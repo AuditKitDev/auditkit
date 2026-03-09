@@ -15,16 +15,14 @@ COPY apps/api/ apps/api/
 COPY packages/shared/ packages/shared/
 COPY tsconfig.base.json ./
 RUN pnpm --filter @auditkit/shared build && pnpm --filter @auditkit/api build
+RUN pnpm --filter @auditkit/api deploy --prod /app/deployed
 
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/packages/shared/package.json ./packages/shared/package.json
+COPY --from=builder /app/deployed ./
+COPY --from=builder /app/packages/shared/dist ./node_modules/@auditkit/shared/dist
+COPY --from=builder /app/packages/shared/package.json ./node_modules/@auditkit/shared/package.json
 
 EXPOSE 3001
 CMD ["node", "dist/index.js"]
