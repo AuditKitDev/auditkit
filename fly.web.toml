@@ -5,7 +5,7 @@ primary_region = 'iad'
   dockerfile = 'docker/Dockerfile.web'
 
   [build.args]
-    NEXT_PUBLIC_API_URL = 'https://auditkit-api.fly.dev'
+    NEXT_PUBLIC_API_URL = 'https://api.auditkit.dev'
 
 [env]
   NODE_ENV = 'production'
