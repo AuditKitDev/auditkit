@@ -13,7 +13,7 @@ test.describe('Dashboard — Compliance Report Generation', () => {
 
     // Should show "Generating..." loading state or a result
     const generating = page.getByText('Generating...');
-    const generatingVisible = await generating.first().isVisible({ timeout: 3_000 }).catch(() => false);
+    const _generatingVisible = await generating.first().isVisible({ timeout: 3_000 }).catch(() => false);
 
     // Wait for generation to complete — either a report appears or the button returns
     await page.waitForTimeout(3_000);

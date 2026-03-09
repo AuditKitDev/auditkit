@@ -1,4 +1,4 @@
-import { test, expect, loginUser, navigateTo, API_URL } from './helpers';
+import { test, expect, loginUser, navigateTo } from './helpers';
 
 test.describe('Dashboard — API Keys CRUD', () => {
   test.beforeEach(async ({ page }) => {
