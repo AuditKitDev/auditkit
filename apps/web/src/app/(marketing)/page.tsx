@@ -58,7 +58,7 @@ export default function LandingPage() {
               GitHub
             </a>
             <Link
-              href="/dashboard/overview"
+              href="/signup"
               className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition btn-shimmer font-medium"
             >
               Get Started
@@ -98,7 +98,7 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-4 mb-14 animate-fade-up" style={{ animationDelay: '300ms' }}>
             <Link
-              href="/dashboard/overview"
+              href="/signup"
               className="group inline-flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3.5 rounded-xl font-semibold hover:bg-primary/90 transition-all btn-shimmer glow-primary btn-glow"
             >
               Get Started Free
@@ -860,7 +860,7 @@ export default function LandingPage() {
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link
-              href="/dashboard/overview"
+              href="/signup"
               className="group inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-xl font-semibold hover:bg-primary/90 transition-all btn-shimmer glow-primary-lg text-lg"
             >
               Get Started Free
