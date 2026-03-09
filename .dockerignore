@@ -13,7 +13,6 @@ playwright-report-api
 test-results
 blob-report
 coverage
-apps/web
 e2e
 ee
 tests
