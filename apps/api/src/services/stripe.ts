@@ -49,8 +49,8 @@ export const PLAN_CONFIGS = {
   supersize: {
     name: 'Supersize + Milkshake',
     priceId: process.env.STRIPE_PRICE_SUPERSIZE || 'price_supersize_monthly',
-    price: 29900,
-    eventQuota: -1, // unlimited
+    price: 34900,
+    eventQuota: 5000000,
     projectQuota: -1, // unlimited
     retentionDays: 2555, // ~7 years
   },

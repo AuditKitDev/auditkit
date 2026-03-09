@@ -76,15 +76,15 @@ const plans = [
   {
     key: 'supersize',
     name: 'Supersize + Milkshake',
-    price: '$299',
+    price: '$349',
     period: '/mo',
-    events: 'Unlimited events',
+    events: '5M events/mo',
     retention: '7-year retention',
     projectLimit: 'Unlimited projects',
     cta: 'Go Supersize',
     features: [
       'Everything in Business',
-      'Unlimited events & projects',
+      '5M events/mo, unlimited projects',
       '7-year retention',
       'Merkle tree proofs',
       'Legal hold',

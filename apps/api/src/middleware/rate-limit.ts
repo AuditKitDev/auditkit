@@ -22,7 +22,7 @@ const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   free:      { writePerMin: 100,   readPerMin: 50,   monthlyEvents: 1_000 },
   pro:       { writePerMin: 500,   readPerMin: 200,  monthlyEvents: 50_000 },
   business:  { writePerMin: 2_000, readPerMin: 500,  monthlyEvents: 500_000 },
-  supersize: { writePerMin: 10_000, readPerMin: 2_000, monthlyEvents: -1 },
+  supersize: { writePerMin: 10_000, readPerMin: 2_000, monthlyEvents: 5_000_000 },
 };
 
 // --- Plan cache (avoid DB lookup every request) ---
