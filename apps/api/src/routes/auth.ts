@@ -153,12 +153,15 @@ export function createAuthRouter(db: Database) {
 
     // Create user
     const passwordHash = await hashPassword(password);
+    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    const role = adminEmails.includes(normalizedEmail) ? 'sysadmin' : 'user';
     const [user] = await db
       .insert(users)
       .values({
         email: normalizedEmail,
         name: trimmedName,
         passwordHash,
+        role,
       })
       .returning({ id: users.id, email: users.email, name: users.name });
 

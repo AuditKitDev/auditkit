@@ -9,6 +9,7 @@ export interface SessionUser {
   id: string;
   email: string;
   name: string;
+  role: string;
 }
 
 export interface SessionProject {
@@ -82,7 +83,7 @@ export function sessionAuthMiddleware(db: Database) {
     const userId = sessionResult[0].userId;
 
     const userResult = await db
-      .select({ id: users.id, email: users.email, name: users.name })
+      .select({ id: users.id, email: users.email, name: users.name, role: users.role })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);

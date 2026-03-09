@@ -80,6 +80,28 @@ export function createBillingRouter(db: Database) {
   router.get('/subscription', async (c) => {
     const user = c.get('user');
 
+    // Sysadmin accounts get unlimited everything, no billing required
+    if (user.role === 'sysadmin') {
+      const userProjects = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(eq(projects.userId, user.id));
+
+      return c.json({
+        plan: 'supersize',
+        plan_name: 'Sysadmin',
+        status: 'active',
+        event_quota: 2147483647,
+        project_quota: 2147483647,
+        retention_days: 2555,
+        event_count: 0,
+        project_count: userProjects.length,
+        current_period_start: null,
+        current_period_end: null,
+        has_stripe: false,
+      });
+    }
+
     const existing = await db
       .select()
       .from(subscriptions)
