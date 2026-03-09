@@ -32,10 +32,9 @@ import { closeEventQueue } from './services/event-queue.js';
 import { logger } from './services/logger.js';
 
 const app = new Hono();
+const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = Array.from(new Set([
-  'http://localhost:3000',
-  'http://localhost:3100',
-  'http://localhost:3200',
+  ...(!isProduction ? ['http://localhost:3000', 'http://localhost:3100', 'http://localhost:3200'] : []),
   process.env.FRONTEND_URL,
   process.env.E2E_WEB_URL,
   ...(process.env.ALLOWED_ORIGINS?.split(',') ?? []),

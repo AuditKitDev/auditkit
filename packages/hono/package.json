@@ -28,5 +28,16 @@
     "tsup": "^8.4.0",
     "typescript": "^5.7.0"
   },
-  "license": "AGPL-3.0-or-later"
+  "license": "AGPL-3.0-or-later",
+  "description": "AuditKit middleware for Hono",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AuditKitDev/auditkit.git",
+    "directory": "packages/hono"
+  },
+  "homepage": "https://auditkit.dev/docs",
+  "bugs": "https://github.com/AuditKitDev/auditkit/issues",
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -4,7 +4,7 @@ let _redis: Redis | null = null;
 
 export function getRedis(): Redis {
   if (!_redis) {
-    const url = process.env.REDIS_URL || 'redis://localhost:6379';
+    const url = process.env.REDIS_URL || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('REDIS_URL is required in production'); })() : 'redis://localhost:6379');
     _redis = new Redis(url, {
       maxRetriesPerRequest: null, // Required by BullMQ
       enableReadyCheck: false,
