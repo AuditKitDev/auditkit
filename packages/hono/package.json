@@ -1,0 +1,32 @@
+{
+  "name": "@auditkit/hono",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@auditkit/sdk": "workspace:*",
+    "@auditkit/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "hono": ">=4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "hono": "^4.7.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0"
+  },
+  "license": "AGPL-3.0-or-later"
+}

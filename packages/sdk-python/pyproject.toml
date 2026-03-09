@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auditkit"
+version = "0.1.0"
+description = "AuditKit Python SDK — Drop-in audit logs for B2B SaaS"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.10"
+authors = [
+    { name = "AuditKit", email = "support@auditkit.dev" },
+]
+keywords = ["audit", "logging", "compliance", "soc2", "enterprise", "audit-trail"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "httpx>=0.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "respx>=0.21",
+    "mypy>=1.5",
+    "ruff>=0.1",
+]
+
+[project.urls]
+Homepage = "https://auditkit.dev"
+Documentation = "https://docs.auditkit.dev"
+Repository = "https://github.com/auditkit/auditkit-python"
+
+[tool.setuptools.packages.find]
+include = ["auditkit*"]
+
+[tool.mypy]
+strict = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100

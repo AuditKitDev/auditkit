@@ -1,0 +1,35 @@
+{
+  "name": "auditkit",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "eslint .",
+    "type-check": "turbo type-check",
+    "db:generate": "turbo db:generate --filter=@auditkit/api",
+    "db:migrate": "turbo db:migrate --filter=@auditkit/api",
+    "db:push": "turbo db:push --filter=@auditkit/api",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:ui": "playwright test --config playwright.ui.config.ts",
+    "test:ui:headed": "playwright test --config playwright.ui.config.ts --headed",
+    "test:api": "playwright test --config playwright.api.config.ts",
+    "test:api:ui": "playwright test --config playwright.api.config.ts --ui"
+  },
+  "devDependencies": {
+    "@argos-ci/playwright": "^6.4.2",
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.1.6",
+    "@playwright/test": "^1.58.2",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.56.1"
+  },
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=20"
+  }
+}

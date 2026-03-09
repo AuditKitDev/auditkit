@@ -1,0 +1,50 @@
+name: 'AuditKit Log Event'
+description: 'Log audit events to AuditKit from GitHub Actions. Automatically captures CI/CD context including commit, branch, author, and PR information.'
+author: 'AuditKit'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  api_key:
+    description: 'AuditKit API key (use a GitHub secret)'
+    required: true
+  action:
+    description: 'The action name for the audit event (e.g., deployment, release, config.change)'
+    required: false
+    default: 'deployment'
+  metadata:
+    description: 'Additional metadata as a JSON string'
+    required: false
+    default: '{}'
+  tenant_id:
+    description: 'The tenant ID to associate the event with'
+    required: true
+  severity:
+    description: 'Event severity level (info, warn, error)'
+    required: false
+    default: 'info'
+  base_url:
+    description: 'AuditKit API base URL'
+    required: false
+    default: 'https://api.auditkit.dev'
+  description:
+    description: 'A human-readable description of the event'
+    required: false
+  target_type:
+    description: 'The type of target resource (e.g., repository, environment, service)'
+    required: false
+  target_id:
+    description: 'The identifier of the target resource'
+    required: false
+
+outputs:
+  event_id:
+    description: 'The ID of the created audit event'
+  hash:
+    description: 'The integrity hash of the created event'
+
+runs:
+  using: 'node20'
+  main: 'index.js'

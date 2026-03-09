@@ -1,0 +1,36 @@
+{
+  "name": "@auditkit/sdk",
+  "version": "0.1.0",
+  "description": "AuditKit SDK — Drop-in audit logs for B2B SaaS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@auditkit/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0"
+  },
+  "keywords": [
+    "audit",
+    "logging",
+    "compliance",
+    "soc2",
+    "enterprise",
+    "audit-trail"
+  ],
+  "license": "AGPL-3.0-or-later"
+}

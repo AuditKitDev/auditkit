@@ -1,0 +1,19 @@
+AuditKit Enterprise License
+
+Copyright (C) 2026 AuditKit
+
+The contents of this directory ("Enterprise Features") require a valid
+AuditKit Enterprise license. You may not use, copy, modify, or distribute
+these files without a commercial agreement with AuditKit.
+
+Enterprise features include but are not limited to:
+- SIEM streaming (Splunk, Datadog, S3)
+- Compliance evidence packages
+- Legal hold
+- Merkle tree proofs
+- SSO/SCIM for dashboard
+- Advanced retention policies
+- Data residency controls
+- Public verification pages
+
+For licensing inquiries: hello@auditkit.dev

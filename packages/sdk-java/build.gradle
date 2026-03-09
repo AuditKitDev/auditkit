@@ -1,0 +1,52 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = 'dev.auditkit'
+version = '0.1.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withJavadocJar()
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.1'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+
+            pom {
+                name = 'AuditKit Java SDK'
+                description = 'Drop-in audit logs for B2B SaaS'
+                url = 'https://auditkit.dev'
+
+                licenses {
+                    license {
+                        name = 'AGPL-3.0-or-later'
+                        url = 'https://www.gnu.org/licenses/agpl-3.0.html'
+                    }
+                }
+
+                scm {
+                    url = 'https://github.com/auditkit/auditkit-java'
+                }
+            }
+        }
+    }
+}
