@@ -1,0 +1,29 @@
+app = 'auditkit-web'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'docker/Dockerfile.web'
+
+  [build.args]
+    NEXT_PUBLIC_API_URL = 'https://auditkit-api.fly.dev'
+
+[env]
+  NODE_ENV = 'production'
+  PORT = '3000'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'suspend'
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = 'requests'
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
