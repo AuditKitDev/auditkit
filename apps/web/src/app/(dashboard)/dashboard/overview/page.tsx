@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   Users,
@@ -11,11 +11,24 @@ import {
   BarChart3,
   Zap,
   User,
+  RefreshCw,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { formatRelative } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/dashboard/onboarding-wizard';
 import { Sparkline, HorizontalBar } from '@/components/dashboard/sparkline';
+
+class OnboardingErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 interface AuditEvent {
   id: string;
@@ -103,6 +116,7 @@ export default function OverviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     // Check onboarding status
@@ -126,7 +140,6 @@ export default function OverviewPage() {
         if (eventsRes.status === 'fulfilled') {
           setRecentEvents(eventsRes.value.data);
           setEventCount(eventsRes.value.total ?? eventsRes.value.data.length);
-          setAnomalyCount(eventsRes.value.data.filter((e) => e.is_anomalous || e.anomalous).length);
         }
         let tenants: { id: string; name: string; external_id: string }[] = [];
         if (tenantsRes.status === 'fulfilled') {
@@ -147,6 +160,10 @@ export default function OverviewPage() {
         }
         if (analyticsRes.status === 'fulfilled') {
           setAnalytics(analyticsRes.value);
+          setAnomalyCount(analyticsRes.value.anomaly_count);
+        } else if (eventsRes.status === 'fulfilled') {
+          // Fallback: count anomalies from recent events if analytics unavailable
+          setAnomalyCount(eventsRes.value.data.filter((e) => e.is_anomalous || e.anomalous).length);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load');
@@ -155,7 +172,7 @@ export default function OverviewPage() {
       }
     }
     load();
-  }, []);
+  }, [refreshKey]);
 
   const chainHealthy = chainStatus?.status === 'verified' || chainStatus?.status === 'healthy';
 
@@ -226,7 +243,9 @@ export default function OverviewPage() {
     <div>
       {/* Onboarding Wizard */}
       {showOnboarding && (
-        <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+        <OnboardingErrorBoundary>
+          <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+        </OnboardingErrorBoundary>
       )}
 
       <div className="mb-8">
@@ -269,9 +288,36 @@ export default function OverviewPage() {
       </div>
 
       {/* Analytics Section */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-semibold text-lg tracking-tight">Analytics</h2>
+        <button
+          onClick={() => setRefreshKey((k) => k + 1)}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs border border-border/60 rounded-lg hover:bg-secondary transition-all font-medium text-muted-foreground"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          Refresh
+        </button>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         {loading ? (
-          <><AnalyticsSkeleton /><AnalyticsSkeleton /><AnalyticsSkeleton /><AnalyticsSkeleton /></>
+          <>
+            <AnalyticsSkeleton />
+            <AnalyticsSkeleton />
+            <AnalyticsSkeleton />
+            <div className="space-y-4">
+              <AnalyticsSkeleton />
+              <div className="border border-border/60 rounded-xl p-5 bg-card">
+                <div className="skeleton h-4 w-24 mb-3" />
+                <div className="flex items-end justify-between">
+                  <div>
+                    <div className="skeleton h-8 w-16 mb-2" />
+                    <div className="skeleton h-3 w-32" />
+                  </div>
+                  <div className="skeleton h-8 w-20" />
+                </div>
+              </div>
+            </div>
+          </>
         ) : analytics ? (
           <>
             {/* Events Over Time */}

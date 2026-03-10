@@ -13,8 +13,11 @@ import {
   Trash2,
   X,
   Check,
+  Loader2,
+  Plug,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { useToast } from '@/components/toast';
 
 interface SiemConnector {
   id: string;
@@ -53,11 +56,16 @@ interface HeaderPair {
 }
 
 export default function SiemPage() {
+  const { toast } = useToast();
   const [connectors, setConnectors] = useState<SiemConnector[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [testingConn, setTestingConn] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Form state
   const [connType, setConnType] = useState<'splunk' | 'datadog' | 's3' | 'custom_http'>('splunk');
@@ -96,29 +104,54 @@ export default function SiemPage() {
     fetchConnectors();
   }, [fetchConnectors]);
 
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
   async function toggleConnector(id: string, currentlyActive: boolean) {
+    const previousConnectors = [...connectors];
+    setConnectors((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, is_active: !c.is_active } : c))
+    );
     try {
       await apiFetch(`/dashboard/siem/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ is_active: !currentlyActive }),
       });
-      setConnectors((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, is_active: !c.is_active } : c))
-      );
     } catch {
+      setConnectors(previousConnectors);
       setError('Failed to toggle connector. Please try again.');
     }
   }
 
   async function deleteConnector(id: string) {
+    setDeleting(true);
     try {
       await apiFetch(`/dashboard/siem/${id}`, {
         method: 'DELETE',
       });
       setConnectors((prev) => prev.filter((c) => c.id !== id));
       setDeleteConfirm(null);
+      toast('success', 'Connector deleted');
     } catch {
       setError('Failed to delete connector. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function testConnection(id: string) {
+    setTestingConn(id);
+    try {
+      await apiFetch(`/dashboard/siem/${id}/test`, { method: 'POST' });
+      toast('success', 'Connection test successful');
+    } catch (err) {
+      toast('error', err instanceof Error ? err.message : 'Connection test failed');
+    } finally {
+      setTestingConn(null);
     }
   }
 
@@ -144,7 +177,32 @@ export default function SiemPage() {
 
   async function createConnector() {
     if (!connName.trim()) return;
+    setFormError(null);
 
+    // BUG-029: Validate required fields based on connector type
+    if (connType === 'splunk') {
+      if (!hecUrl.trim() || !hecToken.trim()) {
+        setFormError('Splunk requires both HEC URL and HEC Token.');
+        return;
+      }
+    } else if (connType === 'datadog') {
+      if (!ddApiKey.trim()) {
+        setFormError('Datadog requires an API Key.');
+        return;
+      }
+    } else if (connType === 's3') {
+      if (!s3Bucket.trim() || !s3Region.trim() || !s3AccessKey.trim() || !s3SecretKey.trim()) {
+        setFormError('S3 requires Bucket, Region, Access Key, and Secret Key.');
+        return;
+      }
+    } else if (connType === 'custom_http') {
+      if (!customUrl.trim()) {
+        setFormError('Custom HTTP requires an Endpoint URL.');
+        return;
+      }
+    }
+
+    setCreating(true);
     try {
       const created = await apiFetch<SiemConnector>('/dashboard/siem', {
         method: 'POST',
@@ -155,9 +213,12 @@ export default function SiemPage() {
         }),
       });
       setConnectors((prev) => [created, ...prev]);
+      toast('success', 'SIEM connector created');
       resetForm();
     } catch {
       setError('Failed to create connector. Please try again.');
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -174,6 +235,7 @@ export default function SiemPage() {
     setS3SecretKey('');
     setCustomUrl('');
     setCustomHeaders([{ key: '', value: '' }]);
+    setFormError(null);
     setShowCreate(false);
   }
 
@@ -384,6 +446,7 @@ export default function SiemPage() {
             <button
               onClick={() => setShowCreate(false)}
               className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center transition"
+              aria-label="Close create form"
             >
               <X className="h-4 w-4" />
             </button>
@@ -417,11 +480,19 @@ export default function SiemPage() {
 
             {renderConfigFields()}
 
+            {formError && (
+              <div className="p-3 border border-destructive/30 bg-destructive/5 rounded-xl text-sm text-destructive">
+                {formError}
+              </div>
+            )}
+
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={createConnector}
-                className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 transition-all btn-shimmer"
+                disabled={creating}
+                className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 transition-all btn-shimmer disabled:opacity-50 flex items-center gap-2"
               >
+                {creating && <Loader2 className="h-4 w-4 animate-spin" />}
                 Create Connector
               </button>
               <button
@@ -505,9 +576,23 @@ export default function SiemPage() {
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
                   <button
+                    onClick={() => testConnection(conn.id)}
+                    disabled={testingConn === conn.id}
+                    className="p-2 text-muted-foreground hover:text-primary transition rounded-lg hover:bg-secondary disabled:opacity-40"
+                    title="Test connection"
+                    aria-label="Test connection"
+                  >
+                    {testingConn === conn.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plug className="h-4 w-4" />
+                    )}
+                  </button>
+                  <button
                     onClick={() => toggleConnector(conn.id, conn.is_active)}
                     className="p-2 text-muted-foreground hover:text-foreground transition rounded-lg hover:bg-secondary"
                     title={conn.is_active ? 'Deactivate' : 'Activate'}
+                    aria-label={conn.is_active ? 'Deactivate connector' : 'Activate connector'}
                   >
                     {conn.is_active ? (
                       <ToggleRight className="h-5 w-5 text-success" />
@@ -519,8 +604,10 @@ export default function SiemPage() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => deleteConnector(conn.id)}
-                        className="px-2 py-1 text-xs bg-destructive/20 text-destructive rounded-lg hover:bg-destructive/30 transition font-medium"
+                        disabled={deleting}
+                        className="px-2 py-1 text-xs bg-destructive/20 text-destructive rounded-lg hover:bg-destructive/30 transition font-medium disabled:opacity-50 flex items-center gap-1"
                       >
+                        {deleting && <Loader2 className="h-3 w-3 animate-spin" />}
                         Confirm
                       </button>
                       <button
@@ -535,6 +622,7 @@ export default function SiemPage() {
                       onClick={() => setDeleteConfirm(conn.id)}
                       className="p-2 text-muted-foreground hover:text-destructive transition rounded-lg hover:bg-secondary"
                       title="Delete connector"
+                      aria-label="Delete connector"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

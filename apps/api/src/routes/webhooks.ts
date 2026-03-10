@@ -56,6 +56,8 @@ function validateWebhookUrl(urlStr: string): { valid: boolean; error?: string } 
   return { valid: true };
 }
 
+const VALID_EVENT_TYPES = ['event.created', 'event.anomaly', 'event.updated', 'event.deleted', '*'];
+
 export function createWebhooksRouter(db: Database) {
   const router = new Hono<{ Variables: { auth: AuthContext } }>();
   router.use('*', forbidViewerTokens('Viewer tokens cannot manage webhooks'));
@@ -77,6 +79,9 @@ export function createWebhooksRouter(db: Database) {
     if (body.events !== undefined) {
       if (!Array.isArray(body.events) || !body.events.every((e: unknown) => typeof e === 'string')) {
         return c.json({ code: 'INVALID_FIELD', message: 'events must be an array of strings' }, 400);
+      }
+      if (!body.events.every((e: string) => VALID_EVENT_TYPES.includes(e))) {
+        return c.json({ code: 'INVALID_FIELD', message: 'Invalid event type. Valid types: ' + VALID_EVENT_TYPES.join(', ') }, 400);
       }
     }
 
@@ -146,6 +151,9 @@ export function createWebhooksRouter(db: Database) {
     if (body.events !== undefined) {
       if (!Array.isArray(body.events) || !body.events.every((e: unknown) => typeof e === 'string')) {
         return c.json({ code: 'INVALID_FIELD', message: 'events must be an array of strings' }, 400);
+      }
+      if (!body.events.every((e: string) => VALID_EVENT_TYPES.includes(e))) {
+        return c.json({ code: 'INVALID_FIELD', message: 'Invalid event type. Valid types: ' + VALID_EVENT_TYPES.join(', ') }, 400);
       }
     }
 

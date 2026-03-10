@@ -36,7 +36,8 @@ function LoginForm() {
 
       setToken(data.token);
       const redirect = searchParams.get('redirect');
-      if (redirect && redirect.startsWith('/')) {
+      const SAFE_REDIRECT_RE = /^\/[a-zA-Z0-9\-_/]+$/;
+      if (redirect && SAFE_REDIRECT_RE.test(redirect)) {
         router.push(redirect);
       } else {
         router.push('/dashboard/overview');

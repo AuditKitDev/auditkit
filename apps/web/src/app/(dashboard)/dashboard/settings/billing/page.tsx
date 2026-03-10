@@ -182,8 +182,10 @@ export default function BillingPage() {
   const projectCount = subscription?.project_count || 0;
   const isUnlimitedEvents = eventQuota >= 2147483647;
   const isUnlimitedProjects = projectQuota >= 2147483647;
-  const eventPct = isUnlimitedEvents ? 5 : eventQuota === 0 ? 0 : Math.min((eventCount / eventQuota) * 100, 100);
-  const projectPct = isUnlimitedProjects ? 5 : Math.min((projectCount / projectQuota) * 100, 100);
+  const eventRawPct = isUnlimitedEvents ? 5 : eventQuota === 0 ? 0 : (eventCount / eventQuota) * 100;
+  const eventPct = Math.min(eventRawPct, 100);
+  const projectRawPct = isUnlimitedProjects ? 5 : (projectCount / projectQuota) * 100;
+  const projectPct = Math.min(projectRawPct, 100);
 
   const isSysadmin = subscription?.plan_name === 'Sysadmin';
   const upgradePlans = isSysadmin
@@ -245,14 +247,19 @@ export default function BillingPage() {
                 <p className="text-sm font-mono">
                   <span className="text-foreground font-semibold">{formatNumber(eventCount)}</span>
                   <span className="text-muted-foreground/50"> / {formatQuota(eventQuota)}</span>
+                  {!isUnlimitedEvents && eventRawPct > 100 && (
+                    <span className="text-destructive font-semibold ml-1">({Math.round(eventRawPct)}%)</span>
+                  )}
                 </p>
               </div>
               <div className="h-2 bg-secondary/50 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    eventPct > 90
-                      ? 'bg-gradient-to-r from-red-500 to-orange-400'
-                      : 'bg-gradient-to-r from-indigo-500 to-purple-400'
+                    eventRawPct > 100
+                      ? 'bg-gradient-to-r from-red-600 to-red-400'
+                      : eventRawPct > 90
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-400'
+                        : 'bg-gradient-to-r from-indigo-500 to-purple-400'
                   }`}
                   style={{ width: `${eventPct}%` }}
                 />
@@ -266,14 +273,19 @@ export default function BillingPage() {
                 <p className="text-sm font-mono">
                   <span className="text-foreground font-semibold">{projectCount}</span>
                   <span className="text-muted-foreground/50"> / {formatQuota(projectQuota)}</span>
+                  {!isUnlimitedProjects && projectRawPct > 100 && (
+                    <span className="text-destructive font-semibold ml-1">({Math.round(projectRawPct)}%)</span>
+                  )}
                 </p>
               </div>
               <div className="h-2 bg-secondary/50 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    projectPct > 90
-                      ? 'bg-gradient-to-r from-red-500 to-orange-400'
-                      : 'bg-gradient-to-r from-indigo-500 to-purple-400'
+                    projectRawPct > 100
+                      ? 'bg-gradient-to-r from-red-600 to-red-400'
+                      : projectRawPct > 90
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-400'
+                        : 'bg-gradient-to-r from-indigo-500 to-purple-400'
                   }`}
                   style={{ width: `${projectPct}%` }}
                 />
@@ -388,7 +400,10 @@ export default function BillingPage() {
                     }`}
                   >
                     {checkoutLoading === plan.key ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Redirecting...
+                      </>
                     ) : (
                       <>
                         {plan.cta || `Upgrade to ${plan.name}`}

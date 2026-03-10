@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, X, Users, Crown, Shield, Eye, Loader2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { useToast } from '@/components/toast';
 
 interface TeamMember {
   id: string;
@@ -36,6 +37,7 @@ function getInitials(name: string) {
 }
 
 export default function TeamPage() {
+  const { toast } = useToast();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
@@ -43,6 +45,7 @@ export default function TeamPage() {
   const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member');
   const [inviting, setInviting] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removeConfirm, setRemoveConfirm] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -62,6 +65,13 @@ export default function TeamPage() {
     fetchMembers();
   }, [fetchMembers]);
 
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
   async function inviteMember() {
     if (!inviteEmail.trim()) return;
     setInviting(true);
@@ -75,6 +85,7 @@ export default function TeamPage() {
           body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
         }
       );
+      toast('success', 'Invitation sent');
       setSuccessMsg(`Invitation sent to ${inviteEmail.trim()}`);
       setInviteEmail('');
       setInviteRole('member');
@@ -95,6 +106,8 @@ export default function TeamPage() {
     try {
       await apiFetch(`/dashboard/team/members/${id}`, { method: 'DELETE' });
       setMembers((prev) => prev.filter((m) => m.id !== id));
+      setRemoveConfirm(null);
+      toast('success', 'Team member removed');
       setSuccessMsg('Member removed');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove member');
@@ -141,6 +154,7 @@ export default function TeamPage() {
             <button
               onClick={() => setShowInvite(false)}
               className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center transition"
+              aria-label="Close invite form"
             >
               <X className="h-4 w-4" />
             </button>
@@ -232,18 +246,39 @@ export default function TeamPage() {
                 {/* Remove */}
                 <div className="shrink-0">
                   {member.role !== 'owner' ? (
-                    <button
-                      onClick={() => removeMember(member.id)}
-                      disabled={removingId === member.id}
-                      className="p-2 text-muted-foreground/40 hover:text-destructive transition rounded-lg hover:bg-secondary opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                      title="Remove member"
-                    >
-                      {removingId === member.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
+                    removeConfirm === member.id ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground mr-1">Are you sure?</span>
+                        <button
+                          onClick={() => removeMember(member.id)}
+                          disabled={removingId === member.id}
+                          className="px-2 py-1 text-xs bg-destructive/20 text-destructive rounded-lg hover:bg-destructive/30 transition font-medium disabled:opacity-50"
+                          aria-label="Confirm remove member"
+                        >
+                          {removingId === member.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            'Confirm'
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setRemoveConfirm(null)}
+                          className="px-2 py-1 text-xs text-muted-foreground rounded-lg hover:bg-secondary transition"
+                          aria-label="Cancel remove member"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setRemoveConfirm(member.id)}
+                        className="p-2 text-muted-foreground/40 hover:text-destructive transition rounded-lg hover:bg-secondary opacity-70 hover:opacity-100 disabled:opacity-50"
+                        aria-label="Remove member"
+                        title="Remove member"
+                      >
                         <Trash2 className="h-4 w-4" />
-                      )}
-                    </button>
+                      </button>
+                    )
                   ) : (
                     <div className="w-8" />
                   )}

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Filter, Download, AlertTriangle, ChevronDown, Loader2, X, Hash, FileDown, Radio, HelpCircle, Sparkles, Clock } from 'lucide-react';
 import { apiFetch, apiHeaders } from '@/lib/api';
 import { formatRelative } from '@/lib/utils';
+import { useToast } from '@/components/toast';
 
 interface AuditEvent {
   id: string;
@@ -76,6 +77,7 @@ const syntaxHelp = [
 ];
 
 export default function EventsPage() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -152,8 +154,6 @@ export default function EventsPage() {
       setLoadingMore(false);
     }
   }, []);
-
-  useEffect(() => { fetchEvents(''); }, [fetchEvents]);
 
   useEffect(() => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
@@ -363,6 +363,7 @@ export default function EventsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast('success', `Events exported as ${format.toUpperCase()} (${events.length} events)`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Export failed');
     } finally {
@@ -533,7 +534,6 @@ export default function EventsPage() {
           <button
             onClick={() => {
               setNlpMode(!nlpMode);
-              setSearchQuery('');
               setActiveQuickFilter(null);
             }}
             className={`flex items-center gap-2 px-4 py-3 text-sm rounded-xl font-medium transition-all whitespace-nowrap ${

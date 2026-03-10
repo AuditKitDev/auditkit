@@ -78,6 +78,8 @@ export default function RedactionPage() {
   const [creating, setCreating] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [patternError, setPatternError] = useState<string | null>(null);
 
   const fetchRules = useCallback(async () => {
     setLoading(true);
@@ -95,6 +97,13 @@ export default function RedactionPage() {
   useEffect(() => {
     fetchRules();
   }, [fetchRules]);
+
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
 
   async function createRule(fieldPath: string, pattern: string, replacement: string) {
     setCreating(true);
@@ -136,6 +145,7 @@ export default function RedactionPage() {
   }
 
   async function deleteRule(id: string) {
+    setDeleting(true);
     setError(null);
     try {
       await apiFetch(`/dashboard/redaction-rules/${id}`, {
@@ -145,6 +155,8 @@ export default function RedactionPage() {
       setDeleteConfirm(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete rule');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -227,9 +239,24 @@ export default function RedactionPage() {
                 type="text"
                 placeholder="e.g., [a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
                 value={newPattern}
-                onChange={(e) => setNewPattern(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm bg-secondary border border-border/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 placeholder:text-muted-foreground/40 transition-all font-mono"
+                onChange={(e) => {
+                  setNewPattern(e.target.value);
+                  setPatternError(null);
+                  if (e.target.value.trim()) {
+                    try {
+                      new RegExp(e.target.value);
+                    } catch {
+                      setPatternError('Invalid regex pattern');
+                    }
+                  }
+                }}
+                className={`w-full px-3 py-2.5 text-sm bg-secondary border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 placeholder:text-muted-foreground/40 transition-all font-mono ${
+                  patternError ? 'border-destructive/60' : 'border-border/60'
+                }`}
               />
+              {patternError && (
+                <p className="text-xs text-destructive mt-1">{patternError}</p>
+              )}
             </div>
             <div>
               <label className="text-sm text-muted-foreground/60 mb-1 block">Replacement</label>
@@ -244,7 +271,7 @@ export default function RedactionPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => createRule(newFieldPath, newPattern, newReplacement)}
-                disabled={creating || !newFieldPath.trim() || !newPattern.trim() || !newReplacement.trim()}
+                disabled={creating || !newFieldPath.trim() || !newPattern.trim() || !newReplacement.trim() || !!patternError}
                 className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 transition-all disabled:opacity-50"
               >
                 {creating && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -314,6 +341,7 @@ export default function RedactionPage() {
                       disabled={toggling === rule.id}
                       className="p-1 text-muted-foreground hover:text-foreground transition rounded-lg hover:bg-secondary"
                       title={rule.enabled ? 'Disable' : 'Enable'}
+                      aria-label={rule.enabled ? 'Disable rule' : 'Enable rule'}
                     >
                       {toggling === rule.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -329,8 +357,10 @@ export default function RedactionPage() {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => deleteRule(rule.id)}
-                          className="px-2 py-1 text-xs bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition font-medium"
+                          disabled={deleting}
+                          className="px-2 py-1 text-xs bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition font-medium disabled:opacity-50 flex items-center gap-1"
                         >
+                          {deleting && <Loader2 className="h-3 w-3 animate-spin" />}
                           Confirm
                         </button>
                         <button
@@ -345,6 +375,7 @@ export default function RedactionPage() {
                         onClick={() => setDeleteConfirm(rule.id)}
                         className="p-2 text-muted-foreground hover:text-destructive transition rounded-lg hover:bg-secondary"
                         title="Delete rule"
+                        aria-label="Delete rule"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

@@ -12,8 +12,10 @@ import {
   XCircle,
   ToggleLeft,
   ToggleRight,
+  Send,
 } from 'lucide-react';
 import { apiFetch, apiHeaders } from '@/lib/api';
+import { useToast } from '@/components/toast';
 
 interface WebhookEntry {
   id: string;
@@ -54,6 +56,7 @@ function SkeletonCard() {
 }
 
 export default function WebhooksPage() {
+  const { toast } = useToast();
   const [webhooks, setWebhooks] = useState<WebhookEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +66,7 @@ export default function WebhooksPage() {
   const [creating, setCreating] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [testing, setTesting] = useState<string | null>(null);
 
   const fetchWebhooks = useCallback(async () => {
     setLoading(true);
@@ -82,6 +86,13 @@ export default function WebhooksPage() {
   useEffect(() => {
     fetchWebhooks();
   }, [fetchWebhooks]);
+
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
 
   function toggleEvent(value: string) {
     if (value === '*') {
@@ -110,6 +121,7 @@ export default function WebhooksPage() {
       });
       const created = res.data ?? (res as unknown as WebhookEntry);
       setWebhooks((prev) => [created, ...prev]);
+      toast('success', 'Webhook created');
       setNewUrl('');
       setNewEvents(['*']);
       setShowCreate(false);
@@ -129,6 +141,7 @@ export default function WebhooksPage() {
       });
       setWebhooks((prev) => prev.filter((w) => w.id !== id));
       setDeleteConfirm(null);
+      toast('success', 'Webhook deleted');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete webhook');
     }
@@ -150,6 +163,22 @@ export default function WebhooksPage() {
       setError(err instanceof Error ? err.message : 'Failed to toggle webhook');
     } finally {
       setToggling(null);
+    }
+  }
+
+  async function sendTest(webhook: WebhookEntry) {
+    setTesting(webhook.id);
+    setError(null);
+    try {
+      await apiFetch(`/v1/webhooks/${webhook.id}/test`, {
+        method: 'POST',
+        headers: apiHeaders(),
+      });
+      toast('success', `Test event sent to ${new URL(webhook.url).hostname}`);
+    } catch (err) {
+      toast('error', err instanceof Error ? err.message : 'Test delivery failed');
+    } finally {
+      setTesting(null);
     }
   }
 
@@ -286,9 +315,9 @@ export default function WebhooksPage() {
                       </span>
                     )}
                     {webhook.lastFailure && (
-                      <span className="text-[10px] text-destructive flex items-center gap-0.5">
+                      <span className="text-[10px] text-destructive flex items-center gap-0.5" title={`Failed at ${new Date(webhook.lastFailure).toLocaleString()}`}>
                         <XCircle className="h-3 w-3" />
-                        Last fail: {new Date(webhook.lastFailure).toLocaleDateString()}
+                        Last fail: {new Date(webhook.lastFailure).toLocaleString()}
                       </span>
                     )}
                   </div>
@@ -308,10 +337,24 @@ export default function WebhooksPage() {
                 {/* Toggle / Delete */}
                 <div className="flex items-center gap-1 shrink-0">
                   <button
+                    onClick={() => sendTest(webhook)}
+                    disabled={testing === webhook.id || !webhook.active}
+                    className="p-2 text-muted-foreground hover:text-primary transition rounded-lg hover:bg-secondary disabled:opacity-40"
+                    title="Send test event"
+                    aria-label="Send test event"
+                  >
+                    {testing === webhook.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </button>
+                  <button
                     onClick={() => toggleActive(webhook)}
                     disabled={toggling === webhook.id}
                     className="p-2 text-muted-foreground hover:text-foreground transition rounded-lg hover:bg-secondary"
                     title={webhook.active ? 'Deactivate' : 'Activate'}
+                    aria-label={webhook.active ? 'Deactivate webhook' : 'Activate webhook'}
                   >
                     {toggling === webhook.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -342,6 +385,7 @@ export default function WebhooksPage() {
                       onClick={() => setDeleteConfirm(webhook.id)}
                       className="p-2 text-muted-foreground hover:text-destructive transition rounded-lg hover:bg-secondary"
                       title="Delete webhook"
+                      aria-label="Delete webhook"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

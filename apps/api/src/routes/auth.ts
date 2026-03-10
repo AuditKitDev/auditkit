@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID, scrypt, timingSafeEqual } from 'cr
 import { eq, and, gte } from 'drizzle-orm';
 import { users, sessions, projects, apiKeys, passwordResetTokens, emailVerificationTokens, refreshTokens } from '../db/schema.js';
 import { emailService } from '../services/email.js';
+import { logAdminActivity } from '../services/admin-log.js';
 import type { Database } from '../db/index.js';
 
 function hashToken(token: string): string {
@@ -51,7 +52,7 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -73,7 +74,7 @@ function getNormalizedEmail(value: unknown): string | null {
   if (!email) return null;
 
   const normalizedEmail = email.toLowerCase();
-  if (!EMAIL_REGEX.test(normalizedEmail) || normalizedEmail.length > 254) {
+  if (!EMAIL_RE.test(normalizedEmail) || normalizedEmail.length > 254) {
     return null;
   }
 
@@ -136,8 +137,16 @@ export function createAuthRouter(db: Database) {
       return c.json({ code: 'MISSING_FIELDS', message: 'email, name, and password are required' }, 400);
     }
 
+    if (trimmedName.length > 100) {
+      return c.json({ code: 'VALIDATION_ERROR', message: 'Name must be 100 characters or less' }, 400);
+    }
+
     if (password.length < 8) {
       return c.json({ code: 'WEAK_PASSWORD', message: 'Password must be at least 8 characters' }, 400);
+    }
+
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      return c.json({ code: 'VALIDATION_ERROR', message: 'Password must contain uppercase, lowercase, and a number' }, 400);
     }
 
     // Check if user exists
@@ -207,10 +216,25 @@ export function createAuthRouter(db: Database) {
       return emailService.sendVerificationEmail(user.email, verifyUrl);
     }).catch(() => {});
 
+    logAdminActivity({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'user.signup',
+      resourceType: 'user',
+      resourceId: user.id,
+      ipAddress: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || undefined,
+      userAgent: c.req.header('user-agent') || undefined,
+    });
+
+    // Set session token as httpOnly cookie
+    c.header('Set-Cookie', `session=${sessionToken}; HttpOnly; Path=/; Max-Age=${30 * 24 * 60 * 60}; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+    // Set refresh token as httpOnly cookie (scoped to /auth/refresh)
+    c.res.headers.append('Set-Cookie', `refresh_token=${refreshToken}; HttpOnly; Path=/auth/refresh; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+
     return c.json({
       user: { id: user.id, email: user.email, name: user.name },
       token: sessionToken,
-      refresh_token: refreshToken,
+      refresh_token: refreshToken, // TODO: remove from response body in v2 — now set as httpOnly cookie
       project: { id: project.id, name: project.name, slug: project.slug },
     }, 201);
   });
@@ -260,10 +284,25 @@ export function createAuthRouter(db: Database) {
       .from(projects)
       .where(eq(projects.userId, user.id));
 
+    logAdminActivity({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'user.login',
+      resourceType: 'user',
+      resourceId: user.id,
+      ipAddress: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || undefined,
+      userAgent: c.req.header('user-agent') || undefined,
+    });
+
+    // Set session token as httpOnly cookie
+    c.header('Set-Cookie', `session=${sessionToken}; HttpOnly; Path=/; Max-Age=${30 * 24 * 60 * 60}; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+    // Set refresh token as httpOnly cookie (scoped to /auth/refresh)
+    c.res.headers.append('Set-Cookie', `refresh_token=${refreshToken}; HttpOnly; Path=/auth/refresh; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+
     return c.json({
       user: { id: user.id, email: user.email, name: user.name },
       token: sessionToken,
-      refresh_token: refreshToken,
+      refresh_token: refreshToken, // TODO: remove from response body in v2 — now set as httpOnly cookie
       projects: userProjects,
     });
   });
@@ -286,6 +325,10 @@ export function createAuthRouter(db: Database) {
       // Delete session
       await db.delete(sessions).where(eq(sessions.tokenHash, tokenHash));
     }
+
+    // Clear httpOnly cookies
+    c.header('Set-Cookie', 'session=; HttpOnly; Path=/; Max-Age=0');
+    c.res.headers.append('Set-Cookie', 'refresh_token=; HttpOnly; Path=/auth/refresh; Max-Age=0');
 
     return c.json({ ok: true });
   });
@@ -369,9 +412,14 @@ export function createAuthRouter(db: Database) {
       expiresAt: refreshExpiresAt,
     });
 
+    // Set new session token as httpOnly cookie
+    c.header('Set-Cookie', `session=${newSessionToken}; HttpOnly; Path=/; Max-Age=${30 * 24 * 60 * 60}; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+    // Set new refresh token as httpOnly cookie (scoped to /auth/refresh)
+    c.res.headers.append('Set-Cookie', `refresh_token=${newRefreshTokenRaw}; HttpOnly; Path=/auth/refresh; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+
     return c.json({
       token: newSessionToken,
-      refresh_token: newRefreshTokenRaw,
+      refresh_token: newRefreshTokenRaw, // TODO: remove from response body in v2 — now set as httpOnly cookie
     });
   });
 
@@ -497,6 +545,10 @@ export function createAuthRouter(db: Database) {
 
     if (password.length < 8) {
       return c.json({ code: 'WEAK_PASSWORD', message: 'Password must be at least 8 characters' }, 400);
+    }
+
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      return c.json({ code: 'VALIDATION_ERROR', message: 'Password must contain uppercase, lowercase, and a number' }, 400);
     }
 
     const tokenHash = hashToken(token);

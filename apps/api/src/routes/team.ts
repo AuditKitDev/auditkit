@@ -11,6 +11,7 @@ import {
 import type { Database } from '../db/index.js';
 import { emailService } from '../services/email.js';
 import { logger } from '../services/logger.js';
+import { logAdminActivity } from '../services/admin-log.js';
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -54,6 +55,9 @@ async function getCallerRole(
 
   return null;
 }
+
+// --- In-memory rate limiter for team invites ---
+const inviteRateLimits = new Map<string, { count: number; resetAt: number }>();
 
 export function createTeamRouter(db: Database) {
   const router = new Hono<{
@@ -150,12 +154,29 @@ export function createTeamRouter(db: Database) {
   // ─── POST /team/invite ─── Invite a member by email ───
   router.post('/invite', async (c) => {
     const user = c.get('user');
+    if (!user.emailVerified) {
+      return c.json({ code: 'EMAIL_NOT_VERIFIED', message: 'Email verification required to invite team members' }, 403);
+    }
+
     const userProjects = c.get('projects');
     const body = await c.req.json<{ email?: string; role?: string; project_id?: string }>();
 
     const projectId = getValidProjectId(body.project_id, userProjects);
     if (!projectId) {
       return c.json({ code: 'BAD_REQUEST', message: 'No valid project' }, 400);
+    }
+
+    // Rate limit: at most 10 invites per project per minute
+    const now = Date.now();
+    const rateKey = projectId;
+    const rateEntry = inviteRateLimits.get(rateKey);
+    if (rateEntry && now < rateEntry.resetAt) {
+      if (rateEntry.count >= 10) {
+        return c.json({ code: 'RATE_LIMITED', message: 'Too many invites. Try again later.' }, 429);
+      }
+      rateEntry.count++;
+    } else {
+      inviteRateLimits.set(rateKey, { count: 1, resetAt: now + 60_000 });
     }
 
     // Validate email
@@ -269,6 +290,11 @@ export function createTeamRouter(db: Database) {
       .limit(1);
 
     if (invitations.length === 0) {
+      await logAdminActivity({
+        actorEmail: 'unknown',
+        action: 'team.invite.accept_failed',
+        metadata: { reason: 'invalid_or_used_token' },
+      });
       return c.json({ code: 'NOT_FOUND', message: 'Invalid or already used invitation' }, 404);
     }
 
@@ -276,6 +302,13 @@ export function createTeamRouter(db: Database) {
 
     // Check expiry
     if (new Date() > invitation.expiresAt) {
+      await logAdminActivity({
+        actorEmail: invitation.email,
+        action: 'team.invite.accept_failed',
+        resourceType: 'project',
+        resourceId: invitation.projectId,
+        metadata: { reason: 'expired', invitationId: invitation.id },
+      });
       return c.json({ code: 'GONE', message: 'This invitation has expired' }, 410);
     }
 
@@ -319,6 +352,15 @@ export function createTeamRouter(db: Database) {
       .update(teamInvitations)
       .set({ acceptedAt: new Date() })
       .where(eq(teamInvitations.id, invitation.id));
+
+    await logAdminActivity({
+      actorId: userId,
+      actorEmail: invitation.email,
+      action: 'team.invite.accepted',
+      resourceType: 'project',
+      resourceId: invitation.projectId,
+      metadata: { role: invitation.role, invitationId: invitation.id },
+    });
 
     return c.json({
       project_id: invitation.projectId,

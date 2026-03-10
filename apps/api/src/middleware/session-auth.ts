@@ -1,5 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
+import { getCookie } from 'hono/cookie';
 import { createHash } from 'crypto';
 import { eq, and, gte } from 'drizzle-orm';
 import type { Database } from '../db/index.js';
@@ -10,6 +11,7 @@ export interface SessionUser {
   email: string;
   name: string;
   role: string;
+  emailVerified: boolean;
 }
 
 export interface SessionProject {
@@ -45,14 +47,30 @@ export function sessionAuthMiddleware(db: Database) {
   return createMiddleware<{
     Variables: { user: SessionUser; projects: SessionProject[] };
   }>(async (c, next) => {
+    // BUG-005: CSRF protection — require X-Requested-With header on non-GET requests
+    if (c.req.method !== 'GET' && c.req.header('x-requested-with') !== 'XMLHttpRequest') {
+      throw new HTTPException(403, { message: 'Missing CSRF header' });
+    }
+
     const authHeader = c.req.header('Authorization');
-    const cookieHeader = c.req.header('Cookie');
 
     let token: string | null = null;
 
     if (authHeader?.startsWith('Bearer st_')) {
       token = authHeader.slice(7);
-    } else if (cookieHeader) {
+    }
+
+    // Fallback: read session token from httpOnly cookie
+    if (!token) {
+      const cookieToken = getCookie(c, 'session');
+      if (cookieToken && cookieToken.startsWith('st_')) {
+        token = cookieToken;
+      }
+    }
+
+    // Final fallback: parse Cookie header manually
+    if (!token) {
+      const cookieHeader = c.req.header('Cookie');
       token = getSessionTokenFromCookieHeader(cookieHeader);
     }
 
@@ -83,7 +101,7 @@ export function sessionAuthMiddleware(db: Database) {
     const userId = sessionResult[0].userId;
 
     const userResult = await db
-      .select({ id: users.id, email: users.email, name: users.name, role: users.role })
+      .select({ id: users.id, email: users.email, name: users.name, role: users.role, emailVerified: users.emailVerified })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);

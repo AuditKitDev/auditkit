@@ -21,8 +21,10 @@ import { createBillingRouter, createBillingWebhookRouter } from './routes/billin
 import { createSSERouter } from './routes/sse.js';
 import { createExportRouter } from './routes/export.js';
 import { createTeamRouter } from './routes/team.js';
+import { createSysadminRouter } from './routes/sysadmin.js';
 import { createOpenApiRouter } from './openapi.js';
 import { idempotencyMiddleware } from './middleware/idempotency.js';
+import { authRateLimitMiddleware } from './middleware/auth-rate-limit.js';
 import { startWebhookRetries } from './workers/webhook-worker.js';
 import { startRetentionCron } from './workers/retention-cron.js';
 import { startMerkleBatchCron } from './services/merkle.js';
@@ -30,6 +32,7 @@ import { startQueueWorker, stopQueueWorker } from './workers/queue-worker.js';
 import { closeRedis } from './services/redis.js';
 import { closeEventQueue } from './services/event-queue.js';
 import { logger } from './services/logger.js';
+import { initAdminLog } from './services/admin-log.js';
 
 const app = new Hono();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -65,7 +68,8 @@ app.use('/dashboard/*', bodyLimit({
   onError: (c) => c.json({ code: 'PAYLOAD_TOO_LARGE', message: 'Request body exceeds 1MB limit' }, 413),
 }));
 
-// --- Auth Routes (unauthenticated) ---
+// --- Auth Routes (unauthenticated, rate-limited) ---
+app.use('/auth/*', authRateLimitMiddleware);
 app.route('/auth', createAuthRouter(db));
 
 // --- Dashboard Routes (session-auth protected) ---
@@ -74,6 +78,7 @@ dashboard.use('*', sessionAuthMiddleware(db));
 dashboard.route('/', createDashboardRouter(db));
 dashboard.route('/exports', createExportRouter(db));
 dashboard.route('/team', createTeamRouter(db));
+dashboard.route('/sysadmin', createSysadminRouter(db));
 app.route('/dashboard', dashboard);
 
 // --- Stripe Webhook (no auth — Stripe sends signature, must be before auth middleware) ---
@@ -168,6 +173,7 @@ app.notFound((c) => {
 // --- Start Server ---
 const port = Number(process.env.PORT) || 3001;
 
+initAdminLog(db);
 logger.info({ port }, 'AuditKit API starting');
 
 serve({

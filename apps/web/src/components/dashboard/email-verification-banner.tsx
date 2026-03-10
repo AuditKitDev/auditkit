@@ -61,7 +61,7 @@ export function EmailVerificationBanner({ emailVerified }: EmailVerificationBann
             className="text-xs font-medium px-3 py-1.5 rounded-md bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
             {sending && <Loader2 className="h-3 w-3 animate-spin" />}
-            {sending ? 'Sending...' : 'Send verification email'}
+            {sending ? 'Sending...' : 'Resend verification email'}
           </button>
         )}
         <button

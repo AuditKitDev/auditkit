@@ -123,6 +123,14 @@ export default function CompliancePage() {
     fetchReports();
   }, [fetchReports]);
 
+  // Auto-refresh when any report is pending
+  useEffect(() => {
+    const hasPending = reports.some(r => r.status === 'pending');
+    if (!hasPending) return;
+    const interval = setInterval(() => fetchReports(), 5000);
+    return () => clearInterval(interval);
+  }, [reports, fetchReports]);
+
   async function generateReport(framework: string) {
     setGenerating(framework);
     setError(null);
@@ -132,7 +140,7 @@ export default function CompliancePage() {
         headers: apiHeaders(),
         body: JSON.stringify({ framework }),
       });
-      const created = res.data ?? (res as unknown as ComplianceReport);
+      const created = (res as { data?: ComplianceReport }).data ?? (res as unknown as ComplianceReport);
       setReports((prev) => [created, ...prev]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate report');

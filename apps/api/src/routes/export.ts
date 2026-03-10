@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, and, desc, gte, lt, ilike } from 'drizzle-orm';
+import { eq, and, desc, gte, lt, ilike, inArray } from 'drizzle-orm';
 import type { SessionUser, SessionProject } from '../middleware/session-auth.js';
 import { auditEvents, tenants, exportJobs } from '../db/schema.js';
 import type { Database } from '../db/index.js';
@@ -61,7 +61,8 @@ export function createExportRouter(db: Database) {
       })
       .returning();
 
-    // Process synchronously
+    // TODO: Move export processing to a background worker (e.g. BullMQ) to avoid
+    // request timeouts on large exports. Currently processes synchronously.
     try {
       const data = await queryFilteredEvents(db, projectId, filters);
       let fileContent: string;
@@ -172,10 +173,10 @@ export function createExportRouter(db: Database) {
     const result = await db
       .select()
       .from(exportJobs)
-      .where(eq(exportJobs.id, exportId))
+      .where(and(eq(exportJobs.id, exportId), inArray(exportJobs.projectId, projectIds)))
       .limit(1);
 
-    if (result.length === 0 || !projectIds.includes(result[0].projectId)) {
+    if (result.length === 0) {
       return c.json({ code: 'NOT_FOUND', message: 'Export job not found' }, 404);
     }
 
@@ -298,6 +299,16 @@ async function queryFilteredEvents(
   }));
 }
 
+// --- Helper: escape CSV field with formula injection protection ---
+function escapeCsvField(val: unknown): string {
+  let str = String(val ?? '');
+  // Prevent formula injection
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
 // --- Helper: generate CSV ---
 function generateCSV(
   data: Array<Record<string, unknown>>
@@ -324,10 +335,7 @@ function generateCSV(
 
   const rows = data.map((row) =>
     headers
-      .map((h) => {
-        const val = row[h] ?? '';
-        return `"${String(val).replace(/"/g, '""')}"`;
-      })
+      .map((h) => escapeCsvField(row[h]))
       .join(',')
   );
 

@@ -13,8 +13,10 @@ import {
   Trash2,
   X,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { useToast } from '@/components/toast';
 
 interface Condition {
   field: string;
@@ -64,11 +66,14 @@ const channelColors: Record<string, string> = {
 };
 
 export default function NotificationsPage() {
+  const { toast } = useToast();
   const [rules, setRules] = useState<NotificationRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Form state
   const [newName, setNewName] = useState('');
@@ -95,21 +100,31 @@ export default function NotificationsPage() {
     fetchRules();
   }, [fetchRules]);
 
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
   async function toggleRule(id: string, currentlyActive: boolean) {
+    const previousRules = [...rules];
+    setRules((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, is_active: !r.is_active } : r))
+    );
     try {
       await apiFetch(`/dashboard/notifications/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ is_active: !currentlyActive }),
       });
-      setRules((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, is_active: !r.is_active } : r))
-      );
     } catch {
+      setRules(previousRules);
       setError('Failed to toggle rule. Please try again.');
     }
   }
 
   async function deleteRule(id: string) {
+    setDeleting(true);
     try {
       await apiFetch(`/dashboard/notifications/${id}`, {
         method: 'DELETE',
@@ -118,6 +133,8 @@ export default function NotificationsPage() {
       setDeleteConfirm(null);
     } catch {
       setError('Failed to delete rule. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -139,8 +156,27 @@ export default function NotificationsPage() {
   async function createRule() {
     if (!newName.trim()) return;
 
+    // BUG-030: Validate channel config
+    if (channelType === 'email' && !emailAddress.trim()) {
+      setError('Email address is required for email channel.');
+      return;
+    }
+    if (channelType === 'slack' && !webhookUrl.trim()) {
+      setError('Webhook URL is required for Slack channel.');
+      return;
+    }
+    if (channelType === 'discord' && !webhookUrl.trim()) {
+      setError('Webhook URL is required for Discord channel.');
+      return;
+    }
+    if (channelType === 'webhook' && !webhookCustomUrl.trim()) {
+      setError('Webhook URL is required for webhook channel.');
+      return;
+    }
+
     const validConditions = conditions.filter((c) => c.value.trim() !== '');
 
+    setCreating(true);
     try {
       const created = await apiFetch<NotificationRule>('/dashboard/notifications', {
         method: 'POST',
@@ -153,8 +189,11 @@ export default function NotificationsPage() {
       });
       setRules((prev) => [created, ...prev]);
       resetForm();
+      toast('success', 'Notification rule created');
     } catch {
       setError('Failed to create rule. Please try again.');
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -221,6 +260,7 @@ export default function NotificationsPage() {
             <button
               onClick={() => setShowCreate(false)}
               className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center transition"
+              aria-label="Close create form"
             >
               <X className="h-4 w-4" />
             </button>
@@ -271,7 +311,7 @@ export default function NotificationsPage() {
                       ))}
                     </select>
                     <input
-                      type="text"
+                      type={cond.operator === 'gt' || cond.operator === 'lt' ? 'number' : 'text'}
                       placeholder="value"
                       value={cond.value}
                       onChange={(e) => updateCondition(i, { value: e.target.value })}
@@ -281,6 +321,7 @@ export default function NotificationsPage() {
                       <button
                         onClick={() => removeCondition(i)}
                         className="p-2 text-muted-foreground hover:text-destructive transition rounded-lg hover:bg-secondary shrink-0"
+                        aria-label="Remove condition"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -355,8 +396,10 @@ export default function NotificationsPage() {
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={createRule}
-                className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 transition-all btn-shimmer"
+                disabled={creating}
+                className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 transition-all btn-shimmer disabled:opacity-50 flex items-center gap-2"
               >
+                {creating && <Loader2 className="h-4 w-4 animate-spin" />}
                 Create Rule
               </button>
               <button
@@ -444,6 +487,7 @@ export default function NotificationsPage() {
                     onClick={() => toggleRule(rule.id, rule.is_active)}
                     className="p-2 text-muted-foreground hover:text-foreground transition rounded-lg hover:bg-secondary"
                     title={rule.is_active ? 'Deactivate' : 'Activate'}
+                    aria-label={rule.is_active ? 'Deactivate rule' : 'Activate rule'}
                   >
                     {rule.is_active ? (
                       <ToggleRight className="h-5 w-5 text-success" />
@@ -455,8 +499,10 @@ export default function NotificationsPage() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => deleteRule(rule.id)}
-                        className="px-2 py-1 text-xs bg-destructive/20 text-destructive rounded-lg hover:bg-destructive/30 transition font-medium"
+                        disabled={deleting}
+                        className="px-2 py-1 text-xs bg-destructive/20 text-destructive rounded-lg hover:bg-destructive/30 transition font-medium disabled:opacity-50 flex items-center gap-1"
                       >
+                        {deleting && <Loader2 className="h-3 w-3 animate-spin" />}
                         Confirm
                       </button>
                       <button
@@ -471,6 +517,7 @@ export default function NotificationsPage() {
                       onClick={() => setDeleteConfirm(rule.id)}
                       className="p-2 text-muted-foreground hover:text-destructive transition rounded-lg hover:bg-secondary"
                       title="Delete rule"
+                      aria-label="Delete rule"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

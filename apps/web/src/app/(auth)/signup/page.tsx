@@ -30,6 +30,11 @@ export default function SignupPage() {
       return;
     }
 
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('Password must contain uppercase, lowercase, and a number');
+      return;
+    }
+
     setLoading(true);
 
     try {

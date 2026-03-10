@@ -58,7 +58,8 @@ export default function TenantsPage() {
       const res = await apiFetch<{ data: Tenant[] }>('/v1/tenants', {
         headers: apiHeaders(),
       });
-      setTenants(res.data ?? (res as unknown as Tenant[]));
+      const data = Array.isArray(res) ? res : (res as { data?: Tenant[] }).data ?? [];
+      setTenants(data);
     } catch {
       setError('Failed to load tenants');
     } finally {
@@ -132,6 +133,10 @@ export default function TenantsPage() {
             <div
               key={tenant.id}
               className="border border-border/60 rounded-xl bg-card p-5 card-hover transition-all cursor-pointer"
+              onClick={() => {
+                const params = new URLSearchParams({ tenant_id: tenant.externalId });
+                window.location.href = `/dashboard/events?${params.toString()}`;
+              }}
             >
               <div className="flex items-center gap-4">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">

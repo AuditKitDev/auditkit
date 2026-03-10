@@ -6,13 +6,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-US', {
+  const d = new Date(date);
+  return d.toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit',
-  }).format(new Date(date));
+    timeZoneName: 'short',
+  });
 }
 
 export function formatRelative(date: string | Date): string {

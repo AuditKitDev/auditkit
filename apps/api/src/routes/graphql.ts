@@ -16,7 +16,7 @@ import { auditEvents, merkleRoots } from '../db/schema.js';
 import { computeRowHash } from '../services/hash-chain.js';
 import type { Database } from '../db/index.js';
 
-const MAX_QUERY_DEPTH = 10;
+const MAX_QUERY_DEPTH = 7;
 
 function getQueryDepth(query: string): number {
   let depth = 0;
@@ -378,7 +378,7 @@ export function createGraphQLRouter(db: Database) {
     }
 
     if (getQueryDepth(query) > MAX_QUERY_DEPTH) {
-      return c.json({ errors: [{ message: `Query depth exceeds maximum of ${MAX_QUERY_DEPTH}` }] }, 400);
+      return c.json({ errors: [{ message: 'Query depth exceeds maximum allowed depth of 7' }] }, 400);
     }
 
     const schema = buildSchema(db, auth.projectId);
@@ -405,7 +405,7 @@ export function createGraphQLRouter(db: Database) {
     }
 
     if (getQueryDepth(query) > MAX_QUERY_DEPTH) {
-      return c.json({ errors: [{ message: `Query depth exceeds maximum of ${MAX_QUERY_DEPTH}` }] }, 400);
+      return c.json({ errors: [{ message: 'Query depth exceeds maximum allowed depth of 7' }] }, 400);
     }
 
     let parsedVariables: Record<string, unknown> | undefined;

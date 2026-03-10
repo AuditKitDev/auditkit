@@ -38,6 +38,17 @@ export function createDashboardRouter(db: Database) {
     Variables: { user: SessionUser; projects: SessionProject[] };
   }>();
 
+  // GET /dashboard/me — current user info
+  router.get('/me', async (c) => {
+    const user = c.get('user');
+    return c.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
+  });
+
   // GET /dashboard/projects — list user's projects
   router.get('/projects', async (c) => {
     const user = c.get('user');
@@ -133,6 +144,11 @@ export function createDashboardRouter(db: Database) {
 
   // POST /dashboard/api-keys — create new API key
   router.post('/api-keys', async (c) => {
+    const user = c.get('user');
+    if (!user.emailVerified) {
+      return c.json({ code: 'EMAIL_NOT_VERIFIED', message: 'Email verification required to create API keys' }, 403);
+    }
+
     const userProjects = c.get('projects');
     if (userProjects.length === 0) {
       return c.json({ code: 'NO_PROJECT', message: 'No project found' }, 400);

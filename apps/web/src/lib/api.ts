@@ -1,15 +1,6 @@
-import { getToken } from './auth';
+import { clearToken } from './auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-function getSessionCookieToken(): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/(?:^|;\s*)session=([^;]+)/);
-  if (!match) return null;
-
-  const token = decodeURIComponent(match[1]);
-  return token.startsWith('st_') ? token : null;
-}
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -21,6 +12,16 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
       ...options?.headers,
     },
   });
+
+  // BUG-019: Intercept 401 responses and redirect to login
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login?expired=1';
+    }
+    throw new Error('Session expired. Please log in again.');
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message || `API error: ${res.status}`);
@@ -31,11 +32,8 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   return res.json();
 }
 
-// Dashboard requests must always use a real session token.
+// BUG-004: The httpOnly session cookie is sent automatically via credentials: 'include'.
+// BUG-005: Send X-Requested-With header for CSRF protection.
 export function apiHeaders(): Record<string, string> {
-  const sessionToken = getToken() || getSessionCookieToken();
-  if (sessionToken) {
-    return { Authorization: `Bearer ${sessionToken}` };
-  }
-  return {};
+  return { 'X-Requested-With': 'XMLHttpRequest' };
 }

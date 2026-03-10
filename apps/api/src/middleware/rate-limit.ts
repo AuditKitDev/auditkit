@@ -33,7 +33,7 @@ interface PlanCacheEntry {
 }
 
 const planCache = new Map<string, PlanCacheEntry>();
-const PLAN_CACHE_TTL = 60_000; // 1 minute
+const PLAN_CACHE_TTL = 10_000; // 10 seconds
 
 // --- Monthly usage Redis cache TTL ---
 const MONTHLY_USAGE_CACHE_TTL = 30; // seconds
@@ -94,24 +94,25 @@ async function checkRateLimit(
   windowMs: number
 ): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
   const now = Date.now();
-  const windowStart = now - windowMs;
+  const windowSeconds = Math.ceil(windowMs / 1000);
 
-  const pipeline = redis.pipeline();
-  pipeline.zremrangebyscore(key, '-inf', windowStart);
-  pipeline.zadd(key, now, `${now}:${Math.random()}`);
-  pipeline.zcard(key);
-  pipeline.pexpire(key, windowMs * 2);
+  // Atomic: INCR first, then check result
+  const count = await redis.incr(key);
 
-  const results = await pipeline.exec();
-  const count = results![2][1] as number;
-
-  if (count > limit) {
-    // Over limit — remove the one we just added
-    await redis.zremrangebyscore(key, now, now);
-    return { allowed: false, remaining: 0, resetAt: now + windowMs };
+  if (count === 1) {
+    // First request in this window — set TTL
+    await redis.expire(key, windowSeconds);
   }
 
-  return { allowed: true, remaining: limit - count, resetAt: now + windowMs };
+  if (count > limit) {
+    const ttl = await redis.pttl(key);
+    const resetAt = now + (ttl > 0 ? ttl : windowMs);
+    return { allowed: false, remaining: 0, resetAt };
+  }
+
+  const ttl = await redis.pttl(key);
+  const resetAt = now + (ttl > 0 ? ttl : windowMs);
+  return { allowed: true, remaining: limit - count, resetAt };
 }
 
 // --- Get cached monthly usage from Redis, falling back to DB ---

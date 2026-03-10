@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { formatRelative } from '@/lib/utils';
+import { useToast } from '@/components/toast';
 
 interface AnomalyAlert {
   id: string;
@@ -72,6 +73,7 @@ function SkeletonCard() {
 }
 
 export default function AnomaliesPage() {
+  const { toast } = useToast();
   const [alerts, setAlerts] = useState<AnomalyAlert[]>([]);
   const [rules, setRules] = useState<AnomalyRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +83,7 @@ export default function AnomaliesPage() {
   const [toggling, setToggling] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [detectionActive, setDetectionActive] = useState(true);
+  const [togglingGlobal, setTogglingGlobal] = useState(false);
 
   const fetchAlerts = useCallback(async () => {
     setLoading(true);
@@ -115,6 +118,30 @@ export default function AnomaliesPage() {
     fetchRules();
   }, [fetchAlerts, fetchRules]);
 
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
+  async function toggleGlobalDetection() {
+    setTogglingGlobal(true);
+    setError(null);
+    try {
+      await apiFetch('/dashboard/anomaly-settings/global', {
+        method: 'PATCH',
+        body: JSON.stringify({ active: !detectionActive }),
+      });
+      setDetectionActive((prev) => !prev);
+      toast('success', detectionActive ? 'Anomaly detection disabled' : 'Anomaly detection enabled');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to toggle detection');
+    } finally {
+      setTogglingGlobal(false);
+    }
+  }
+
   async function updateAlertStatus(alertId: string, status: 'acknowledged' | 'resolved') {
     setUpdating(alertId);
     setError(null);
@@ -126,6 +153,7 @@ export default function AnomaliesPage() {
       setAlerts((prev) =>
         prev.map((a) => (a.id === alertId ? { ...a, status } : a))
       );
+      toast('success', `Alert ${status}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update alert');
     } finally {
@@ -153,6 +181,10 @@ export default function AnomaliesPage() {
 
   async function updateThreshold(ruleId: string, threshold: number) {
     setError(null);
+    if (threshold < 1 || threshold > 10000) {
+      setError('Threshold must be between 1 and 10,000.');
+      return;
+    }
     try {
       await apiFetch(`/dashboard/anomaly-settings/${ruleId}`, {
         method: 'PATCH',
@@ -161,6 +193,7 @@ export default function AnomaliesPage() {
       setRules((prev) =>
         prev.map((r) => (r.id === ruleId ? { ...r, threshold } : r))
       );
+      toast('info', 'Threshold saved');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update threshold');
     }
@@ -178,22 +211,23 @@ export default function AnomaliesPage() {
               Monitor unusual patterns and suspicious activity across your audit events.
             </p>
           </div>
-          <span
-            className={`text-[11px] px-3 py-1 rounded-full font-medium ${
+          <button
+            onClick={toggleGlobalDetection}
+            disabled={togglingGlobal}
+            className={`text-[11px] px-3 py-1 rounded-full font-medium cursor-pointer transition-all ${
               detectionActive
-                ? 'bg-success/20 text-success border border-success/30'
-                : 'bg-secondary text-muted-foreground border border-border/60'
+                ? 'bg-success/20 text-success border border-success/30 hover:bg-success/30'
+                : 'bg-secondary text-muted-foreground border border-border/60 hover:bg-secondary/80'
             }`}
+            title={detectionActive ? 'Click to disable detection' : 'Click to enable detection'}
           >
-            {detectionActive ? (
-              <>
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-success mr-1.5 animate-pulse" />
-                Active
-              </>
-            ) : (
-              'Inactive'
-            )}
-          </span>
+            {togglingGlobal ? (
+              <Loader2 className="inline h-3 w-3 animate-spin mr-1" />
+            ) : detectionActive ? (
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-success mr-1.5 animate-pulse" />
+            ) : null}
+            {detectionActive ? 'Active' : 'Inactive'}
+          </button>
         </div>
         <button
           onClick={fetchAlerts}
@@ -382,6 +416,7 @@ export default function AnomaliesPage() {
                   disabled={toggling === rule.id}
                   className="shrink-0"
                   title={rule.enabled ? 'Disable' : 'Enable'}
+                  aria-label={rule.enabled ? 'Disable rule' : 'Enable rule'}
                 >
                   {toggling === rule.id ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -400,6 +435,8 @@ export default function AnomaliesPage() {
                     <label className="text-xs text-muted-foreground/60">Threshold:</label>
                     <input
                       type="number"
+                      min={1}
+                      max={10000}
                       value={rule.threshold}
                       onChange={(e) => {
                         const val = parseInt(e.target.value, 10);
@@ -414,6 +451,7 @@ export default function AnomaliesPage() {
                         if (!isNaN(val)) updateThreshold(rule.id, val);
                       }}
                       className="w-20 px-2 py-1.5 text-xs bg-secondary border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 transition-all text-center font-mono"
+                      aria-label={`Threshold for ${rule.name}`}
                     />
                   </div>
                 )}

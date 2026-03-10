@@ -7,8 +7,10 @@ import {
   Check,
   Info,
   MapPin,
+  X,
 } from 'lucide-react';
 import { apiFetch, apiHeaders } from '@/lib/api';
+import { useToast } from '@/components/toast';
 
 interface ResidencyConfig {
   region: string;
@@ -40,12 +42,14 @@ const regions = [
 ];
 
 export default function ResidencyPage() {
+  const { toast } = useToast();
   const [currentRegion, setCurrentRegion] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const fetchResidency = useCallback(async () => {
     setLoading(true);
@@ -70,8 +74,21 @@ export default function ResidencyPage() {
     fetchResidency();
   }, [fetchResidency]);
 
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
+  function handleSaveClick() {
+    if (selectedRegion === null || !hasChanges) return;
+    setShowConfirmModal(true);
+  }
+
   async function handleSave() {
     if (selectedRegion === null) return;
+    setShowConfirmModal(false);
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -82,6 +99,7 @@ export default function ResidencyPage() {
         body: JSON.stringify({ region: selectedRegion }),
       });
       setCurrentRegion(selectedRegion);
+      toast('success', 'Data residency updated');
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -221,7 +239,7 @@ export default function ResidencyPage() {
       {/* Save */}
       <div className="flex items-center gap-3">
         <button
-          onClick={handleSave}
+          onClick={handleSaveClick}
           disabled={!hasChanges || saving}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
             hasChanges && !saving
@@ -239,6 +257,57 @@ export default function ResidencyPage() {
           </span>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={() => setShowConfirmModal(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-card border border-border/60 rounded-xl shadow-2xl shadow-black/40 max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
+                    <AlertTriangle className="h-5 w-5 text-warning" />
+                  </div>
+                  <h3 className="font-bold text-lg">Confirm Region Change</h3>
+                </div>
+                <button onClick={() => setShowConfirmModal(false)} className="p-1 hover:bg-secondary rounded-lg transition" aria-label="Close confirmation dialog">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground mb-2">
+                You are changing your data residency region from{' '}
+                <span className="font-semibold text-foreground">
+                  {regions.find((r) => r.key === currentRegion)?.name || currentRegion}
+                </span>{' '}
+                to{' '}
+                <span className="font-semibold text-foreground">
+                  {regions.find((r) => r.key === selectedRegion)?.name || selectedRegion}
+                </span>.
+              </p>
+              <p className="text-sm text-muted-foreground mb-6">
+                New events will be stored in the selected region. Existing events will remain in their current region.
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Yes, change region
+                </button>
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-secondary text-foreground hover:bg-muted transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

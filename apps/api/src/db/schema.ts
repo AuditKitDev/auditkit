@@ -607,6 +607,30 @@ export const refreshTokens = pgTable(
 );
 
 // ============================================
+// Admin Activity Logs (sysadmin only)
+// ============================================
+export const adminActivityLogs = pgTable(
+  'admin_activity_logs',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    actorEmail: text('actor_email').notNull(),
+    action: text('action').notNull(), // user.signup, user.login, api_key.created, project.created, etc.
+    resourceType: text('resource_type'), // user, project, api_key, webhook, etc.
+    resourceId: text('resource_id'),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
+    ipAddress: inet('ip_address'),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_admin_logs_created').on(table.createdAt),
+    index('idx_admin_logs_actor').on(table.actorId),
+    index('idx_admin_logs_action').on(table.action),
+  ]
+);
+
+// ============================================
 // Export Jobs
 // ============================================
 export const exportJobs = pgTable('export_jobs', {

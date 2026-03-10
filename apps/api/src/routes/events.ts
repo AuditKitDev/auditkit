@@ -1,3 +1,4 @@
+import { createHmac } from 'crypto';
 import { Hono } from 'hono';
 import { eq, and, desc, gte, lt, ilike, sql, or } from 'drizzle-orm';
 import { requireScope, type AuthContext } from '../middleware/auth.js';
@@ -24,6 +25,23 @@ import {
 const eventCounters = new Map<string, number>();
 const MERKLE_BATCH_SIZE = 100;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CURSOR_SECRET = process.env.CURSOR_SECRET || 'auditkit-cursor-default-key';
+
+function signCursor(id: number): string {
+  const payload = String(id);
+  const sig = createHmac('sha256', CURSOR_SECRET).update(payload).digest('hex').slice(0, 16);
+  return Buffer.from(`${payload}:${sig}`).toString('base64');
+}
+
+function verifyCursor(cursor: string): number | null {
+  try {
+    const decoded = Buffer.from(cursor, 'base64').toString();
+    const [payload, sig] = decoded.split(':');
+    const expected = createHmac('sha256', CURSOR_SECRET).update(payload).digest('hex').slice(0, 16);
+    if (sig !== expected) return null;
+    return Number(payload);
+  } catch { return null; }
+}
 
 export function createEventsRouter(db: Database) {
   const router = new Hono<{ Variables: { auth: AuthContext } }>();
@@ -75,7 +93,7 @@ export function createEventsRouter(db: Database) {
       const existing = await db
         .select({ eventId: auditEvents.eventId, rowHash: auditEvents.rowHash })
         .from(auditEvents)
-        .where(eq(auditEvents.idempotencyKey, body.idempotency_key))
+        .where(and(eq(auditEvents.idempotencyKey, body.idempotency_key), eq(auditEvents.projectId, auth.projectId)))
         .limit(1);
 
       if (existing.length > 0) {
@@ -342,6 +360,9 @@ export function createEventsRouter(db: Database) {
 
     // Process all events inside a single transaction with advisory locks
     const results = await db.transaction(async (tx) => {
+      // Set serializable isolation to prevent phantom reads in hash chain
+      await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`);
+
       // Acquire advisory locks for all tenants involved in the batch.
       // Sorting lock keys prevents deadlocks when concurrent batches
       // overlap on multiple tenants.
@@ -537,6 +558,10 @@ export function createEventsRouter(db: Database) {
 
     // Viewer tokens are always scoped to their tenant
     if (auth.type === 'viewer_token' && auth.tenantId) {
+      // If the request specifies a different tenant, deny access
+      if (query.tenant_id && query.tenant_id !== auth.tenantId) {
+        return c.json({ code: 'FORBIDDEN', message: 'Viewer token is scoped to a different tenant' }, 403);
+      }
       conditions.push(eq(auditEvents.tenantId, auth.tenantId));
     } else if (query.tenant_id) {
       // Look up internal tenant ID from external ID
@@ -579,6 +604,9 @@ export function createEventsRouter(db: Database) {
 
     if (query.severity) {
       const severities = query.severity.split(',');
+      if (severities.length > 10) {
+        return c.json({ code: 'INVALID_FIELD', message: 'Maximum 10 severity values allowed' }, 400);
+      }
       conditions.push(
         or(...severities.map((s) => eq(auditEvents.severity, s)))!
       );
@@ -605,12 +633,11 @@ export function createEventsRouter(db: Database) {
     }
 
     if (query.cursor) {
-      try {
-        const cursorId = Number(Buffer.from(query.cursor, 'base64').toString());
-        conditions.push(lt(auditEvents.id, cursorId));
-      } catch {
-        // Invalid cursor, ignore
+      const cursorId = verifyCursor(query.cursor);
+      if (cursorId === null) {
+        return c.json({ code: 'INVALID_CURSOR', message: 'Invalid or tampered pagination cursor' }, 400);
       }
+      conditions.push(lt(auditEvents.id, cursorId));
     }
 
     const limit = Math.min(Number(query.limit) || 50, 1000);
@@ -704,7 +731,7 @@ export function createEventsRouter(db: Database) {
     if (hasMore) events.pop();
 
     const cursor = events.length > 0
-      ? Buffer.from(String(events[events.length - 1].id)).toString('base64')
+      ? signCursor(events[events.length - 1].id)
       : null;
 
     return c.json({
@@ -828,7 +855,7 @@ export function createEventsRouter(db: Database) {
     if (hasMore) events.pop();
 
     const cursor = events.length > 0
-      ? Buffer.from(String(events[events.length - 1].id)).toString('base64')
+      ? signCursor(events[events.length - 1].id)
       : null;
 
     return c.json({

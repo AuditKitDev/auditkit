@@ -30,7 +30,6 @@ export default function VerificationPage() {
   const [tenantsLoading, setTenantsLoading] = useState(true);
   const [selectedTenant, setSelectedTenant] = useState('');
   const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +39,8 @@ export default function VerificationPage() {
       const res = await apiFetch<{ data: Tenant[] }>('/v1/tenants', {
         headers: apiHeaders(),
       });
-      setTenants(res.data ?? (res as unknown as Tenant[]));
+      const data = Array.isArray(res) ? res : (res as { data?: Tenant[] }).data ?? [];
+      setTenants(data);
     } catch {
       setError('Failed to load tenants');
     } finally {
@@ -57,31 +57,17 @@ export default function VerificationPage() {
     setRunning(true);
     setResult(null);
     setError(null);
-    setProgress(0);
-
-    // Animate progress while waiting for response
-    const progressInterval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 90) return p;
-        return p + Math.random() * 15;
-      });
-    }, 300);
 
     try {
       const res = await apiFetch<VerificationResult>(
         `/v1/verify?tenant_id=${encodeURIComponent(selectedTenant)}`,
         { headers: apiHeaders() }
       );
-      setProgress(100);
-      setTimeout(() => {
-        setResult(res);
-        setRunning(false);
-      }, 400);
+      setResult(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
-      setRunning(false);
     } finally {
-      clearInterval(progressInterval);
+      setRunning(false);
     }
   }
 
@@ -168,15 +154,24 @@ export default function VerificationPage() {
               Checking each event's SHA-256 hash against the previous event.
             </p>
           </div>
-          {/* Progress Bar */}
-          <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+          {/* Indeterminate Progress Bar */}
+          <div className="w-full bg-secondary rounded-full h-2 overflow-hidden relative">
             <div
-              className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${Math.min(progress, 100)}%` }}
+              className="absolute h-2 rounded-full bg-primary"
+              style={{
+                width: '30%',
+                animation: 'indeterminate-slide 1.5s ease-in-out infinite',
+              }}
             />
           </div>
+          <style jsx>{`
+            @keyframes indeterminate-slide {
+              0% { left: -30%; }
+              100% { left: 100%; }
+            }
+          `}</style>
           <p className="text-xs text-muted-foreground/50 text-center mt-2">
-            {Math.round(Math.min(progress, 100))}%
+            Verifying...
           </p>
         </div>
       )}

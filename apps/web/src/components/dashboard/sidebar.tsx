@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Logo } from '@/components/logo';
 import { cn } from '@/lib/utils';
 import { apiFetch, apiHeaders } from '@/lib/api';
+import { clearToken } from '@/lib/auth';
 import {
   LayoutDashboard,
   List,
@@ -27,6 +28,8 @@ import {
   AlertTriangle,
   Shield,
   Globe,
+  LogOut,
+  Sparkles,
 } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 
@@ -78,6 +81,7 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [project, setProject] = useState<ProjectInfo | null>(null);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [isSysadmin, setIsSysadmin] = useState(false);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -97,12 +101,16 @@ export function Sidebar() {
   useEffect(() => {
     async function loadSidebarData() {
       try {
-        const [projectsRes, usageRes] = await Promise.allSettled([
+        const [projectsRes, usageRes, meRes] = await Promise.allSettled([
           apiFetch<{ data: { id: string; name: string }[] }>('/dashboard/projects', { headers: apiHeaders() }),
           apiFetch<{ events_this_month: number; limit: number; plan: string; resets_at: string }>('/billing/subscription', { headers: apiHeaders() }),
+          apiFetch<{ role: string }>('/dashboard/me', { headers: apiHeaders() }),
         ]);
         if (projectsRes.status === 'fulfilled' && projectsRes.value.data.length > 0) {
           setProject({ name: projectsRes.value.data[0].name, environment: 'Production' });
+        }
+        if (meRes.status === 'fulfilled' && meRes.value.role === 'sysadmin') {
+          setIsSysadmin(true);
         }
         if (usageRes.status === 'fulfilled') {
           const u = usageRes.value;
@@ -134,6 +142,14 @@ export function Sidebar() {
 
   const handleNavClick = () => {
     setMobileOpen(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } catch { /* logout may fail if session already expired */ }
+    clearToken();
+    window.location.href = '/login';
   };
 
   const sidebarContent = (
@@ -169,6 +185,27 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-3">
         <ul className="space-y-0.5">
+          {/* Sysadmin link — only visible to sysadmin users */}
+          {isSysadmin && (() => {
+            const isActive = pathname === '/dashboard/sysadmin';
+            return (
+              <li>
+                <Link
+                  href="/dashboard/sysadmin"
+                  onClick={handleNavClick}
+                  className={cn(
+                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all',
+                    isActive
+                      ? 'bg-destructive/10 text-destructive font-medium'
+                      : 'text-destructive/70 hover:text-destructive hover:bg-destructive/5'
+                  )}
+                >
+                  <Shield className="h-4 w-4" />
+                  System Admin
+                </Link>
+              </li>
+            );
+          })()}
           {navigation.map((item) => {
             if (item.children) {
               return (
@@ -259,6 +296,21 @@ export function Sidebar() {
             <ExternalLink className="h-3.5 w-3.5" />
             Status
           </a>
+          <button
+            onClick={() => { localStorage.removeItem('auditkit_onboarding_complete'); window.location.reload(); }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-muted-foreground hover:text-foreground transition rounded-md hover:bg-secondary/50"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Setup
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-muted-foreground hover:text-destructive transition rounded-md hover:bg-destructive/10"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Logout
+          </button>
           <ThemeToggle />
         </div>
 

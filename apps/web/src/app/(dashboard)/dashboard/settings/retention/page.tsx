@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Clock, Check, AlertTriangle, Info, Loader2 } from 'lucide-react';
+import { Clock, Check, AlertTriangle, Info, Loader2, X } from 'lucide-react';
 import { apiFetch, apiHeaders } from '@/lib/api';
+import { useToast } from '@/components/toast';
 
 const retentionOptions = [
   {
@@ -47,9 +48,11 @@ export default function RetentionPage() {
   const [currentRetention, setCurrentRetention] = useState<number | null>(null);
   const [selectedRetention, setSelectedRetention] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const fetchRetention = useCallback(async () => {
     setLoading(true);
@@ -74,8 +77,27 @@ export default function RetentionPage() {
     fetchRetention();
   }, [fetchRetention]);
 
-  async function handleSave() {
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
+  function handleSaveClick() {
     if (selectedRetention === null) return;
+    const isReduction = currentRetention !== null && selectedRetention < currentRetention;
+    if (isReduction) {
+      setShowConfirmModal(true);
+    } else {
+      performSave();
+    }
+  }
+
+  async function performSave() {
+    if (selectedRetention === null) return;
+    const previousRetention = currentRetention;
+    setShowConfirmModal(false);
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -87,8 +109,10 @@ export default function RetentionPage() {
       });
       setCurrentRetention(selectedRetention);
       setSaved(true);
+      toast('success', 'Retention policy updated');
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
+      setSelectedRetention(previousRetention);
       setError(err instanceof Error ? err.message : 'Failed to update retention policy');
     } finally {
       setSaving(false);
@@ -224,7 +248,7 @@ export default function RetentionPage() {
       {/* Save */}
       <div className="flex items-center gap-3">
         <button
-          onClick={handleSave}
+          onClick={handleSaveClick}
           disabled={!hasChanges || saving}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
             hasChanges && !saving
@@ -242,6 +266,55 @@ export default function RetentionPage() {
           </span>
         )}
       </div>
+
+      {/* Confirmation Modal for Retention Reduction */}
+      {showConfirmModal && (
+        <>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={() => setShowConfirmModal(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-card border border-border/60 rounded-xl shadow-2xl shadow-black/40 max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                  </div>
+                  <h3 className="font-bold text-lg">Confirm Retention Reduction</h3>
+                </div>
+                <button onClick={() => setShowConfirmModal(false)} className="p-1 hover:bg-secondary rounded-lg transition">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground mb-2">
+                You are reducing retention from{' '}
+                <span className="font-semibold text-foreground">
+                  {retentionOptions.find((o) => o.days === currentRetention)?.label || `${currentRetention} days`}
+                </span>{' '}
+                to{' '}
+                <span className="font-semibold text-foreground">
+                  {retentionOptions.find((o) => o.days === selectedRetention)?.label || `${selectedRetention} days`}
+                </span>.
+              </p>
+              <p className="text-sm text-destructive font-medium mb-6">
+                Events older than the new retention period will be permanently deleted within 24 hours. This cannot be undone.
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={performSave}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all"
+                >
+                  Yes, reduce retention
+                </button>
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-secondary text-foreground hover:bg-muted transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

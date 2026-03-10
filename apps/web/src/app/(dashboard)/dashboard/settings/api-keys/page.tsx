@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Key, Plus, Copy, Check, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { Key, Plus, Copy, Check, Trash2, Loader2, AlertTriangle, Mail } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { useToast } from '@/components/toast';
 
 interface ApiKey {
   id: string;
@@ -41,6 +42,7 @@ function SkeletonCard() {
 }
 
 export default function ApiKeysPage() {
+  const { toast } = useToast();
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +54,14 @@ export default function ApiKeysPage() {
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailVerified, setEmailVerified] = useState<boolean>(true);
+
+  useEffect(() => {
+    apiFetch<{ user: { emailVerified: boolean } }>('/auth/me')
+      .then((data) => setEmailVerified(data.user.emailVerified))
+      .catch(() => {});
+  }, []);
 
   const fetchKeys = useCallback(async () => {
     setLoading(true);
@@ -70,8 +80,19 @@ export default function ApiKeysPage() {
     fetchKeys();
   }, [fetchKeys]);
 
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
   async function createKey() {
-    if (!newKeyName.trim()) return;
+    if (!newKeyName.trim()) {
+      setNameError('Key name is required.');
+      return;
+    }
+    setNameError(null);
     setCreating(true);
     try {
       const res = await apiFetch<{ key: string; apiKey: ApiKey }>('/dashboard/api-keys', {
@@ -97,6 +118,7 @@ export default function ApiKeysPage() {
       });
       setKeys((prev) => prev.filter((k) => k.id !== id));
       setDeleteConfirm(null);
+      toast('success', 'API key deleted');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete key');
     } finally {
@@ -116,6 +138,17 @@ export default function ApiKeysPage() {
 
   return (
     <div>
+      {!emailVerified && (
+        <div className="mb-6 border border-amber-500/20 bg-amber-500/5 rounded-lg px-4 py-3 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+            <Mail className="h-4 w-4 text-amber-500" />
+          </div>
+          <p className="text-sm text-amber-400 font-medium">
+            Please verify your email to create API keys.
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">API Keys</h1>
@@ -125,7 +158,8 @@ export default function ApiKeysPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 transition-all"
+          disabled={!emailVerified}
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="h-4 w-4" />
           Create New Key
@@ -144,16 +178,21 @@ export default function ApiKeysPage() {
 
       {/* Created Key Banner */}
       {createdKey && (
-        <div className="border border-success/30 bg-success/10 rounded-xl p-4 mb-6">
+        <div className="border border-warning/30 bg-warning/10 rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-success">
-              API key created. Copy it now -- it will not be shown again.
+            <p className="text-sm font-semibold text-warning flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Save this key now. It will never be shown again.
             </p>
             <button
-              onClick={() => setCreatedKey(null)}
+              onClick={() => {
+                if (window.confirm('Have you copied this API key? It cannot be retrieved after dismissing.')) {
+                  setCreatedKey(null);
+                }
+              }}
               className="text-muted-foreground hover:text-foreground text-sm"
             >
-              Dismiss
+              I&apos;ve copied it
             </button>
           </div>
           <div className="flex items-center gap-2 bg-background rounded-xl px-3 py-2 border border-border/60">
@@ -161,6 +200,7 @@ export default function ApiKeysPage() {
             <button
               onClick={() => copyToClipboard('created', createdKey)}
               className="text-muted-foreground hover:text-foreground transition p-1.5 rounded-lg hover:bg-secondary"
+              aria-label="Copy API key"
             >
               {copiedId === 'created' ? (
                 <Check className="h-4 w-4 text-success" />
@@ -183,9 +223,15 @@ export default function ApiKeysPage() {
                 type="text"
                 placeholder="e.g., Production API Key"
                 value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm bg-secondary border border-border/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 placeholder:text-muted-foreground/40 transition-all"
+                onChange={(e) => {
+                  setNewKeyName(e.target.value);
+                  if (nameError) setNameError(null);
+                }}
+                className={`w-full px-3 py-2.5 text-sm bg-secondary border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/30 placeholder:text-muted-foreground/40 transition-all ${nameError ? 'border-destructive/60' : 'border-border/60'}`}
               />
+              {nameError && (
+                <p className="text-xs text-destructive mt-1">{nameError}</p>
+              )}
             </div>
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Environment</label>
@@ -275,6 +321,7 @@ export default function ApiKeysPage() {
                     onClick={() => copyToClipboard(key.id, key.keyPrefix)}
                     className="p-2 text-muted-foreground hover:text-foreground transition rounded-lg hover:bg-secondary"
                     title="Copy key prefix (full key only shown at creation)"
+                    aria-label="Copy key prefix"
                   >
                     {copiedId === key.id ? (
                       <Check className="h-4 w-4 text-success" />
@@ -307,6 +354,7 @@ export default function ApiKeysPage() {
                       onClick={() => setDeleteConfirm(key.id)}
                       className="p-2 text-muted-foreground hover:text-destructive transition rounded-lg hover:bg-secondary"
                       title="Delete key"
+                      aria-label="Delete key"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

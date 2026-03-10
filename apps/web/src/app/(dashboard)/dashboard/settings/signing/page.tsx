@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { useToast } from '@/components/toast';
 import { formatDate, formatRelative } from '@/lib/utils';
 
 interface SigningKey {
@@ -39,6 +40,7 @@ function SkeletonCard() {
 }
 
 export default function SigningKeysPage() {
+  const { toast } = useToast();
   const [keys, setKeys] = useState<SigningKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +65,13 @@ export default function SigningKeysPage() {
     fetchKeys();
   }, [fetchKeys]);
 
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
   async function rotateKey() {
     setRotating(true);
     setError(null);
@@ -76,6 +85,7 @@ export default function SigningKeysPage() {
         [newKey, ...prev.map((k) => (k.active ? { ...k, active: false, revokedAt: new Date().toISOString() } : k))]
       );
       setShowRotateConfirm(false);
+      toast('success', 'Key rotated successfully');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to rotate key');
     } finally {
@@ -138,6 +148,7 @@ export default function SigningKeysPage() {
                 <button
                   onClick={() => setShowRotateConfirm(false)}
                   className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center transition"
+                  aria-label="Close rotation dialog"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -147,7 +158,8 @@ export default function SigningKeysPage() {
                 <div>
                   <p className="text-sm font-medium text-warning">This action cannot be undone</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    The current signing key will be revoked. New events will be signed with the new key.
+                    The current active key will be revoked and replaced with a new key.
+                    New events will be signed with the new key.
                     Existing events remain verifiable with the old public key.
                   </p>
                 </div>
@@ -205,6 +217,7 @@ export default function SigningKeysPage() {
                 onClick={() => copyPublicKey(activeKey.publicKey)}
                 className="p-1.5 rounded-lg hover:bg-secondary transition shrink-0"
                 title="Copy public key"
+                aria-label="Copy public key"
               >
                 {copied ? (
                   <Check className="h-3.5 w-3.5 text-success" />
