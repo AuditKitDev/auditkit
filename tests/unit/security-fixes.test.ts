@@ -48,7 +48,7 @@ describe('Cursor signing', () => {
   });
 
   it('rejects a tampered cursor', () => {
-    const cursor = signCursor(42);
+    const _cursor = signCursor(42);
     const tampered = Buffer.from('42:0000000000000000').toString('base64');
     expect(verifyCursor(tampered)).toBeNull();
   });
