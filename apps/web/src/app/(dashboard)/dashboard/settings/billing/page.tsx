@@ -185,7 +185,10 @@ export default function BillingPage() {
   const eventPct = isUnlimitedEvents ? 5 : eventQuota === 0 ? 0 : Math.min((eventCount / eventQuota) * 100, 100);
   const projectPct = isUnlimitedProjects ? 5 : Math.min((projectCount / projectQuota) * 100, 100);
 
-  const upgradePlans = plans.filter((p) => p.key !== currentPlan && p.key !== 'free');
+  const isSysadmin = subscription?.plan_name === 'Sysadmin';
+  const upgradePlans = isSysadmin
+    ? plans.filter((p) => p.key !== 'free')
+    : plans.filter((p) => p.key !== currentPlan && p.key !== 'free');
 
   return (
     <div>
@@ -328,8 +331,8 @@ export default function BillingPage() {
       </h2>
       <div className={`grid gap-4 mb-8 ${upgradePlans.length === 3 ? 'md:grid-cols-3' : upgradePlans.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-md'}`}>
         {upgradePlans.map((plan) => {
-          const isCurrent = plan.key === currentPlan;
-          const isDowngrade = plans.findIndex((p) => p.key === currentPlan) > plans.findIndex((p) => p.key === plan.key);
+          const isCurrent = !isSysadmin && plan.key === currentPlan;
+          const isDowngrade = !isSysadmin && plans.findIndex((p) => p.key === currentPlan) > plans.findIndex((p) => p.key === plan.key);
 
           return (
             <div

@@ -88,8 +88,6 @@ export async function createCheckoutSession(
 
   if (customerId) {
     sessionParams.customer = customerId;
-  } else {
-    sessionParams.customer_creation = 'always';
   }
 
   return stripe.checkout.sessions.create(sessionParams);
