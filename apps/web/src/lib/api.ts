@@ -14,7 +14,8 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   });
 
   // BUG-019: Intercept 401 responses and redirect to login
-  if (res.status === 401) {
+  // Skip redirect for auth endpoints — 401 there means wrong credentials, not expired session
+  if (res.status === 401 && !path.startsWith('/auth/')) {
     clearToken();
     if (typeof window !== 'undefined') {
       window.location.href = '/login?expired=1';
