@@ -1,6 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
 import { createHash } from 'crypto';
+import { getCookie } from 'hono/cookie';
 import { eq, and, gte } from 'drizzle-orm';
 import type { Database } from '../db/index.js';
 import { apiKeys, projects, sessions, viewerTokens } from '../db/schema.js';
@@ -20,17 +21,30 @@ function hashKey(key: string): string {
 
 /**
  * Authentication middleware.
- * Supports API keys (Bearer ak_...) and viewer tokens (Bearer vt_...).
+ * Supports API keys (Bearer ak_...), viewer tokens (Bearer vt_...),
+ * and session tokens via httpOnly cookie fallback.
  */
 export function authMiddleware(db: Database) {
   return createMiddleware<{ Variables: { auth: AuthContext } }>(async (c, next) => {
     const authHeader = c.req.header('Authorization');
 
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new HTTPException(401, { message: 'Missing or invalid Authorization header' });
+    let token: string | undefined;
+
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
     }
 
-    const token = authHeader.slice(7);
+    // Fallback: read session token from httpOnly cookie (dashboard frontend)
+    if (!token) {
+      const cookieToken = getCookie(c, 'session');
+      if (cookieToken?.startsWith('st_')) {
+        token = cookieToken;
+      }
+    }
+
+    if (!token) {
+      throw new HTTPException(401, { message: 'Missing or invalid Authorization header' });
+    }
 
     if (token.startsWith('ak_')) {
       // API Key authentication
