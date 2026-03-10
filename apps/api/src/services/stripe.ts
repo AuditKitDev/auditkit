@@ -33,7 +33,7 @@ export const PLAN_CONFIGS = {
   pro: {
     name: 'Pro',
     priceId: process.env.STRIPE_PRICE_PRO || 'price_pro_monthly',
-    price: 2900,
+    price: 3900,
     eventQuota: 50000,
     projectQuota: 3,
     retentionDays: 90,

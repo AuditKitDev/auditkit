@@ -37,7 +37,7 @@ const plans = [
   {
     key: 'pro',
     name: 'Pro',
-    price: '$29',
+    price: '$39',
     period: '/mo',
     events: '50K events/mo',
     retention: '90-day retention',
