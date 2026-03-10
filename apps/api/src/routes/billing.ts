@@ -216,7 +216,7 @@ export function createBillingWebhookRouter(db: Database) {
               stripeSubscriptionId: session.subscription,
               plan,
               status: 'active',
-              eventQuota: planConfig.eventQuota === -1 ? 2147483647 : planConfig.eventQuota,
+              eventQuota: (planConfig.eventQuota as number) === -1 ? 2147483647 : planConfig.eventQuota,
               projectQuota: planConfig.projectQuota === -1 ? 2147483647 : planConfig.projectQuota,
               updatedAt: new Date(),
             })
@@ -228,7 +228,7 @@ export function createBillingWebhookRouter(db: Database) {
             stripeSubscriptionId: session.subscription,
             plan,
             status: 'active',
-            eventQuota: planConfig.eventQuota === -1 ? 2147483647 : planConfig.eventQuota,
+            eventQuota: (planConfig.eventQuota as number) === -1 ? 2147483647 : planConfig.eventQuota,
             projectQuota: planConfig.projectQuota === -1 ? 2147483647 : planConfig.projectQuota,
           });
         }
