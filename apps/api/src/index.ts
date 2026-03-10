@@ -48,7 +48,7 @@ app.use('*', cors({
   origin: allowedOrigins,
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'stripe-signature'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'stripe-signature', 'X-Requested-With'],
   maxAge: 3600,
 }));
 app.use('*', requestIdMiddleware);
