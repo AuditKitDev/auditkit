@@ -26,7 +26,7 @@ class ResendEmailProvider implements EmailProvider {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) throw new Error('RESEND_API_KEY is required for ResendEmailProvider');
     this.client = new Resend(apiKey);
-    this.from = process.env.EMAIL_FROM || 'AuditKit <noreply@auditkit.com>';
+    this.from = process.env.EMAIL_FROM || 'AuditKit <noreply@auditkit.dev>';
   }
 
   async sendEmail(to: string, subject: string, html: string): Promise<void> {
