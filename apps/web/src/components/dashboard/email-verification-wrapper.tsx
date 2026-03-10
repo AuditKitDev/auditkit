@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { EmailVerificationBanner } from './email-verification-banner';
 
-export function EmailVerificationWrapper() {
+function EmailVerificationInner() {
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
   const searchParams = useSearchParams();
 
@@ -35,4 +35,12 @@ export function EmailVerificationWrapper() {
   if (emailVerified === null) return null;
 
   return <EmailVerificationBanner emailVerified={emailVerified} />;
+}
+
+export function EmailVerificationWrapper() {
+  return (
+    <Suspense>
+      <EmailVerificationInner />
+    </Suspense>
+  );
 }
