@@ -30,7 +30,12 @@ class ResendEmailProvider implements EmailProvider {
   }
 
   async sendEmail(to: string, subject: string, html: string): Promise<void> {
-    await this.client.emails.send({ from: this.from, to, subject, html });
+    const { data, error } = await this.client.emails.send({ from: this.from, to, subject, html });
+    if (error) {
+      logger.error({ error, to, subject }, 'Resend email failed');
+      throw new Error(`Email send failed: ${error.message}`);
+    }
+    logger.info({ id: data?.id, to }, 'Email sent via Resend');
   }
 }
 
