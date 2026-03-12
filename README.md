@@ -15,9 +15,15 @@
   <a href="https://github.com/AuditKitDev/auditkit/issues">Issues</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/AuditKitDev/auditkit/actions"><img src="https://img.shields.io/github/actions/workflow/status/AuditKitDev/auditkit/ci.yml?label=build" alt="Build Status" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPLv3-blue" alt="License" /></a>
+  <a href="https://www.npmjs.com/package/@auditkit/sdk"><img src="https://img.shields.io/npm/dm/@auditkit/sdk?label=npm%20downloads" alt="npm downloads" /></a>
+</p>
+
 ---
 
-## Quick Start
+## Get Started in 60 Seconds
 
 ```bash
 npm install @auditkit/sdk
@@ -88,3 +94,10 @@ pnpm test:ui      # UI e2e tests
 ## License
 
 AGPLv3 — see [LICENSE](LICENSE). The `/ee` directory requires a [commercial license](mailto:hello@auditkit.dev).
+
+---
+
+## Also By Us
+
+- **[CloakShare](https://github.com/cloakshare/cloakshare)** — Open-source DocSend alternative with canvas rendering, watermarks, and per-page analytics. MIT licensed.
+- **[SiteCrawlIQ](https://github.com/AuditKitDev/sitecrawliq)** — AI-powered SEO + GEO/AEO audit platform. Tracks AI citations across ChatGPT, Perplexity, Claude, and Gemini.
