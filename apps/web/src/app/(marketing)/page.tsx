@@ -879,6 +879,150 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* FAQ */}
+      <section className="max-w-4xl mx-auto px-6 py-28">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-extrabold tracking-tight mb-4">Frequently asked questions</h2>
+          <p className="text-muted-foreground text-lg">
+            Everything you need to know about AuditKit.
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          {[
+            {
+              question: 'What is AuditKit?',
+              answer:
+                'AuditKit is an open-source, tamper-evident audit logging platform built for B2B SaaS. It gives your application immutable, tenant-scoped audit trails with SHA-256 hash chaining and Merkle tree cryptographic proofs. You can use the managed cloud or self-host on your own infrastructure.',
+            },
+            {
+              question: 'How does tamper-proof logging work?',
+              answer:
+                'Every audit event is linked to the previous one using SHA-256 hash chaining. AuditKit also builds Merkle tree proofs over batches of events. If any event is modified or deleted, the hash chain breaks and the tampering is immediately detectable. This gives you cryptographic proof that your audit trail has not been altered.',
+            },
+            {
+              question: 'What compliance standards does AuditKit support?',
+              answer:
+                'AuditKit generates compliance-ready exports for SOC 2, ISO 27001, HIPAA, and GDPR. It supports industry-standard OCSF and CEF event formats, and can produce PDF evidence packages that auditors accept. SIEM streaming to Splunk, Datadog, and Elastic is also included for continuous monitoring.',
+            },
+            {
+              question: 'Can I self-host AuditKit?',
+              answer:
+                'Yes. AuditKit is fully self-hostable using Docker Compose. The project is licensed under AGPLv3 with a commercial license option for enterprises that need it. You get zero vendor lock-in and full control over your data residency.',
+            },
+            {
+              question: 'How fast is setup?',
+              answer:
+                'Most teams are logging their first audit event within 5 minutes. Install the SDK (TypeScript, Python, Go, or Java), call audit.log() with your event data, and you are done. The embeddable React viewer can be dropped into your customer dashboard with a single component.',
+            },
+            {
+              question: "What is the difference between free and paid plans?",
+              answer:
+                'The Free plan includes 1K events per month, 7-day retention, SDK access with hash chaining, and basic search. Pro ($39/mo) adds the embedded viewer, webhooks, anomaly detection, and 50K events. Business ($99/mo) includes SIEM streaming, compliance exports, data residency, and 500K events. Supersize ($349/mo) adds Merkle tree proofs, SSO/SCIM, GraphQL API, 99.99% SLA, and 5M events.',
+            },
+            {
+              question: 'What SDKs and APIs are available?',
+              answer:
+                'AuditKit provides official SDKs for TypeScript, Python, Go, and Java, all with full type safety. The platform also offers a GraphQL API with filtering, pagination, and real-time subscriptions. Webhooks can push events to Slack, Discord, or any HTTP endpoint.',
+            },
+            {
+              question: 'How does tenant-scoped access work?',
+              answer:
+                'Every audit event is associated with a tenant ID. Your customers can only see their own logs, and access is enforced at the API level. The embeddable viewer component automatically scopes to the current tenant, so you can safely embed it in multi-tenant dashboards without any extra access control logic.',
+            },
+          ].map((faq) => (
+            <details
+              key={faq.question}
+              className="group border border-border rounded-xl bg-card overflow-hidden"
+            >
+              <summary className="flex items-center justify-between p-6 cursor-pointer font-semibold hover:bg-secondary/50 transition select-none">
+                {faq.question}
+                <span className="text-muted-foreground ml-4 shrink-0 transition-transform group-open:rotate-45 text-xl leading-none">+</span>
+              </summary>
+              <div className="px-6 pb-6 text-muted-foreground leading-relaxed">
+                {faq.answer}
+              </div>
+            </details>
+          ))}
+        </div>
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: [
+                {
+                  '@type': 'Question',
+                  name: 'What is AuditKit?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'AuditKit is an open-source, tamper-evident audit logging platform built for B2B SaaS. It gives your application immutable, tenant-scoped audit trails with SHA-256 hash chaining and Merkle tree cryptographic proofs. You can use the managed cloud or self-host on your own infrastructure.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'How does tamper-proof logging work?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Every audit event is linked to the previous one using SHA-256 hash chaining. AuditKit also builds Merkle tree proofs over batches of events. If any event is modified or deleted, the hash chain breaks and the tampering is immediately detectable. This gives you cryptographic proof that your audit trail has not been altered.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'What compliance standards does AuditKit support?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'AuditKit generates compliance-ready exports for SOC 2, ISO 27001, HIPAA, and GDPR. It supports industry-standard OCSF and CEF event formats, and can produce PDF evidence packages that auditors accept. SIEM streaming to Splunk, Datadog, and Elastic is also included for continuous monitoring.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'Can I self-host AuditKit?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Yes. AuditKit is fully self-hostable using Docker Compose. The project is licensed under AGPLv3 with a commercial license option for enterprises that need it. You get zero vendor lock-in and full control over your data residency.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'How fast is setup?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Most teams are logging their first audit event within 5 minutes. Install the SDK (TypeScript, Python, Go, or Java), call audit.log() with your event data, and you are done. The embeddable React viewer can be dropped into your customer dashboard with a single component.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'What is the difference between free and paid plans?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'The Free plan includes 1K events per month, 7-day retention, SDK access with hash chaining, and basic search. Pro ($39/mo) adds the embedded viewer, webhooks, anomaly detection, and 50K events. Business ($99/mo) includes SIEM streaming, compliance exports, data residency, and 500K events. Supersize ($349/mo) adds Merkle tree proofs, SSO/SCIM, GraphQL API, 99.99% SLA, and 5M events.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'What SDKs and APIs are available?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'AuditKit provides official SDKs for TypeScript, Python, Go, and Java, all with full type safety. The platform also offers a GraphQL API with filtering, pagination, and real-time subscriptions. Webhooks can push events to Slack, Discord, or any HTTP endpoint.',
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'How does tenant-scoped access work?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'Every audit event is associated with a tenant ID. Your customers can only see their own logs, and access is enforced at the API level. The embeddable viewer component automatically scopes to the current tenant, so you can safely embed it in multi-tenant dashboards without any extra access control logic.',
+                  },
+                },
+              ],
+            }),
+          }}
+        />
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-border/50 py-16">
         <div className="max-w-6xl mx-auto px-6">

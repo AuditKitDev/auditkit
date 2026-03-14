@@ -1,0 +1,464 @@
+# AuditKit - Full Technical Reference
+
+> Open-source, tamper-evident audit logging for B2B SaaS. Ship immutable, tenant-scoped audit trails in minutes, not sprints.
+
+## Overview
+
+AuditKit is a drop-in audit logging platform designed for B2B SaaS applications that need enterprise-grade compliance and security features. It provides cryptographically verifiable audit trails using SHA-256 hash chaining and Merkle tree proofs, multi-tenant log isolation, an embeddable React viewer, SIEM integrations, and compliance-ready exports.
+
+Licensed under AGPLv3 with a commercial license option for enterprises.
+
+## Technical Architecture
+
+### System Components
+
+- **API Server**: Hono framework running on Fly.io. Handles event ingestion, querying, hash chain verification, and Merkle tree proof generation.
+- **Web Dashboard**: Next.js 15 application deployed on Vercel. Provides project management, log exploration, analytics, and team settings.
+- **PostgreSQL Database**: Primary data store using Drizzle ORM. Stores events, hash chains, Merkle trees, tenant configurations, and user accounts. Uses advisory locks for concurrency safety during hash chain operations.
+- **Embeddable Viewer**: React component package that renders tenant-scoped audit logs directly inside customer-facing dashboards.
+- **SDKs**: Official client libraries for TypeScript, Python, Go, and Java with full type safety and automatic hash chain validation.
+
+### Monorepo Structure
+
+```
+auditkit/
+  apps/
+    api/          # Hono API server (Fly.io)
+    web/          # Next.js 15 dashboard (Vercel)
+  packages/
+    db/           # Drizzle ORM schema and migrations
+    sdk-ts/       # TypeScript SDK
+    sdk-python/   # Python SDK
+    sdk-go/       # Go SDK
+    sdk-java/     # Java SDK
+    viewer/       # Embeddable React viewer component
+    shared/       # Shared types and utilities
+```
+
+Build system: pnpm workspaces + Turborepo for task orchestration.
+
+### Data Flow
+
+1. Application calls `audit.log()` via SDK or REST/GraphQL API
+2. API server receives the event, validates the schema, and assigns a timestamp
+3. Event is appended to the tenant-specific hash chain (SHA-256 of previous hash + current event data)
+4. Event is stored in PostgreSQL with the computed hash
+5. Periodically, events are batched into Merkle trees for efficient bulk verification
+6. If SIEM streaming is enabled, the event is forwarded in real-time to configured destinations
+7. Webhooks fire for any matching event patterns (Slack, Discord, HTTP endpoints)
+8. Anomaly detection evaluates the event against learned access patterns
+
+## Tamper-Proof Logging Details
+
+### Hash Chaining
+
+Every audit event includes a `previousHash` field containing the SHA-256 hash of the prior event in the same tenant's chain. The hash input is:
+
+```
+SHA-256(previousHash + eventId + tenantId + action + actorId + timestamp + JSON(metadata))
+```
+
+This creates a linked chain where modifying or deleting any event breaks all subsequent hashes.
+
+### Merkle Tree Proofs
+
+Events are periodically batched (configurable batch size, default 1000 events) into Merkle trees. Each leaf is the event hash. The Merkle root is stored and can be published to an external witness (e.g., blockchain timestamp service) for independent verification.
+
+Verification flow:
+1. Client requests proof for a specific event
+2. API returns the Merkle path (sibling hashes from leaf to root)
+3. Client can independently compute the root and compare against the published root
+4. Any tampering in the batch will produce a different root hash
+
+### Verification API
+
+```
+GET /api/v1/verify/chain/{tenantId}
+GET /api/v1/verify/event/{eventId}
+GET /api/v1/verify/merkle/{batchId}
+```
+
+## API Endpoints
+
+### REST API
+
+Base URL: `https://api.auditkit.dev/v1`
+
+#### Events
+
+```
+POST   /events                    # Ingest a new audit event
+GET    /events                    # List events (paginated, filterable)
+GET    /events/:id                # Get a single event by ID
+GET    /events/search             # Full-text search across events
+DELETE /events/:id                # Soft-delete (marks as deleted, chain preserved)
+```
+
+#### Tenants
+
+```
+GET    /tenants                   # List tenants in the project
+POST   /tenants                   # Create a new tenant
+GET    /tenants/:id               # Get tenant details
+PATCH  /tenants/:id               # Update tenant settings
+DELETE /tenants/:id               # Delete a tenant
+```
+
+#### Verification
+
+```
+GET    /verify/chain/:tenantId    # Verify the full hash chain for a tenant
+GET    /verify/event/:eventId     # Verify a single event's hash
+GET    /verify/merkle/:batchId    # Get and verify a Merkle tree proof
+```
+
+#### Exports
+
+```
+POST   /exports                   # Create a new export job
+GET    /exports/:id               # Get export status and download URL
+GET    /exports/:id/download      # Download the exported file
+```
+
+Supported export formats: CSV, JSON, PDF
+Supported compliance standards: OCSF, CEF, SOC 2 evidence package
+
+#### SIEM Streaming
+
+```
+GET    /siem/destinations          # List configured SIEM destinations
+POST   /siem/destinations          # Add a new SIEM destination
+PATCH  /siem/destinations/:id      # Update a SIEM destination
+DELETE /siem/destinations/:id      # Remove a SIEM destination
+POST   /siem/destinations/:id/test # Send a test event
+```
+
+Supported SIEM platforms: Splunk (HEC), Datadog, Elastic, generic webhook
+
+#### Webhooks
+
+```
+GET    /webhooks                  # List webhooks
+POST   /webhooks                  # Create a webhook
+PATCH  /webhooks/:id              # Update a webhook
+DELETE /webhooks/:id              # Remove a webhook
+```
+
+### GraphQL API
+
+Endpoint: `https://api.auditkit.dev/graphql`
+
+Supports queries, mutations, and real-time subscriptions via WebSocket.
+
+Key queries:
+- `events(tenantId, filters, pagination)` - Query events with filtering
+- `event(id)` - Get a single event
+- `verifyChain(tenantId)` - Verify hash chain integrity
+- `verifyEvent(eventId)` - Verify a single event
+
+Key subscriptions:
+- `onEvent(tenantId)` - Real-time event stream for a tenant
+- `onAnomaly(tenantId)` - Real-time anomaly alerts
+
+## SDK Examples
+
+### TypeScript
+
+```typescript
+import { AuditKit } from '@auditkit/sdk';
+
+const audit = new AuditKit({
+  apiKey: process.env.AUDITKIT_API_KEY,
+  projectId: 'proj_abc123',
+});
+
+// Log an event
+await audit.log({
+  tenantId: 'org_acme',
+  action: 'document.viewed',
+  actorId: 'user_123',
+  actorEmail: 'jane@acme.com',
+  resourceType: 'document',
+  resourceId: 'doc_456',
+  metadata: {
+    ipAddress: '192.168.1.1',
+    userAgent: 'Mozilla/5.0...',
+  },
+});
+
+// Query events
+const events = await audit.events.list({
+  tenantId: 'org_acme',
+  action: 'document.viewed',
+  limit: 50,
+});
+
+// Verify chain integrity
+const result = await audit.verify.chain('org_acme');
+console.log(result.valid); // true
+```
+
+### Python
+
+```python
+from auditkit import AuditKit
+
+audit = AuditKit(
+    api_key=os.environ["AUDITKIT_API_KEY"],
+    project_id="proj_abc123",
+)
+
+# Log an event
+audit.log(
+    tenant_id="org_acme",
+    action="document.viewed",
+    actor_id="user_123",
+    actor_email="jane@acme.com",
+    resource_type="document",
+    resource_id="doc_456",
+    metadata={
+        "ip_address": "192.168.1.1",
+    },
+)
+
+# Query events
+events = audit.events.list(
+    tenant_id="org_acme",
+    action="document.viewed",
+    limit=50,
+)
+```
+
+### Go
+
+```go
+import "github.com/AuditKitDev/auditkit-go"
+
+client := auditkit.New(auditkit.Config{
+    APIKey:    os.Getenv("AUDITKIT_API_KEY"),
+    ProjectID: "proj_abc123",
+})
+
+// Log an event
+err := client.Log(ctx, auditkit.Event{
+    TenantID:     "org_acme",
+    Action:       "document.viewed",
+    ActorID:      "user_123",
+    ResourceType: "document",
+    ResourceID:   "doc_456",
+})
+```
+
+### Java
+
+```java
+import dev.auditkit.sdk.AuditKit;
+import dev.auditkit.sdk.AuditEvent;
+
+AuditKit audit = AuditKit.builder()
+    .apiKey(System.getenv("AUDITKIT_API_KEY"))
+    .projectId("proj_abc123")
+    .build();
+
+// Log an event
+audit.log(AuditEvent.builder()
+    .tenantId("org_acme")
+    .action("document.viewed")
+    .actorId("user_123")
+    .resourceType("document")
+    .resourceId("doc_456")
+    .build());
+```
+
+### Embeddable Viewer (React)
+
+```tsx
+import { AuditLogViewer } from '@auditkit/viewer';
+
+function AuditPage({ tenantId }: { tenantId: string }) {
+  return (
+    <AuditLogViewer
+      apiKey={process.env.NEXT_PUBLIC_AUDITKIT_PUBLIC_KEY}
+      tenantId={tenantId}
+      theme="dark"
+      pageSize={25}
+    />
+  );
+}
+```
+
+The viewer component handles pagination, filtering, search, and real-time updates. It automatically scopes to the specified tenant and respects the configured theme.
+
+## Deployment Options
+
+### Managed Cloud
+
+- Hosted on Fly.io (API) and Vercel (dashboard)
+- Regions: US, EU (data residency selectable per project)
+- Automatic scaling, backups, and updates
+- No infrastructure management required
+- Sign up at https://auditkit.dev/signup
+
+### Self-Hosted (Docker Compose)
+
+```yaml
+# docker-compose.yml
+services:
+  api:
+    image: ghcr.io/auditkitdev/auditkit-api:latest
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgres://auditkit:password@db:5432/auditkit
+      AUDITKIT_SECRET: your-secret-key
+    depends_on:
+      - db
+
+  web:
+    image: ghcr.io/auditkitdev/auditkit-web:latest
+    ports:
+      - "3000:3000"
+    environment:
+      API_URL: http://api:3001
+
+  db:
+    image: postgres:16
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: auditkit
+      POSTGRES_USER: auditkit
+      POSTGRES_PASSWORD: password
+
+volumes:
+  pgdata:
+```
+
+Self-hosting setup:
+1. Clone the repository or use the published Docker images
+2. Configure environment variables (DATABASE_URL, AUDITKIT_SECRET)
+3. Run `docker compose up -d`
+4. Run database migrations: `docker compose exec api pnpm db:migrate`
+5. Access the dashboard at http://localhost:3000
+
+### Kubernetes (Helm Chart)
+
+A Helm chart is available for Kubernetes deployments:
+
+```bash
+helm repo add auditkit https://charts.auditkit.dev
+helm install auditkit auditkit/auditkit \
+  --set database.url=postgres://... \
+  --set api.secret=your-secret-key
+```
+
+## Security Model
+
+### Authentication
+
+- API keys: Project-scoped keys for server-to-server communication. Never expose in client-side code.
+- Public keys: Read-only keys safe for use in the embeddable viewer (tenant-scoped, no write access).
+- Dashboard auth: Email/password with optional SSO (SAML, OIDC) on enterprise plans.
+
+### Authorization
+
+- Role-based access control (RBAC) for dashboard users: Owner, Admin, Member, Viewer
+- API keys are scoped to a single project
+- Tenant isolation enforced at the database query level (row-level filtering)
+- Public keys are scoped to a single tenant
+
+### Data Protection
+
+- TLS 1.3 for all data in transit
+- AES-256 encryption at rest (managed cloud)
+- PII redaction: Configurable rules to automatically redact sensitive fields before storage
+- Data residency: Choose US or EU region for data storage (Business plan and above)
+- Soft deletes: Events are never physically deleted; soft-delete preserves chain integrity
+
+### Audit of Audits
+
+AuditKit logs its own access patterns. Every query, export, and configuration change within AuditKit itself is recorded in a separate system audit trail.
+
+## Event Schema
+
+```typescript
+interface AuditEvent {
+  id: string;              // Auto-generated UUID
+  tenantId: string;        // Customer/organization identifier
+  action: string;          // What happened (e.g., "document.viewed")
+  actorId: string;         // Who performed the action
+  actorEmail?: string;     // Actor's email (optional, subject to PII redaction)
+  actorName?: string;      // Actor's display name (optional)
+  resourceType?: string;   // Type of resource acted upon
+  resourceId?: string;     // ID of the resource
+  description?: string;    // Human-readable description
+  metadata?: object;       // Arbitrary key-value pairs
+  ipAddress?: string;      // Client IP (optional, subject to PII redaction)
+  userAgent?: string;      // Client user agent (optional)
+  timestamp: string;       // ISO 8601 timestamp
+  hash: string;            // SHA-256 hash (computed by server)
+  previousHash: string;    // Hash of the previous event in the chain
+}
+```
+
+## Anomaly Detection
+
+AuditKit's AI anomaly detection system monitors event patterns and flags unusual activity:
+
+- **Unusual access times**: Events outside normal operating hours for the tenant
+- **Bulk operations**: Sudden spikes in event volume from a single actor
+- **New IP addresses**: Access from previously unseen IP addresses
+- **Privilege escalation**: Actions that suggest unauthorized access attempts
+- **Geographic anomalies**: Access from unexpected locations
+
+Anomaly alerts can be delivered via webhook, Slack, Discord, or email. Severity levels: low, medium, high, critical.
+
+## Pricing
+
+| Plan | Price | Events/mo | Retention | Key Features |
+|------|-------|-----------|-----------|--------------|
+| Free | $0 | 1K | 7 days | SDK, hash chaining, search, basic dashboard |
+| Pro | $39/mo | 50K | 90 days | Embedded viewer, webhooks, anomaly detection |
+| Business | $99/mo | 500K | 1 year | SIEM streaming, compliance exports, data residency, PII redaction |
+| Supersize | $349/mo | 5M | 7 years | Merkle tree proofs, SSO/SCIM, GraphQL API, 99.99% SLA |
+
+Overage pricing: $0.50 per additional 1K events (Pro and above).
+
+## Competitive Advantages
+
+- Only open-source audit logging platform with both hash chaining AND Merkle tree proofs
+- 5-minute setup vs 2-4 weeks for custom solutions
+- Self-hostable with zero vendor lock-in
+- Embeddable viewer component for customer-facing audit trails
+- Multi-language SDK support with full type safety
+- Built-in AI anomaly detection
+- Compliance-ready exports that auditors accept
+
+## Tech Stack Summary
+
+| Component | Technology |
+|-----------|-----------|
+| API Server | Hono (TypeScript) on Fly.io |
+| Dashboard | Next.js 15 on Vercel |
+| Database | PostgreSQL 16 with Drizzle ORM |
+| Build System | pnpm workspaces + Turborepo |
+| SDKs | TypeScript, Python, Go, Java |
+| Viewer | React component package |
+| Auth | Custom + SSO (SAML/OIDC) |
+| Monitoring | PostHog analytics |
+
+## Links
+
+- Homepage: https://auditkit.dev
+- Documentation: https://auditkit.dev/docs
+- GitHub: https://github.com/AuditKitDev/auditkit
+- Blog: https://auditkit.dev/blog
+- API Reference: https://auditkit.dev/docs/api
+- SDK Guide: https://auditkit.dev/docs/sdks
+- Self-Hosting Guide: https://auditkit.dev/docs/self-hosting
+- Status Page: https://status.auditkit.dev
+
+## Contact
+
+- Email: hello@auditkit.dev
+- GitHub Issues: https://github.com/AuditKitDev/auditkit/issues
