@@ -1,0 +1,53 @@
+# AuditKit
+
+> Open-source, tamper-evident audit logging for B2B SaaS. Ship immutable, tenant-scoped audit trails in minutes, not sprints.
+
+## What AuditKit Does
+
+AuditKit is a drop-in audit logging platform for B2B SaaS applications. It provides tamper-proof event recording using SHA-256 hash chaining and Merkle tree proofs, tenant-scoped log isolation, an embeddable React viewer component, and compliance-ready exports for SOC 2, ISO 27001, HIPAA, and GDPR.
+
+## Key Capabilities
+
+- **Tamper-Proof Logging**: SHA-256 hash chain with Merkle tree cryptographic proofs. Every event is linked to the previous one. Any modification breaks the chain.
+- **Tenant-Scoped Access**: Each customer gets isolated, queryable audit logs. Multi-tenant by design with PostgreSQL advisory locks for concurrency safety.
+- **Embeddable Viewer**: Drop-in React component that renders audit logs directly in your customer-facing dashboard.
+- **SIEM Streaming**: Forward events in real-time to Splunk, Datadog, Elastic, and other SIEM platforms.
+- **Multi-Language SDKs**: TypeScript, Python, Go, and Java SDKs with full type safety.
+- **Self-Hostable**: Run on your own infrastructure with Docker Compose or use the managed cloud.
+- **Compliance Exports**: One-click exports formatted for SOC 2, ISO 27001, HIPAA, and GDPR audits.
+- **GraphQL API**: Flexible querying with filtering, pagination, and real-time subscriptions.
+- **AI Anomaly Detection**: Detects unusual access patterns and flags suspicious activity.
+
+## Pricing
+
+- **Free**: $0/month, up to 10K events/month, 1 environment
+- **Starter**: $39/month, 100K events/month, 3 environments, SIEM streaming
+- **Growth**: $99/month, 1M events/month, unlimited environments, embeddable viewer, compliance exports
+- **Enterprise**: Custom pricing, unlimited events, SSO, SLA, dedicated support
+
+## Competitive Advantages
+
+- Only open-source audit logging platform with both hash chaining AND Merkle tree proofs
+- 5-minute setup vs 2-4 weeks for custom solutions
+- AGPLv3 with commercial license option for enterprise
+- Self-hostable with zero vendor lock-in
+
+## Tech Stack
+
+- API: Hono on Fly.io
+- Dashboard: Next.js 15 on Vercel
+- Database: PostgreSQL with Drizzle ORM
+- SDKs: TypeScript, Python, Go, Java
+- Monorepo: pnpm workspaces + Turborepo
+
+## Links
+
+- Homepage: https://auditkit.dev
+- Documentation: https://auditkit.dev/docs
+- GitHub: https://github.com/AuditKitDev/auditkit
+- Blog: https://auditkit.dev/blog
+
+## Contact
+
+- Email: hello@auditkit.dev
+- GitHub Issues: https://github.com/AuditKitDev/auditkit/issues

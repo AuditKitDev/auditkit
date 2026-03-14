@@ -97,6 +97,12 @@ AGPLv3 — see [LICENSE](LICENSE). The `/ee` directory requires a [commercial li
 
 ---
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=AuditKitDev/auditkit&type=Date)](https://star-history.com/#AuditKitDev/auditkit&Date)
+
+---
+
 ## Also By Us
 
 - **[CloakShare](https://github.com/cloakshare/cloakshare)** — Open-source DocSend alternative with canvas rendering, watermarks, and per-page analytics. MIT licensed.
