@@ -7,6 +7,7 @@ import type { Database } from '../db/index.js';
 import { projects, subscriptions } from '../db/schema.js';
 import { getRedis } from '../services/redis.js';
 import { incrementUsage, getUsage } from '../services/usage-tracking.js';
+import { logger } from '../services/logger.js';
 
 // --- Plan tier definitions ---
 
@@ -158,51 +159,58 @@ export function rateLimitMiddleware(db: Database) {
     const plan = await lookupPlan(db, auth.projectId);
     const limits = PLAN_LIMITS[plan];
 
-    const redis = getRedis();
+    try {
+      const redis = getRedis();
 
-    // --- Per-minute sliding window (Redis) ---
-    const windowKey = `rl:${auth.projectId}:${limitType}`;
-    const windowMs = 60_000;
-    const perMinLimit = isWrite ? limits.writePerMin : limits.readPerMin;
+      // --- Per-minute sliding window (Redis) ---
+      const windowKey = `rl:${auth.projectId}:${limitType}`;
+      const windowMs = 60_000;
+      const perMinLimit = isWrite ? limits.writePerMin : limits.readPerMin;
 
-    const rl = await checkRateLimit(redis, windowKey, perMinLimit, windowMs);
+      const rl = await checkRateLimit(redis, windowKey, perMinLimit, windowMs);
 
-    if (!rl.allowed) {
-      c.header('X-RateLimit-Limit', String(perMinLimit));
-      c.header('X-RateLimit-Remaining', '0');
-      c.header('X-RateLimit-Reset', String(Math.ceil(rl.resetAt / 1000)));
-      throw new HTTPException(429, { message: 'Rate limit exceeded' });
-    }
-
-    c.header('X-RateLimit-Limit', String(perMinLimit));
-    c.header('X-RateLimit-Remaining', String(Math.max(0, rl.remaining)));
-    c.header('X-RateLimit-Reset', String(Math.ceil(rl.resetAt / 1000)));
-
-    // --- Monthly event quota (only for write operations) ---
-    if (isWrite && limits.monthlyEvents !== -1) {
-      const monthlyReset = getMonthlyResetDate();
-
-      // Check current usage (Redis-cached, DB-backed)
-      const currentUsage = await getCachedMonthlyUsage(redis, db, auth.projectId);
-
-      if (currentUsage >= limits.monthlyEvents) {
-        c.header('X-RateLimit-Monthly-Limit', String(limits.monthlyEvents));
-        c.header('X-RateLimit-Monthly-Used', String(currentUsage));
-        c.header('X-RateLimit-Monthly-Reset', monthlyReset.toISOString());
-        throw new HTTPException(429, { message: 'Monthly event quota exceeded' });
+      if (!rl.allowed) {
+        c.header('X-RateLimit-Limit', String(perMinLimit));
+        c.header('X-RateLimit-Remaining', '0');
+        c.header('X-RateLimit-Reset', String(Math.ceil(rl.resetAt / 1000)));
+        throw new HTTPException(429, { message: 'Rate limit exceeded' });
       }
 
-      // Increment usage (reserve quota before processing)
-      const newUsage = await incrementAndCacheUsage(redis, db, auth.projectId);
+      c.header('X-RateLimit-Limit', String(perMinLimit));
+      c.header('X-RateLimit-Remaining', String(Math.max(0, rl.remaining)));
+      c.header('X-RateLimit-Reset', String(Math.ceil(rl.resetAt / 1000)));
 
-      c.header('X-RateLimit-Monthly-Limit', String(limits.monthlyEvents));
-      c.header('X-RateLimit-Monthly-Used', String(newUsage));
-      c.header('X-RateLimit-Monthly-Reset', monthlyReset.toISOString());
-    } else if (isWrite) {
-      // Unlimited plan — still send headers
-      c.header('X-RateLimit-Monthly-Limit', 'unlimited');
-      c.header('X-RateLimit-Monthly-Used', '0');
-      c.header('X-RateLimit-Monthly-Reset', getMonthlyResetDate().toISOString());
+      // --- Monthly event quota (only for write operations) ---
+      if (isWrite && limits.monthlyEvents !== -1) {
+        const monthlyReset = getMonthlyResetDate();
+
+        // Check current usage (Redis-cached, DB-backed)
+        const currentUsage = await getCachedMonthlyUsage(redis, db, auth.projectId);
+
+        if (currentUsage >= limits.monthlyEvents) {
+          c.header('X-RateLimit-Monthly-Limit', String(limits.monthlyEvents));
+          c.header('X-RateLimit-Monthly-Used', String(currentUsage));
+          c.header('X-RateLimit-Monthly-Reset', monthlyReset.toISOString());
+          throw new HTTPException(429, { message: 'Monthly event quota exceeded' });
+        }
+
+        // Increment usage (reserve quota before processing)
+        const newUsage = await incrementAndCacheUsage(redis, db, auth.projectId);
+
+        c.header('X-RateLimit-Monthly-Limit', String(limits.monthlyEvents));
+        c.header('X-RateLimit-Monthly-Used', String(newUsage));
+        c.header('X-RateLimit-Monthly-Reset', monthlyReset.toISOString());
+      } else if (isWrite) {
+        // Unlimited plan — still send headers
+        c.header('X-RateLimit-Monthly-Limit', 'unlimited');
+        c.header('X-RateLimit-Monthly-Used', '0');
+        c.header('X-RateLimit-Monthly-Reset', getMonthlyResetDate().toISOString());
+      }
+    } catch (err) {
+      // Re-throw intentional HTTP exceptions (429 rate limit)
+      if (err instanceof HTTPException) throw err;
+      // Redis unavailable — fail open, let the request through without rate limiting
+      logger.warn({ err }, 'Rate limit Redis unavailable, failing open');
     }
 
     await next();

@@ -74,8 +74,14 @@ export function startQueueWorker(db: Database): Worker {
     }
   });
 
+  let lastErrorLog = 0;
   _worker.on('error', (err) => {
-    logger.error({ err: err.message }, 'Queue worker error');
+    // Throttle Redis connection errors to once per 60 seconds
+    const now = Date.now();
+    if (now - lastErrorLog > 60_000) {
+      lastErrorLog = now;
+      logger.error({ err: err.message }, 'Queue worker error');
+    }
   });
 
   logger.info('BullMQ worker started for audit-events queue');
