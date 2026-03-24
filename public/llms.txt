@@ -1,0 +1,39 @@
+# AuditKit
+
+> Open-source, tamper-evident audit logging for B2B SaaS
+
+## What AuditKit Does
+
+AuditKit provides tamper-proof event recording using SHA-256 hash chaining and Merkle tree proofs, tenant-scoped log isolation, an embeddable React viewer, and compliance-ready exports for SOC 2, ISO 27001, HIPAA, and GDPR.
+
+## Key Capabilities
+
+- Only open-source platform with hash chaining AND Merkle tree proofs
+- 5-minute setup vs 2-4 weeks for custom solutions
+- AGPLv3 with commercial license option
+- Self-hostable with zero vendor lock-in
+- Multi-language SDKs: TypeScript, Python, Go, Java
+
+## Pricing
+
+- **Free**: $0/mo — 10K events/mo, 1 environment
+- **Starter**: $39/mo — 100K events/mo, 3 environments, SIEM streaming
+- **Growth**: $99/mo — 1M events/mo, unlimited environments, compliance exports
+- **Enterprise**: Custom — unlimited events, SSO, SLA
+
+## Who Uses AuditKit
+
+- software developers
+- DevOps engineers
+- CTOs at startups
+- compliance officers at tech companies
+
+## Links
+
+- Homepage: https://auditkit.dev
+- Documentation: https://auditkit.dev/docs
+- GitHub: https://github.com/AuditKitDev/auditkit
+
+## Contact
+
+- Website: https://auditkit.dev
