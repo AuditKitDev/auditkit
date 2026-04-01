@@ -20,77 +20,85 @@ interface SubscriptionData {
 
 const plans = [
   {
-    key: 'free',
-    name: 'Free',
-    price: '$0',
+    key: 'starter',
+    name: 'Starter',
+    price: '$99',
     period: '/mo',
-    events: '1K events/mo',
-    retention: '7-day retention',
-    projectLimit: '1 project',
+    events: '50K events/mo',
+    retention: '90-day retention',
+    projectLimit: '3 projects',
+    cta: 'Start Starter',
     features: [
-      'Basic audit logging',
-      '1 project',
-      '7-day event retention',
-      'Dashboard access',
+      'SDK + hash chaining',
+      'Embedded audit viewer',
+      'SOC 2 control catalog (51 controls)',
+      '15 policy templates',
+      'Evidence vault (5 GB)',
+      'Readiness dashboard',
+      'Anomaly detection',
+      '3 projects · 5 seats',
     ],
   },
   {
     key: 'pro',
     name: 'Pro',
-    price: '$39',
+    price: '$299',
     period: '/mo',
-    events: '50K events/mo',
-    retention: '90-day retention',
-    projectLimit: '3 projects',
+    events: '500K events/mo',
+    retention: '1-year retention',
+    projectLimit: '10 projects',
     cta: 'Upgrade to Pro',
+    popular: true,
     features: [
-      'Everything in Free',
-      '50K events per month',
-      '3 projects',
-      '90-day retention',
-      'Embedded viewer UI',
-      'CSV/JSON export',
-      'Webhooks + notifications',
+      'Everything in Starter',
+      'Access review campaigns',
+      'Vendor tracking + risk register',
+      'Incident tracker',
+      'SIEM streaming (Splunk, Datadog)',
+      'Compliance exports (OCSF/CEF)',
+      'Data residency (EU/US)',
+      'PII redaction',
+      '10 projects · 15 seats',
     ],
   },
   {
     key: 'business',
     name: 'Business',
-    price: '$99',
+    price: '$499',
     period: '/mo',
-    events: '500K events/mo',
-    retention: '1-year retention',
-    projectLimit: '10 projects',
+    events: '2M events/mo',
+    retention: '3-year retention',
+    projectLimit: '50 projects',
     cta: 'Upgrade to Business',
-    popular: true,
     features: [
       'Everything in Pro',
-      '500K events per month',
-      '10 projects',
-      '1-year retention',
-      'SIEM streaming',
-      'Compliance evidence packs',
-      'Data residency options',
+      'Auditor collaboration portal',
+      'Personnel tracker',
+      'Trust center',
+      'Merkle tree proofs',
+      'System description builder',
+      'Unlimited integrations',
+      'Unlimited projects · 50 seats',
     ],
   },
   {
     key: 'supersize',
     name: 'Supersize + Milkshake',
-    price: '$349',
+    price: '$999',
     period: '/mo',
-    events: '5M events/mo',
+    events: '10M events/mo',
     retention: '7-year retention',
     projectLimit: 'Unlimited projects',
     cta: 'Go Supersize',
     features: [
       'Everything in Business',
-      '5M events/mo, unlimited projects',
-      '7-year retention',
-      'Merkle tree proofs',
       'Legal hold',
       'SSO/SCIM',
+      'GraphQL API',
       '99.99% SLA',
-      'Priority support',
+      'Unlimited everything',
+      'Dedicated support',
+      'Priority support + extra milkshakes',
     ],
   },
 ];
@@ -188,9 +196,7 @@ export default function BillingPage() {
   const projectPct = Math.min(projectRawPct, 100);
 
   const isSysadmin = subscription?.plan_name === 'Sysadmin';
-  const upgradePlans = isSysadmin
-    ? plans.filter((p) => p.key !== 'free')
-    : plans.filter((p) => p.key !== currentPlan && p.key !== 'free');
+  const upgradePlans = plans;
 
   return (
     <div>
@@ -322,16 +328,16 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Free plan CTA */}
-      {currentPlan === 'free' && (
+      {/* Upsell CTA for starter/free users */}
+      {(currentPlan === 'free' || currentPlan === 'starter') && (
         <div className="border border-indigo-500/20 rounded-xl bg-gradient-to-r from-indigo-500/[0.06] to-purple-500/[0.06] p-5 mb-8 flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
             <Zap className="h-5 w-5 text-indigo-400" />
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-sm">Unlock more with a paid plan</p>
+            <p className="font-semibold text-sm">Unlock more with a higher plan</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Get more events, projects, longer retention, and premium features like SIEM streaming and compliance evidence.
+              Get access reviews, vendor tracking, SIEM streaming, auditor portal, and more SOC 2 prep tools.
             </p>
           </div>
         </div>

@@ -6,6 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
+        disallow: ['/dashboard/', '/login', '/signup', '/forgot-password', '/reset-password'],
       },
       // Explicitly welcome AI crawlers for GEO/AEO visibility
       {

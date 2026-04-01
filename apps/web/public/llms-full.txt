@@ -13,7 +13,7 @@ Licensed under AGPLv3 with a commercial license option for enterprises.
 ### System Components
 
 - **API Server**: Hono framework running on Fly.io. Handles event ingestion, querying, hash chain verification, and Merkle tree proof generation.
-- **Web Dashboard**: Next.js 15 application deployed on Vercel. Provides project management, log exploration, analytics, and team settings.
+- **Web Dashboard**: Next.js 15 application deployed on Fly.io. Provides project management, log exploration, analytics, and team settings.
 - **PostgreSQL Database**: Primary data store using Drizzle ORM. Stores events, hash chains, Merkle trees, tenant configurations, and user accounts. Uses advisory locks for concurrency safety during hash chain operations.
 - **Embeddable Viewer**: React component package that renders tenant-scoped audit logs directly inside customer-facing dashboards.
 - **SDKs**: Official client libraries for TypeScript, Python, Go, and Java with full type safety and automatic hash chain validation.
@@ -417,12 +417,33 @@ Anomaly alerts can be delivered via webhook, Slack, Discord, or email. Severity 
 
 | Plan | Price | Events/mo | Retention | Key Features |
 |------|-------|-----------|-----------|--------------|
-| Free | $0 | 1K | 7 days | SDK, hash chaining, search, basic dashboard |
-| Pro | $39/mo | 50K | 90 days | Embedded viewer, webhooks, anomaly detection |
-| Business | $99/mo | 500K | 1 year | SIEM streaming, compliance exports, data residency, PII redaction |
-| Supersize | $349/mo | 5M | 7 years | Merkle tree proofs, SSO/SCIM, GraphQL API, 99.99% SLA |
+| Starter | $99/mo | 50K | 90 days | SDK, hash chaining, SOC 2 control catalog, 15 policy templates, evidence vault, readiness dashboard |
+| Pro | $299/mo | 500K | 1 year | Access reviews, vendor tracking, risk register, SIEM streaming, compliance exports |
+| Business | $499/mo | 2M | 3 years | Auditor portal, trust center, Merkle proofs, personnel tracker, unlimited integrations |
+| Supersize + Milkshake | $999/mo | 10M | 7 years | SSO/SCIM, legal hold, 99.99% SLA, unlimited everything |
 
 Overage pricing: $0.50 per additional 1K events (Pro and above).
+
+## SOC 2 Audit Prep
+
+AuditKit helps B2B SaaS teams prepare for and pass SOC 2 audits with purpose-built features:
+
+- **Evidence Vault**: Automatically collect and organize audit evidence. Every log entry is cryptographically verifiable, giving auditors tamper-proof records.
+- **Control Catalog**: Pre-mapped controls aligned to SOC 2 Trust Services Criteria. Track implementation status and link controls to evidence.
+- **Policy Templates**: Ready-to-use policy documents covering access control, change management, incident response, and more.
+- **Access Reviews**: Schedule and track periodic user access reviews with approval workflows and audit-ready reports.
+- **Vendor Tracking**: Maintain a centralized vendor inventory with risk assessments, review schedules, and compliance status.
+- **Risk Register**: Document, score, and track risks with treatment plans and residual risk tracking.
+
+### SOC 2 Resources
+
+- SOC 2 Overview: https://auditkit.dev/soc-2
+- AuditKit vs Vanta: https://auditkit.dev/compare/vanta
+- AuditKit vs Drata: https://auditkit.dev/compare/drata
+- AuditKit vs Spreadsheets: https://auditkit.dev/compare/spreadsheets
+- AuditKit vs WorkOS: https://auditkit.dev/compare/workos
+- AuditKit vs Pangea: https://auditkit.dev/compare/pangea
+- AuditKit vs Retraced: https://auditkit.dev/compare/retraced
 
 ## Competitive Advantages
 
@@ -439,7 +460,7 @@ Overage pricing: $0.50 per additional 1K events (Pro and above).
 | Component | Technology |
 |-----------|-----------|
 | API Server | Hono (TypeScript) on Fly.io |
-| Dashboard | Next.js 15 on Vercel |
+| Dashboard | Next.js 15 on Fly.io |
 | Database | PostgreSQL 16 with Drizzle ORM |
 | Build System | pnpm workspaces + Turborepo |
 | SDKs | TypeScript, Python, Go, Java |

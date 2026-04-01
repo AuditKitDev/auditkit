@@ -20,10 +20,10 @@ AuditKit is a drop-in audit logging platform for B2B SaaS applications. It provi
 
 ## Pricing
 
-- **Free**: $0/month, up to 10K events/month, 1 environment
-- **Starter**: $39/month, 100K events/month, 3 environments, SIEM streaming
-- **Growth**: $99/month, 1M events/month, unlimited environments, embeddable viewer, compliance exports
-- **Enterprise**: Custom pricing, unlimited events, SSO, SLA, dedicated support
+- **Starter**: $99/month — 50K events/mo, SOC 2 control catalog, 15 policy templates, evidence vault, readiness dashboard
+- **Pro**: $299/month — 500K events/mo, access reviews, vendor tracking, risk register, SIEM streaming, compliance exports
+- **Business**: $499/month — 2M events/mo, auditor portal, trust center, Merkle proofs, personnel tracker
+- **Supersize + Milkshake**: $999/month — 10M events/mo, SSO/SCIM, legal hold, 99.99% SLA, unlimited everything
 
 ## Competitive Advantages
 
@@ -35,10 +35,19 @@ AuditKit is a drop-in audit logging platform for B2B SaaS applications. It provi
 ## Tech Stack
 
 - API: Hono on Fly.io
-- Dashboard: Next.js 15 on Vercel
+- Dashboard: Next.js 15 on Fly.io
 - Database: PostgreSQL with Drizzle ORM
 - SDKs: TypeScript, Python, Go, Java
 - Monorepo: pnpm workspaces + Turborepo
+
+## SOC 2 Audit Prep
+- SOC 2 Overview: https://auditkit.dev/soc-2
+- AuditKit vs Vanta: https://auditkit.dev/compare/vanta
+- AuditKit vs Drata: https://auditkit.dev/compare/drata
+- AuditKit vs Spreadsheets: https://auditkit.dev/compare/spreadsheets
+- AuditKit vs WorkOS: https://auditkit.dev/compare/workos
+- AuditKit vs Pangea: https://auditkit.dev/compare/pangea
+- AuditKit vs Retraced: https://auditkit.dev/compare/retraced
 
 ## Links
 

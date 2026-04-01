@@ -4,9 +4,24 @@ import { Check, ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'AuditKit vs Retraced - Comparison',
+  title: 'AuditKit vs Retraced — Open-Source Audit Log Comparison',
   description:
-    'Compare AuditKit and Retraced for audit logging. Both are open source, but AuditKit adds managed cloud hosting, cryptographic immutability, SIEM streaming, and multi-language SDKs.',
+    'Compare AuditKit and Retraced for audit logging. Both are open source, but AuditKit adds managed cloud, cryptographic immutability, and SIEM streaming.',
+  alternates: { canonical: 'https://auditkit.dev/compare/retraced' },
+  openGraph: {
+    title: 'AuditKit vs Retraced — Open-Source Audit Log Comparison',
+    description:
+      'Compare AuditKit and Retraced for audit logging. Both are open source, but AuditKit adds managed cloud, cryptographic immutability, and SIEM streaming.',
+    url: 'https://auditkit.dev/compare/retraced',
+    siteName: 'AuditKit',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'AuditKit vs Retraced — Open-Source Audit Log Comparison',
+    description:
+      'Compare AuditKit and Retraced for audit logging. Both are open source, but AuditKit adds managed cloud, cryptographic immutability, and SIEM streaming.',
+  },
 };
 
 const comparison = [
@@ -113,6 +128,29 @@ export default function CompareRetracedPage() {
               <p className="text-muted-foreground leading-relaxed">{item.description}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Related Resources */}
+      <section className="max-w-4xl mx-auto px-6 pb-20">
+        <h2 className="text-3xl font-extrabold tracking-tight mb-8">Related resources</h2>
+        <div className="grid sm:grid-cols-2 gap-5">
+          <Link href="/soc-2" className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 transition group">
+            <h3 className="font-bold mb-1 group-hover:text-primary transition">SOC 2 Compliance Made Simple</h3>
+            <p className="text-sm text-muted-foreground">Collect evidence, organize controls, and deliver tamper-proof audit packages from $99/mo.</p>
+          </Link>
+          <Link href="/blog/open-source-audit-logging-enterprise-trust" className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 transition group">
+            <h3 className="font-bold mb-1 group-hover:text-primary transition">Open-Source Audit Logging for Enterprise Trust</h3>
+            <p className="text-sm text-muted-foreground">Why open-source audit logging builds more trust with enterprise customers than proprietary solutions.</p>
+          </Link>
+          <Link href="/compare/pangea" className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 transition group">
+            <h3 className="font-bold mb-1 group-hover:text-primary transition">AuditKit vs Pangea</h3>
+            <p className="text-sm text-muted-foreground">Both offer tamper-proof logging, but AuditKit is open source, self-hostable, and more affordable.</p>
+          </Link>
+          <Link href="/blog/build-vs-buy-audit-logging" className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 transition group">
+            <h3 className="font-bold mb-1 group-hover:text-primary transition">Build vs Buy: Audit Logging</h3>
+            <p className="text-sm text-muted-foreground">The real cost of building audit logging in-house versus using a purpose-built platform.</p>
+          </Link>
         </div>
       </section>
 

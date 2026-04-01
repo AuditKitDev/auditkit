@@ -22,6 +22,7 @@ import { createSSERouter } from './routes/sse.js';
 import { createExportRouter } from './routes/export.js';
 import { createTeamRouter } from './routes/team.js';
 import { createSysadminRouter } from './routes/sysadmin.js';
+import { createSoc2Router } from './routes/soc2.js';
 import { createOpenApiRouter } from './openapi.js';
 import { idempotencyMiddleware } from './middleware/idempotency.js';
 import { authRateLimitMiddleware } from './middleware/auth-rate-limit.js';
@@ -79,6 +80,7 @@ dashboard.route('/', createDashboardRouter(db));
 dashboard.route('/exports', createExportRouter(db));
 dashboard.route('/team', createTeamRouter(db));
 dashboard.route('/sysadmin', createSysadminRouter(db));
+dashboard.route('/soc2', createSoc2Router(db));
 app.route('/dashboard', dashboard);
 
 // --- Stripe Webhook (no auth — Stripe sends signature, must be before auth middleware) ---

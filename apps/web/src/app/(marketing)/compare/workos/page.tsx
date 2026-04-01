@@ -4,9 +4,24 @@ import { Check, ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'AuditKit vs WorkOS Audit Log - Comparison',
+  title: 'AuditKit vs WorkOS Audit Log — Feature Comparison',
   description:
-    'Compare AuditKit and WorkOS Audit Log side by side. See how AuditKit offers open-source flexibility, cryptographic immutability, and self-hosting options that WorkOS does not.',
+    'Compare AuditKit and WorkOS Audit Log side by side. Open-source flexibility, cryptographic immutability, and self-hosting options WorkOS lacks.',
+  alternates: { canonical: 'https://auditkit.dev/compare/workos' },
+  openGraph: {
+    title: 'AuditKit vs WorkOS Audit Log — Feature Comparison',
+    description:
+      'Compare AuditKit and WorkOS Audit Log side by side. Open-source flexibility, cryptographic immutability, and self-hosting options WorkOS lacks.',
+    url: 'https://auditkit.dev/compare/workos',
+    siteName: 'AuditKit',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'AuditKit vs WorkOS Audit Log — Feature Comparison',
+    description:
+      'Compare AuditKit and WorkOS Audit Log side by side. Open-source flexibility, cryptographic immutability, and self-hosting options WorkOS lacks.',
+  },
 };
 
 const comparison = [
@@ -113,6 +128,29 @@ export default function CompareWorkOSPage() {
               <p className="text-muted-foreground leading-relaxed">{item.description}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Related Resources */}
+      <section className="max-w-4xl mx-auto px-6 pb-20">
+        <h2 className="text-3xl font-extrabold tracking-tight mb-8">Related resources</h2>
+        <div className="grid sm:grid-cols-2 gap-5">
+          <Link href="/soc-2" className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 transition group">
+            <h3 className="font-bold mb-1 group-hover:text-primary transition">SOC 2 Compliance Made Simple</h3>
+            <p className="text-sm text-muted-foreground">Collect evidence, organize controls, and deliver tamper-proof audit packages from $99/mo.</p>
+          </Link>
+          <Link href="/blog/audit-logging-best-practices-multi-tenant-saas" className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 transition group">
+            <h3 className="font-bold mb-1 group-hover:text-primary transition">Audit Logging Best Practices for Multi-Tenant SaaS</h3>
+            <p className="text-sm text-muted-foreground">Best practices for implementing audit logs in multi-tenant B2B SaaS applications.</p>
+          </Link>
+          <Link href="/compare/pangea" className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 transition group">
+            <h3 className="font-bold mb-1 group-hover:text-primary transition">AuditKit vs Pangea</h3>
+            <p className="text-sm text-muted-foreground">Both offer tamper-proof logging, but AuditKit is open source, self-hostable, and more affordable.</p>
+          </Link>
+          <Link href="/blog/audit-logs-soc-2-b2b-saas" className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 transition group">
+            <h3 className="font-bold mb-1 group-hover:text-primary transition">Why Your B2B SaaS Needs Audit Logs Before SOC 2</h3>
+            <p className="text-sm text-muted-foreground">Audit logs are a core SOC 2 requirement. Learn why building them early saves months of compliance work.</p>
+          </Link>
         </div>
       </section>
 

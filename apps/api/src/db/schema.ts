@@ -645,3 +645,348 @@ export const exportJobs = pgTable('export_jobs', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp('completed_at', { withTimezone: true }),
 });
+
+// ============================================
+// SOC 2 Compliance — Phase 1: Evidence Vault
+// ============================================
+export const evidence = pgTable(
+  'evidence',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    type: text('type').notNull(), // screenshot | document | csv | link | auto_collected
+    fileUrl: text('file_url'),
+    externalUrl: text('external_url'),
+    fileName: text('file_name'),
+    fileSize: integer('file_size'),
+    fileHash: text('file_hash'), // SHA-256 hash of uploaded file
+    chainHash: text('chain_hash'), // ties into existing audit trail hash chain
+    collectedBy: uuid('collected_by').references(() => users.id),
+    autoSource: text('auto_source'), // auditkit_events | github | okta | null for manual
+    auditPeriodStart: timestamp('audit_period_start', { withTimezone: true }),
+    auditPeriodEnd: timestamp('audit_period_end', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_evidence_project').on(table.projectId, table.createdAt),
+  ]
+);
+
+export const evidenceTags = pgTable(
+  'evidence_tags',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    evidenceId: uuid('evidence_id')
+      .notNull()
+      .references(() => evidence.id, { onDelete: 'cascade' }),
+    controlId: uuid('control_id').references(() => controls.id, { onDelete: 'cascade' }),
+    framework: text('framework').notNull(), // soc2 | iso27001 | hipaa
+    criteriaId: text('criteria_id').notNull(), // CC6.1 | CC7.2 | A1.1
+  },
+  (table) => [
+    uniqueIndex('idx_evidence_tags_unique').on(table.evidenceId, table.controlId),
+    index('idx_evidence_tags_control').on(table.controlId),
+  ]
+);
+
+// ============================================
+// SOC 2 Compliance — Phase 1: Control Catalog
+// ============================================
+export const controlFrameworks = pgTable(
+  'control_frameworks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    framework: text('framework').notNull(), // soc2 | iso27001 | hipaa
+    criteriaId: text('criteria_id').notNull(), // CC1.1 | CC6.1 | A1.1
+    title: text('title').notNull(),
+    description: text('description'),
+    category: text('category'), // security | availability | processing_integrity | confidentiality | privacy
+  },
+  (table) => [
+    uniqueIndex('idx_control_frameworks_unique').on(table.framework, table.criteriaId),
+  ]
+);
+
+export const controls = pgTable(
+  'controls',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    framework: text('framework').notNull(), // soc2 | iso27001 | hipaa
+    criteriaId: text('criteria_id').notNull(), // CC6.1 | CC7.2
+    title: text('title').notNull(),
+    description: text('description'),
+    whatAuditorsWant: text('what_auditors_want'), // plain English guidance
+    evidenceGuidance: text('evidence_guidance'), // what to upload
+    implementationStatus: text('implementation_status').notNull().default('not_started'), // not_started | in_progress | ready | verified
+    ownerId: uuid('owner_id').references(() => users.id),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_controls_project').on(table.projectId, table.framework),
+    uniqueIndex('idx_controls_project_criteria').on(table.projectId, table.framework, table.criteriaId),
+  ]
+);
+
+// ============================================
+// SOC 2 Compliance — Phase 1: Policy Management
+// ============================================
+export const policies = pgTable(
+  'policies',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    slug: text('slug').notNull(),
+    category: text('category').notNull(), // security | access | change-mgmt | incident | vendor | hr | data | bcp | privacy
+    status: text('status').notNull().default('draft'), // draft | active | archived
+    currentVersionId: uuid('current_version_id'),
+    reviewFrequency: text('review_frequency').notNull().default('annual'), // quarterly | semi-annual | annual
+    nextReviewDate: timestamp('next_review_date', { withTimezone: true }),
+    ownerId: uuid('owner_id').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_policies_project').on(table.projectId),
+    uniqueIndex('idx_policies_project_slug').on(table.projectId, table.slug),
+  ]
+);
+
+export const policyVersions = pgTable(
+  'policy_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    policyId: uuid('policy_id')
+      .notNull()
+      .references(() => policies.id, { onDelete: 'cascade' }),
+    versionNumber: integer('version_number').notNull(),
+    content: text('content').notNull(), // markdown
+    changeSummary: text('change_summary'),
+    approvedBy: uuid('approved_by').references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_policy_versions_policy').on(table.policyId),
+  ]
+);
+
+export const policyAcknowledgments = pgTable(
+  'policy_acknowledgments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    policyId: uuid('policy_id')
+      .notNull()
+      .references(() => policies.id, { onDelete: 'cascade' }),
+    policyVersionId: uuid('policy_version_id')
+      .notNull()
+      .references(() => policyVersions.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }).notNull().defaultNow(),
+    ipAddress: inet('ip_address'),
+  },
+  (table) => [
+    uniqueIndex('idx_policy_ack_unique').on(table.policyVersionId, table.userId),
+    index('idx_policy_ack_policy').on(table.policyId),
+  ]
+);
+
+// ============================================
+// SOC 2 Compliance — Phase 2: Access Reviews
+// ============================================
+export const accessReviews = pgTable(
+  'access_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    status: text('status').notNull().default('draft'), // draft | in_progress | completed
+    reviewerId: uuid('reviewer_id').references(() => users.id),
+    periodStart: timestamp('period_start', { withTimezone: true }),
+    periodEnd: timestamp('period_end', { withTimezone: true }),
+    dueDate: timestamp('due_date', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_access_reviews_project').on(table.projectId, table.createdAt),
+  ]
+);
+
+export const accessReviewEntries = pgTable(
+  'access_review_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    reviewId: uuid('review_id')
+      .notNull()
+      .references(() => accessReviews.id, { onDelete: 'cascade' }),
+    userEmail: text('user_email').notNull(),
+    userName: text('user_name'),
+    system: text('system').notNull(), // github | aws | okta | google | azure | custom
+    role: text('role'),
+    lastActive: timestamp('last_active', { withTimezone: true }),
+    decision: text('decision').notNull().default('pending'), // approve | revoke | pending
+    decisionBy: uuid('decision_by').references(() => users.id),
+    decisionAt: timestamp('decision_at', { withTimezone: true }),
+    notes: text('notes'),
+  },
+  (table) => [
+    index('idx_access_review_entries_review').on(table.reviewId),
+  ]
+);
+
+// ============================================
+// SOC 2 Compliance — Phase 2: Vendor Management
+// ============================================
+export const vendors = pgTable(
+  'vendors',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    category: text('category'), // infrastructure | security | hr | finance | development | other
+    criticality: text('criticality').notNull().default('low'), // low | medium | high | critical
+    dataAccessLevel: text('data_access_level'), // none | metadata | customer_data | sensitive_data
+    website: text('website'),
+    contactEmail: text('contact_email'),
+    status: text('status').notNull().default('active'), // active | inactive | under_review
+    lastAssessedAt: timestamp('last_assessed_at', { withTimezone: true }),
+    nextReviewDate: timestamp('next_review_date', { withTimezone: true }),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_vendors_project').on(table.projectId),
+  ]
+);
+
+export const vendorDocuments = pgTable(
+  'vendor_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    vendorId: uuid('vendor_id')
+      .notNull()
+      .references(() => vendors.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(), // soc2_report | dpa | baa | contract | assessment | other
+    title: text('title').notNull(),
+    fileUrl: text('file_url'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    uploadedBy: uuid('uploaded_by').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_vendor_documents_vendor').on(table.vendorId),
+  ]
+);
+
+// ============================================
+// SOC 2 Compliance — Phase 2: Risk Register
+// ============================================
+export const risks = pgTable(
+  'risks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    category: text('category'), // security | operational | compliance | financial | reputational
+    likelihood: integer('likelihood').notNull().default(1), // 1-5
+    impact: integer('impact').notNull().default(1), // 1-5
+    treatment: text('treatment').notNull().default('mitigate'), // accept | mitigate | transfer | avoid
+    treatmentPlan: text('treatment_plan'),
+    ownerId: uuid('owner_id').references(() => users.id),
+    status: text('status').notNull().default('open'), // open | mitigated | accepted | closed
+    relatedControlIds: text('related_control_ids').array().default(sql`ARRAY[]::text[]`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_risks_project').on(table.projectId),
+  ]
+);
+
+// ============================================
+// SOC 2 Compliance — Phase 3: Incidents
+// ============================================
+export const incidents = pgTable(
+  'incidents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    severity: text('severity').notNull().default('p3'), // p0 | p1 | p2 | p3 | p4
+    status: text('status').notNull().default('detected'), // detected | acknowledged | mitigating | resolved | rca_complete
+    description: text('description'),
+    detectedAt: timestamp('detected_at', { withTimezone: true }).notNull().defaultNow(),
+    acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }),
+    mitigatedAt: timestamp('mitigated_at', { withTimezone: true }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    rcaCompletedAt: timestamp('rca_completed_at', { withTimezone: true }),
+    rcaSummary: text('rca_summary'),
+    rootCause: text('root_cause'),
+    impactDescription: text('impact_description'),
+    customersAffected: integer('customers_affected'),
+    assignedTo: uuid('assigned_to').references(() => users.id),
+    anomalyAlertId: uuid('anomaly_alert_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_incidents_project').on(table.projectId, table.createdAt),
+    index('idx_incidents_status').on(table.projectId, table.status),
+  ]
+);
+
+// ============================================
+// SOC 2 Compliance — Phase 3: Personnel
+// ============================================
+export const personnel = pgTable(
+  'personnel',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    email: text('email').notNull(),
+    role: text('role'),
+    department: text('department'),
+    hireDate: timestamp('hire_date', { withTimezone: true }),
+    terminationDate: timestamp('termination_date', { withTimezone: true }),
+    backgroundCheckCompleted: boolean('background_check_completed').notNull().default(false),
+    backgroundCheckDate: timestamp('background_check_date', { withTimezone: true }),
+    trainingCompleted: boolean('training_completed').notNull().default(false),
+    trainingDate: timestamp('training_date', { withTimezone: true }),
+    policyAcknowledged: boolean('policy_acknowledged').notNull().default(false),
+    status: text('status').notNull().default('active'), // active | offboarding | terminated
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_personnel_project').on(table.projectId),
+    uniqueIndex('idx_personnel_project_email').on(table.projectId, table.email),
+  ]
+);

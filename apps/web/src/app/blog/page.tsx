@@ -42,6 +42,7 @@ export default function BlogListingPage() {
     description:
       'Insights on audit logging, SOC 2 compliance, tamper-proof logs, and building enterprise-ready B2B SaaS.',
     url: 'https://auditkit.dev/blog',
+    inLanguage: 'en',
     publisher: {
       '@type': 'Organization',
       name: 'AuditKit',

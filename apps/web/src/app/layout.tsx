@@ -48,6 +48,22 @@ const organizationJsonLd = {
   description:
     'Open-source, tamper-evident audit logging for B2B SaaS. Ship immutable, tenant-scoped audit trails in minutes.',
   sameAs: ['https://github.com/AuditKitDev/auditkit'],
+  logo: {
+    '@type': 'ImageObject',
+    url: 'https://auditkit.dev/icon.svg',
+  },
+};
+
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'AuditKit',
+  url: 'https://auditkit.dev',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: 'https://auditkit.dev/blog?q={search_term_string}',
+    'query-input': 'required name=search_term_string',
+  },
 };
 
 const softwareApplicationJsonLd = {
@@ -73,43 +89,47 @@ const softwareApplicationJsonLd = {
   offers: [
     {
       '@type': 'Offer',
-      name: 'Free',
-      price: '0',
-      priceCurrency: 'USD',
-      description: '1K events/mo, 7-day retention, 1 project, 1 seat',
-    },
-    {
-      '@type': 'Offer',
-      name: 'Pro',
-      price: '39',
-      priceCurrency: 'USD',
-      priceSpecification: {
-        '@type': 'UnitPriceSpecification',
-        billingDuration: 'P1M',
-      },
-      description: '50K events/mo, 90-day retention, embedded viewer, anomaly detection',
-    },
-    {
-      '@type': 'Offer',
-      name: 'Business',
+      name: 'Starter',
       price: '99',
       priceCurrency: 'USD',
       priceSpecification: {
         '@type': 'UnitPriceSpecification',
         billingDuration: 'P1M',
       },
-      description: '500K events/mo, 1-year retention, SIEM streaming, compliance exports',
+      description: '50K events/mo, 90-day retention, SOC 2 control catalog, 15 policy templates, evidence vault',
     },
     {
       '@type': 'Offer',
-      name: 'Supersize + Milkshake',
-      price: '349',
+      name: 'Pro',
+      price: '299',
       priceCurrency: 'USD',
       priceSpecification: {
         '@type': 'UnitPriceSpecification',
         billingDuration: 'P1M',
       },
-      description: '5M events/mo, 7-year retention, Merkle tree proofs, SSO/SCIM, 99.99% SLA',
+      description: '500K events/mo, 1-year retention, access reviews, vendor tracking, SIEM streaming, compliance exports',
+    },
+    {
+      '@type': 'Offer',
+      name: 'Business',
+      price: '499',
+      priceCurrency: 'USD',
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification',
+        billingDuration: 'P1M',
+      },
+      description: '2M events/mo, 3-year retention, auditor portal, trust center, Merkle proofs',
+    },
+    {
+      '@type': 'Offer',
+      name: 'Supersize + Milkshake',
+      price: '999',
+      priceCurrency: 'USD',
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification',
+        billingDuration: 'P1M',
+      },
+      description: '10M events/mo, 7-year retention, SSO/SCIM, legal hold, 99.99% SLA, unlimited everything',
     },
   ],
 };
@@ -139,6 +159,10 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
         <script
           type="application/ld+json"

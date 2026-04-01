@@ -12,8 +12,42 @@ import {
   Zap,
   Lock,
   Star,
+  Shield,
+  FileCheck,
+  ScrollText,
+  Building2,
+  Clock,
+  DollarSign,
+  MessageSquare,
+  Hash,
+  GitBranch,
+  KeyRound,
 } from 'lucide-react';
 import { InteractiveDemo } from '@/components/marketing/interactive-demo';
+import { Soc2Demo } from '@/components/marketing/soc2-demo';
+import { Hero } from '@/components/marketing/hero';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'AuditKit — Audit Logs & SOC 2 Prep for B2B SaaS',
+  description:
+    'Stop losing enterprise deals to compliance gaps. Tamper-proof audit trails and SOC 2 evidence collection in one open-source platform. From $99/mo.',
+  alternates: { canonical: 'https://auditkit.dev' },
+  openGraph: {
+    title: 'AuditKit — Audit Logs & SOC 2 Prep for B2B SaaS',
+    description:
+      'Stop losing enterprise deals to compliance gaps. Tamper-proof audit trails and SOC 2 evidence collection in one open-source platform. From $99/mo.',
+    url: 'https://auditkit.dev',
+    siteName: 'AuditKit',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'AuditKit — Open-Source Audit Logs & SOC 2 Compliance for B2B SaaS',
+    description:
+      'Ship tamper-evident audit trails in 5 minutes. SOC 2 evidence collection, policy templates, and compliance automation. Open source, from $0/mo.',
+  },
+};
 
 const comparison = [
   { feature: 'Open source', auditkit: true, workos: false, pangea: false, retraced: true, custom: true },
@@ -47,6 +81,9 @@ export default function LandingPage() {
             <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition">
               Features
             </Link>
+            <Link href="/soc-2" className="text-sm text-muted-foreground hover:text-foreground transition">
+              SOC 2 Prep
+            </Link>
             <Link href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition">
               Pricing
             </Link>
@@ -68,150 +105,9 @@ export default function LandingPage() {
       </nav>
 
       <div className="relative overflow-x-hidden">
-      {/* Hero */}
-      <section className="relative max-w-6xl mx-auto px-6 pt-28 pb-20">
-        {/* Background glow orbs */}
-        <div className="hero-glow -top-40 -left-40 absolute" />
-        <div className="hero-glow -top-20 right-0 absolute opacity-40" style={{ background: 'radial-gradient(circle, rgba(192, 132, 252, 0.1) 0%, transparent 70%)' }} />
+      {/* Hero — animated client component */}
+      <Hero />
 
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-sm mb-8 animate-fade-up">
-            <Zap className="h-3.5 w-3.5" />
-            <span>Open source</span>
-            <span className="w-1 h-1 rounded-full bg-primary/50" />
-            <span>Tamper-evident</span>
-            <span className="w-1 h-1 rounded-full bg-primary/50" />
-            <span>Enterprise-ready</span>
-          </div>
-
-          <h1 className="text-6xl font-extrabold tracking-tight leading-[1.1] mb-6 animate-fade-up" style={{ animationDelay: '100ms' }}>
-            Ship audit logging in
-            <br />
-            <span className="gradient-text">5 minutes, not 5 sprints</span>
-          </h1>
-
-          <p className="text-xl text-muted-foreground mb-10 max-w-2xl leading-relaxed animate-fade-up" style={{ animationDelay: '200ms' }}>
-            Immutable, tenant-scoped audit trails that close enterprise deals.
-            Stop spending weeks building custom logging infrastructure.
-            Open-source SDK with optional managed cloud.
-          </p>
-
-          <div className="flex items-center gap-4 mb-14 animate-fade-up" style={{ animationDelay: '300ms' }}>
-            <Link
-              href="/signup"
-              className="group inline-flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3.5 rounded-xl font-semibold hover:bg-primary/90 transition-all btn-shimmer glow-primary btn-glow"
-            >
-              Get Started Free
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-            <a
-              href="https://github.com/AuditKitDev/auditkit"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 border border-border px-7 py-3.5 rounded-xl font-semibold hover:bg-secondary hover:border-muted-foreground/20 transition-all"
-            >
-              <Github className="h-4 w-4" />
-              View on GitHub
-            </a>
-          </div>
-
-          {/* Code Example */}
-          <div className="code-block rounded-xl overflow-hidden shadow-2xl shadow-black/40 animate-fade-up" style={{ animationDelay: '400ms' }}>
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-secondary/30">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-500/60" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-                <div className="w-3 h-3 rounded-full bg-green-500/60" />
-              </div>
-              <span className="text-xs text-muted-foreground font-mono ml-2">app.ts</span>
-            </div>
-            <pre className="p-5 overflow-x-auto text-sm font-mono leading-relaxed">
-              <code>
-                <span className="code-keyword">import</span>{' '}
-                <span className="text-foreground/70">{'{ '}</span>
-                <span className="code-function">AuditKit</span>
-                <span className="text-foreground/70">{' }'}</span>
-                <span className="code-keyword"> from</span>{' '}
-                <span className="code-string">{`'@auditkit/sdk'`}</span>
-                <span className="text-foreground/70">;</span>
-                {'\n\n'}
-                <span className="code-keyword">const</span>{' '}
-                <span className="text-foreground">audit</span>
-                <span className="text-foreground/70"> = </span>
-                <span className="code-keyword">new</span>{' '}
-                <span className="code-function">AuditKit</span>
-                <span className="text-foreground/70">{'({'}</span>
-                {'\n  '}
-                <span className="code-property">apiKey</span>
-                <span className="text-foreground/70">: </span>
-                <span className="text-foreground">process.env.</span>
-                <span className="code-property">AUDITKIT_API_KEY</span>
-                <span className="text-foreground/70">!,</span>
-                {'\n'}
-                <span className="text-foreground/70">{'});'}</span>
-                {'\n\n'}
-                <span className="code-keyword">await</span>{' '}
-                <span className="text-foreground">audit.</span>
-                <span className="code-function">log</span>
-                <span className="text-foreground/70">(</span>
-                <span className="code-string">{`'document.updated'`}</span>
-                <span className="text-foreground/70">, {'{'}</span>
-                {'\n  '}
-                <span className="code-property">actor</span>
-                <span className="text-foreground/70">{': { '}</span>
-                <span className="code-property">id</span>
-                <span className="text-foreground/70">: </span>
-                <span className="code-string">{`'user_123'`}</span>
-                <span className="text-foreground/70">, </span>
-                <span className="code-property">name</span>
-                <span className="text-foreground/70">: </span>
-                <span className="code-string">{`'Jane Doe'`}</span>
-                <span className="text-foreground/70">{' },'}</span>
-                {'\n  '}
-                <span className="code-property">target</span>
-                <span className="text-foreground/70">{': { '}</span>
-                <span className="code-property">type</span>
-                <span className="text-foreground/70">: </span>
-                <span className="code-string">{`'document'`}</span>
-                <span className="text-foreground/70">, </span>
-                <span className="code-property">id</span>
-                <span className="text-foreground/70">: </span>
-                <span className="code-string">{`'doc_456'`}</span>
-                <span className="text-foreground/70">{' },'}</span>
-                {'\n  '}
-                <span className="code-property">tenantId</span>
-                <span className="text-foreground/70">: </span>
-                <span className="code-string">{`'org_acme'`}</span>
-                <span className="text-foreground/70">,</span>
-                {'\n'}
-                <span className="text-foreground/70">{'});'}</span>
-              </code>
-            </pre>
-          </div>
-        </div>
-      </section>
-
-      {/* Social Proof — Real Metrics */}
-      <section className="max-w-6xl mx-auto px-6 pb-20 relative z-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          {[
-            { icon: Terminal, label: 'Open Source', sublabel: 'AGPLv3 licensed' },
-            { icon: Lock, label: 'Tamper-Evident', sublabel: 'SHA-256 hash chaining' },
-            { icon: Zap, label: '< 5 min setup', sublabel: 'npm install to production' },
-            { icon: Check, label: 'SOC 2 Ready', sublabel: 'Compliance exports included' },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center gap-3 border border-border/50 rounded-xl px-5 py-4 bg-card/50">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 shrink-0">
-                <item.icon className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.sublabel}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Pain Points */}
       <section className="max-w-6xl mx-auto px-6 py-28 relative">
@@ -585,6 +481,133 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* SOC 2 Audit Prep — NEW SECTION */}
+      <section id="soc2" className="max-w-6xl mx-auto px-6 py-28 relative">
+        <div className="hero-glow absolute -right-40 top-0 opacity-30" />
+        <div className="relative z-10">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-success/20 bg-success/5 text-success text-sm mb-4">
+              <Shield className="h-3.5 w-3.5" />
+              NEW: SOC 2 Audit Prep
+            </div>
+            <h2 className="text-4xl font-extrabold tracking-tight mb-4">
+              SOC 2 evidence collection eats <span className="gradient-text">60-80 hours every quarter</span>
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-3xl mx-auto leading-relaxed">
+              Your auditor just sent a 200-item evidence request list. Your team is screenshotting admin consoles,
+              digging through Google Drive folders, and formatting CSVs at 2am. AuditKit automates the 70% of SOC 2 prep
+              that&apos;s just evidence collection — the part your team hates most.
+            </p>
+          </div>
+
+          {/* Pain → Solution grid */}
+          <div className="grid md:grid-cols-3 gap-6 mb-20">
+            {[
+              {
+                icon: Clock,
+                stat: '60-80 hrs/quarter',
+                title: 'Manual evidence collection',
+                description: '"I soon got overwhelmed by the sheer amount of evidence I had to gather." Every quarter, your team stops shipping features to screenshot admin consoles.',
+                gradient: 'from-red-500/20 to-pink-500/20',
+              },
+              {
+                icon: DollarSign,
+                stat: '$25K-$80K',
+                title: 'First-year SOC 2 cost',
+                description: '"It costs $40K in year one." Tool subscriptions, auditor fees, consultant hours, and the hidden cost of engineering time diverted from product.',
+                gradient: 'from-amber-500/20 to-orange-500/20',
+              },
+              {
+                icon: MessageSquare,
+                stat: '38 pages',
+                title: 'of audit feedback',
+                description: '"How hard could it really be?" Then the pre-audit readiness review came back as 38 pages of feedback on every aspect of our business.',
+                gradient: 'from-indigo-500/20 to-purple-500/20',
+              },
+            ].map((pain) => (
+              <div
+                key={pain.title}
+                className="group relative border border-border rounded-xl p-7 bg-card card-hover feature-glow overflow-hidden text-center"
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${pain.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                <div className="relative">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-destructive/10 mb-5 mx-auto">
+                    <pain.icon className="h-6 w-6 text-destructive" />
+                  </div>
+                  <p className="text-3xl font-extrabold tracking-tight mb-1">{pain.stat}</p>
+                  <h3 className="font-bold text-lg mb-3">{pain.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{pain.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* What AuditKit does about it */}
+          <div className="text-center mb-12">
+            <h3 className="text-2xl font-extrabold tracking-tight mb-3">
+              AuditKit replaces the spreadsheet scramble with <span className="gradient-text">one platform</span>
+            </h3>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
+            {[
+              { icon: FileCheck, title: 'Evidence Vault', desc: 'Upload, organize, and hash-verify every piece of audit evidence. Tagged to SOC 2 controls. Auditor-ready export.', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+              { icon: Shield, title: 'Control Catalog', desc: 'Pre-built SOC 2 checklist with 51 controls. Track readiness per category. Know exactly where you stand.', color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+              { icon: ScrollText, title: '15 Policy Templates', desc: 'Pre-written security policies ready to customize. Save $5K-$15K in consultant fees. Employee acknowledgment tracking.', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+              { icon: Users, title: 'Access Reviews', desc: 'Quarterly access review campaigns. Pull user lists, assign reviewers, track approve/revoke decisions. No more spreadsheets.', color: 'text-violet-400', bg: 'bg-violet-500/10' },
+              { icon: Building2, title: 'Vendor Tracking', desc: 'Vendor inventory with SOC 2 report tracking, DPA storage, and expiration alerts. 89% of audits check vendors.', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+              { icon: AlertTriangle, title: 'Risk Register', desc: 'Document risks with likelihood/impact scoring. Treatment plans and owner assignment. Connects to anomaly detection.', color: 'text-rose-400', bg: 'bg-rose-500/10' },
+            ].map((feat) => (
+              <div key={feat.title} className="border border-border/60 rounded-xl p-5 bg-card card-hover">
+                <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg ${feat.bg} mb-4`}>
+                  <feat.icon className={`h-5 w-5 ${feat.color}`} />
+                </div>
+                <h4 className="font-bold text-sm mb-1.5">{feat.title}</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">{feat.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Tamper-proof callout */}
+          <div className="border border-primary/20 rounded-xl p-8 bg-primary/5 text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Hash className="h-5 w-5 text-primary" />
+              <GitBranch className="h-5 w-5 text-primary" />
+              <KeyRound className="h-5 w-5 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold mb-2">Every piece of evidence is tamper-proof</h3>
+            <p className="text-sm text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              SHA-256 hash chains, Merkle tree proofs, and Ed25519 digital signatures on every upload.
+              After the Delve scandal — where 494 fake SOC 2 reports were exposed — auditors want proof your evidence is real.
+              AuditKit provides cryptographic proof that nothing has been altered since collection.
+            </p>
+          </div>
+
+          <div className="text-center mt-10 space-y-4">
+            <Link
+              href="/soc-2"
+              className="group inline-flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3.5 rounded-xl font-semibold hover:bg-primary/90 transition-all btn-shimmer glow-primary btn-glow"
+            >
+              Learn More About SOC 2 Prep
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              Read more:{' '}
+              <Link href="/blog/audit-logs-soc-2-b2b-saas" className="text-primary hover:underline">
+                Why Your B2B SaaS Needs Audit Logs Before SOC 2
+              </Link>{' '}
+              &middot;{' '}
+              <Link href="/blog/soc-2-evidence-collection-guide" className="text-primary hover:underline">
+                SOC 2 Evidence Collection Guide
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* SOC 2 Interactive Demo */}
+      <Soc2Demo />
+
       {/* Comparison */}
       <section className="max-w-6xl mx-auto px-6 py-28">
         <div className="text-center mb-16">
@@ -602,9 +625,15 @@ export default function LandingPage() {
                 <th className="text-center p-5 font-bold text-primary">
                   <Logo size="md" />
                 </th>
-                <th className="text-center p-5 font-medium text-muted-foreground">WorkOS</th>
-                <th className="text-center p-5 font-medium text-muted-foreground">Pangea</th>
-                <th className="text-center p-5 font-medium text-muted-foreground">Retraced</th>
+                <th className="text-center p-5 font-medium text-muted-foreground">
+                  <Link href="/compare/workos" className="hover:text-primary transition">WorkOS</Link>
+                </th>
+                <th className="text-center p-5 font-medium text-muted-foreground">
+                  <Link href="/compare/pangea" className="hover:text-primary transition">Pangea</Link>
+                </th>
+                <th className="text-center p-5 font-medium text-muted-foreground">
+                  <Link href="/compare/retraced" className="hover:text-primary transition">Retraced</Link>
+                </th>
                 <th className="text-center p-5 font-medium text-muted-foreground">Custom Build</th>
               </tr>
             </thead>
@@ -632,76 +661,99 @@ export default function LandingPage() {
             </tbody>
           </table>
         </div>
+
+        <p className="text-sm text-muted-foreground text-center mt-8">
+          See detailed comparisons:{' '}
+          <Link href="/compare/vanta" className="text-primary hover:underline">AuditKit vs Vanta</Link>
+          {' '}&middot;{' '}
+          <Link href="/compare/drata" className="text-primary hover:underline">AuditKit vs Drata</Link>
+          {' '}&middot;{' '}
+          <Link href="/compare/spreadsheets" className="text-primary hover:underline">AuditKit vs Spreadsheets</Link>
+        </p>
       </section>
 
       {/* Pricing */}
       <section id="pricing" className="max-w-6xl mx-auto px-6 py-28">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-extrabold tracking-tight mb-4">Simple, usage-based pricing</h2>
-          <p className="text-muted-foreground text-lg">Start free. Scale as you grow.</p>
+          <h2 className="text-4xl font-extrabold tracking-tight mb-4">Audit logging + SOC 2 prep. One platform.</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Published pricing. Monthly billing. No lock-in contracts. No surprise renewals.
+          </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             {
-              name: 'Free',
-              price: '$0',
-              period: '',
-              events: '1K events/mo',
-              retention: '7-day retention',
-              cta: 'Get Started Free',
-              features: ['SDK + hash chaining', 'Search + API', 'Basic dashboard', '1 project', '1 seat', 'Community support'],
-            },
-            {
-              name: 'Pro',
-              price: '$39',
+              name: 'Starter',
+              price: '$99',
               period: '/mo',
               events: '50K events/mo',
               retention: '90-day retention',
+              cta: 'Start Free Trial',
+              features: [
+                'SDK + hash chaining',
+                'Embedded audit viewer',
+                'SOC 2 control catalog (51 controls)',
+                '15 policy templates',
+                'Evidence vault (5 GB)',
+                'Readiness dashboard',
+                'Anomaly detection',
+                '3 projects · 5 seats',
+              ],
+            },
+            {
+              name: 'Pro',
+              price: '$299',
+              period: '/mo',
+              events: '500K events/mo',
+              retention: '1-year retention',
               cta: 'Start Pro Trial',
               popular: true,
               features: [
-                'Everything in Free',
-                'Embedded viewer UI',
-                'CSV/JSON export',
-                'Webhooks + Slack/Discord',
-                'Anomaly detection',
-                'Unlimited tenants',
-                '3 projects \u00b7 5 seats',
+                'Everything in Starter',
+                'Access review campaigns',
+                'Vendor tracking + risk register',
+                'Incident tracker',
+                'SIEM streaming (Splunk, Datadog)',
+                'Compliance exports (OCSF/CEF)',
+                'Data residency (EU/US)',
+                'PII redaction',
+                '10 projects · 15 seats',
               ],
             },
             {
               name: 'Business',
-              price: '$99',
+              price: '$499',
               period: '/mo',
-              events: '500K events/mo',
-              retention: '1-year retention',
+              events: '2M events/mo',
+              retention: '3-year retention',
               cta: 'Start Business Trial',
               features: [
                 'Everything in Pro',
-                'SIEM streaming included',
-                'OCSF/CEF formats',
-                'Compliance evidence export',
-                'Data residency (EU/US)',
-                'PII redaction',
-                '10 projects \u00b7 15 seats',
+                'Auditor collaboration portal',
+                'Personnel tracker',
+                'Trust center',
+                'Merkle tree proofs',
+                'System description builder',
+                'Unlimited integrations',
+                'Unlimited projects · 50 seats',
               ],
             },
             {
               name: 'Supersize + Milkshake',
-              price: '$349',
+              price: '$999',
               period: '/mo',
-              events: '5M events/mo',
+              events: '10M events/mo',
               retention: '7-year retention',
               cta: 'Go Supersize',
               features: [
                 'Everything in Business',
-                'Merkle tree proofs',
                 'Legal hold',
                 'SSO/SCIM',
                 'GraphQL API',
                 '99.99% SLA',
-                'Unlimited projects, seats & tenants',
+                'Unlimited everything',
+                'Dedicated support',
                 'Priority support + extra milkshakes',
               ],
             },
@@ -879,6 +931,14 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* What is AuditKit? — GEO definition section for AI citation */}
+      <section className="max-w-4xl mx-auto px-6 pb-16">
+        <h2 className="text-3xl font-extrabold tracking-tight mb-4">What is AuditKit?</h2>
+        <p className="text-muted-foreground leading-relaxed text-lg">
+          AuditKit is an open-source audit logging and SOC 2 compliance platform for B2B SaaS companies. It provides tamper-evident audit trails using SHA-256 hash chaining and Merkle tree proofs, tenant-scoped access controls, and automated SOC 2 evidence collection. AuditKit helps companies ship enterprise-grade audit logging in minutes and prepare for SOC 2 audits at a fraction of the cost of traditional compliance platforms.
+        </p>
+      </section>
+
       {/* FAQ */}
       <section className="max-w-4xl mx-auto px-6 py-28">
         <div className="text-center mb-16">
@@ -945,6 +1005,40 @@ export default function LandingPage() {
             </details>
           ))}
         </div>
+
+        {/* HowTo JSON-LD for "Production-ready in three steps" */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'HowTo',
+              name: 'How to set up audit logging with AuditKit',
+              description:
+                'Ship production-ready, tamper-evident audit trails in under 5 minutes with AuditKit.',
+              step: [
+                {
+                  '@type': 'HowToStep',
+                  position: 1,
+                  name: 'Install the SDK',
+                  text: 'Run npm install @auditkit/sdk to add AuditKit to your project. Works with Node, Python, Go, and Ruby.',
+                },
+                {
+                  '@type': 'HowToStep',
+                  position: 2,
+                  name: 'Log your first event',
+                  text: 'Call audit.log() with an action, actor, and tenant ID. Each event is automatically hash-chained for tamper evidence.',
+                },
+                {
+                  '@type': 'HowToStep',
+                  position: 3,
+                  name: 'Embed the audit trail viewer',
+                  text: 'Drop the AuditKitViewer React component into your app. Tenant-scoped by default so each customer sees only their own events.',
+                },
+              ],
+            }),
+          }}
+        />
 
         <script
           type="application/ld+json"
@@ -1038,7 +1132,8 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold text-sm mb-4">Product</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><Link href="#features" className="hover:text-foreground transition">Features</Link></li>
+                <li><Link href="#features" className="hover:text-foreground transition">Audit Logging</Link></li>
+                <li><Link href="/soc-2" className="hover:text-foreground transition">SOC 2 Audit Prep</Link></li>
                 <li><Link href="#pricing" className="hover:text-foreground transition">Pricing</Link></li>
                 <li><Link href="/docs" className="hover:text-foreground transition">Documentation</Link></li>
                 <li><Link href="/blog" className="hover:text-foreground transition">Blog</Link></li>
@@ -1054,11 +1149,14 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-sm mb-4">Company</h4>
+              <h4 className="font-semibold text-sm mb-4">Compare</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><Link href="/blog" className="hover:text-foreground transition">Blog</Link></li>
-                <li><Link href="#" className="hover:text-foreground transition">Privacy</Link></li>
-                <li><Link href="#" className="hover:text-foreground transition">Terms</Link></li>
+                <li><Link href="/compare/vanta" className="hover:text-foreground transition">AuditKit vs Vanta</Link></li>
+                <li><Link href="/compare/drata" className="hover:text-foreground transition">AuditKit vs Drata</Link></li>
+                <li><Link href="/compare/spreadsheets" className="hover:text-foreground transition">AuditKit vs Spreadsheets</Link></li>
+                <li><Link href="/compare/workos" className="hover:text-foreground transition">AuditKit vs WorkOS</Link></li>
+                <li><Link href="/compare/pangea" className="hover:text-foreground transition">AuditKit vs Pangea</Link></li>
+                <li><Link href="/compare/retraced" className="hover:text-foreground transition">AuditKit vs Retraced</Link></li>
                 <li><a href="mailto:hello@auditkit.dev" className="hover:text-foreground transition">Contact</a></li>
               </ul>
             </div>

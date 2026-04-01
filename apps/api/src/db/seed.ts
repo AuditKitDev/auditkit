@@ -1,7 +1,9 @@
 import { createHash, randomBytes, scrypt } from 'crypto';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { eq } from 'drizzle-orm';
 import * as schema from './schema.js';
+import { SOC2_CONTROLS } from '@auditkit/shared';
 
 const client = postgres(process.env.DATABASE_URL!);
 const db = drizzle(client, { schema });
@@ -104,6 +106,28 @@ async function seed() {
   });
 
   print('Free subscription created for demo user');
+
+  // 7. Seed SOC 2 control framework templates
+  const existingFrameworks = await db
+    .select({ id: schema.controlFrameworks.id })
+    .from(schema.controlFrameworks)
+    .where(eq(schema.controlFrameworks.framework, 'soc2'))
+    .limit(1);
+
+  if (existingFrameworks.length === 0) {
+    await db.insert(schema.controlFrameworks).values(
+      SOC2_CONTROLS.map((c) => ({
+        framework: c.framework,
+        criteriaId: c.criteriaId,
+        title: c.title,
+        description: c.description,
+        category: c.category,
+      }))
+    );
+    print(`SOC 2 control framework seeded: ${SOC2_CONTROLS.length} controls`);
+  } else {
+    print('SOC 2 control framework already seeded');
+  }
 
   print('\n--- Setup Complete ---');
   print('\nDemo login: demo@auditkit.dev / demo1234');

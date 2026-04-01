@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Calendar, Clock, User, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, User, ChevronRight, ArrowRight, ArrowLeft } from 'lucide-react';
 import { blogPosts, getPostBySlug, getAllSlugs } from '@/content/blog/posts';
 
 interface PageProps {
@@ -54,14 +54,20 @@ export default async function BlogPostPage({ params }: PageProps) {
   const post = getPostBySlug(slug);
   if (!post) notFound();
 
-  const relatedPosts = blogPosts.filter((p) => p.slug !== post.slug).slice(0, 2);
+  const relatedPosts = blogPosts.filter((p) => p.slug !== post.slug).slice(0, 3);
+
+  const currentIndex = blogPosts.findIndex(p => p.slug === slug);
+  const prevPost = currentIndex > 0 ? blogPosts[currentIndex - 1] : null;
+  const nextPost = currentIndex < blogPosts.length - 1 ? blogPosts[currentIndex + 1] : null;
 
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': 'BlogPosting',
     headline: post.title,
     description: post.description,
+    image: 'https://auditkit.dev/og-default.png',
     datePublished: post.publishedAt,
+    dateModified: post.publishedAt,
     author: {
       '@type': 'Organization',
       name: post.author,
@@ -80,10 +86,23 @@ export default async function BlogPostPage({ params }: PageProps) {
     wordCount: post.content.replace(/<[^>]*>/g, '').split(/\s+/).length,
   };
 
-  const faqJsonLd = {
+  const faqQuestions = extractQuestionsFromContent(post.content);
+  const faqJsonLd = faqQuestions.length > 0
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqQuestions,
+      }
+    : null;
+
+  const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: extractQuestionsFromContent(post.content),
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://auditkit.dev' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://auditkit.dev/blog' },
+      { '@type': 'ListItem', position: 3, name: post.title },
+    ],
   };
 
   return (
@@ -92,9 +111,15 @@ export default async function BlogPostPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
       <article className="max-w-3xl mx-auto px-6 pt-12 pb-24">
@@ -166,11 +191,23 @@ export default async function BlogPostPage({ params }: PageProps) {
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
+        {/* CTA */}
+        <div className="mt-12 border border-primary/20 rounded-xl p-8 bg-primary/5 text-center">
+          <h3 className="text-xl font-bold mb-2">Ready to ship audit logging?</h3>
+          <p className="text-muted-foreground mb-4 max-w-lg mx-auto text-sm">
+            AuditKit gives you tamper-evident audit trails and SOC 2 evidence collection in one platform. Start free.
+          </p>
+          <Link href="/signup" className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all">
+            Get Started Free
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
         {/* Related Posts */}
         {relatedPosts.length > 0 && (
           <section className="mt-16 pt-10 border-t border-border">
             <h2 className="text-xl font-semibold mb-6">Related Articles</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {relatedPosts.map((related) => (
                 <Link
                   key={related.slug}
@@ -190,6 +227,40 @@ export default async function BlogPostPage({ params }: PageProps) {
               ))}
             </div>
           </section>
+        )}
+
+        {/* Prev / Next Navigation */}
+        {(prevPost || nextPost) && (
+          <nav className="mt-12 pt-8 border-t border-border flex items-stretch justify-between gap-4">
+            {prevPost ? (
+              <Link
+                href={`/blog/${prevPost.slug}`}
+                className="group flex-1 flex items-start gap-3 border border-border rounded-lg p-4 hover:border-primary/30 transition"
+              >
+                <ArrowLeft className="h-4 w-4 mt-1 shrink-0 text-muted-foreground group-hover:text-primary transition" />
+                <div className="min-w-0">
+                  <span className="text-xs text-muted-foreground">Previous</span>
+                  <p className="text-sm font-medium truncate group-hover:text-primary transition">{prevPost.title}</p>
+                </div>
+              </Link>
+            ) : (
+              <div className="flex-1" />
+            )}
+            {nextPost ? (
+              <Link
+                href={`/blog/${nextPost.slug}`}
+                className="group flex-1 flex items-start gap-3 border border-border rounded-lg p-4 hover:border-primary/30 transition text-right"
+              >
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs text-muted-foreground">Next</span>
+                  <p className="text-sm font-medium truncate group-hover:text-primary transition">{nextPost.title}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 mt-1 shrink-0 text-muted-foreground group-hover:text-primary transition" />
+              </Link>
+            ) : (
+              <div className="flex-1" />
+            )}
+          </nav>
         )}
       </article>
     </>

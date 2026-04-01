@@ -50,6 +50,20 @@ const navigation = [
   { name: 'Compliance', href: '/dashboard/compliance', icon: FileText },
   { name: 'Anomalies', href: '/dashboard/anomalies', icon: AlertTriangle },
   {
+    name: 'SOC 2 Prep',
+    icon: Shield,
+    children: [
+      { name: 'Readiness', href: '/dashboard/soc2/readiness', icon: ShieldCheck },
+      { name: 'Evidence', href: '/dashboard/soc2/evidence', icon: FileText },
+      { name: 'Policies', href: '/dashboard/soc2/policies', icon: FileText },
+      { name: 'Access Reviews', href: '/dashboard/soc2/access-reviews', icon: Users },
+      { name: 'Vendors', href: '/dashboard/soc2/vendors', icon: Globe },
+      { name: 'Risks', href: '/dashboard/soc2/risks', icon: AlertTriangle },
+      { name: 'Incidents', href: '/dashboard/soc2/incidents', icon: AlertTriangle },
+      { name: 'Personnel', href: '/dashboard/soc2/personnel', icon: Users },
+    ],
+  },
+  {
     name: 'Settings',
     icon: Settings,
     children: [
