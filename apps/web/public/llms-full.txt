@@ -477,7 +477,7 @@ AuditKit helps B2B SaaS teams prepare for and pass SOC 2 audits with purpose-bui
 - API Reference: https://auditkit.dev/docs/api
 - SDK Guide: https://auditkit.dev/docs/sdks
 - Self-Hosting Guide: https://auditkit.dev/docs/self-hosting
-- Status Page: https://status.auditkit.dev
+- SOC 2 Prep: https://auditkit.dev/soc-2
 
 ## Contact
 

@@ -302,13 +302,13 @@ export function Sidebar() {
             Support
           </a>
           <a
-            href="https://status.auditkit.dev"
+            href="https://github.com/AuditKitDev/auditkit"
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-muted-foreground hover:text-foreground transition rounded-md hover:bg-secondary/50"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Status
+            GitHub
           </a>
           <button
             onClick={() => { localStorage.removeItem('auditkit_onboarding_complete'); window.location.reload(); }}

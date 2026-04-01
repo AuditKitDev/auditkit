@@ -347,7 +347,7 @@ export default function BillingPage() {
       <h2 className="text-lg font-bold mb-4">
         {currentPlan === 'free' ? 'Upgrade Your Plan' : 'Available Plans'}
       </h2>
-      <div className={`grid gap-4 mb-8 ${upgradePlans.length === 3 ? 'md:grid-cols-3' : upgradePlans.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-md'}`}>
+      <div className={`grid gap-4 mb-8 ${upgradePlans.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : upgradePlans.length === 3 ? 'md:grid-cols-3' : upgradePlans.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-md'}`}>
         {upgradePlans.map((plan) => {
           const isCurrent = !isSysadmin && plan.key === currentPlan;
           const isDowngrade = !isSysadmin && plans.findIndex((p) => p.key === currentPlan) > plans.findIndex((p) => p.key === plan.key);
