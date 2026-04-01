@@ -30,27 +30,35 @@ export const PLAN_CONFIGS = {
     projectQuota: 1,
     retentionDays: 7,
   },
-  pro: {
-    name: 'Pro',
-    priceId: process.env.STRIPE_PRICE_PRO || 'price_pro_monthly',
-    price: 3900,
+  starter: {
+    name: 'Starter',
+    priceId: process.env.STRIPE_PRICE_STARTER || 'price_1THXhCLzfIOEd6fK1IAXAK5v',
+    price: 9900,
     eventQuota: 50000,
     projectQuota: 3,
     retentionDays: 90,
   },
-  business: {
-    name: 'Business',
-    priceId: process.env.STRIPE_PRICE_BUSINESS || 'price_business_monthly',
-    price: 9900,
+  pro: {
+    name: 'Pro',
+    priceId: process.env.STRIPE_PRICE_PRO || 'price_1THXjBLzfIOEd6fKmS5jajad',
+    price: 29900,
     eventQuota: 500000,
     projectQuota: 10,
     retentionDays: 365,
   },
+  business: {
+    name: 'Business',
+    priceId: process.env.STRIPE_PRICE_BUSINESS || 'price_1THXlJLzfIOEd6fKF4DJBBI3',
+    price: 49900,
+    eventQuota: 2000000,
+    projectQuota: 50,
+    retentionDays: 1095, // ~3 years
+  },
   supersize: {
     name: 'Supersize + Milkshake',
-    priceId: process.env.STRIPE_PRICE_SUPERSIZE || 'price_supersize_monthly',
-    price: 34900,
-    eventQuota: 5000000,
+    priceId: process.env.STRIPE_PRICE_SUPERSIZE || 'price_1THXmILzfIOEd6fKvMGE0Zgj',
+    price: 99900,
+    eventQuota: 10000000,
     projectQuota: -1, // unlimited
     retentionDays: 2555, // ~7 years
   },
