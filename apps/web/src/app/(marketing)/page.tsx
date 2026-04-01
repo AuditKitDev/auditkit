@@ -782,15 +782,16 @@ export default function LandingPage() {
               <p className="text-sm text-muted-foreground mb-1">{tier.events}</p>
               <p className="text-sm text-muted-foreground/60 mb-7">{tier.retention}</p>
 
-              <button
-                className={`w-full py-2.5 rounded-lg text-sm font-semibold mb-7 transition-all ${
+              <Link
+                href="/signup"
+                className={`w-full py-2.5 rounded-lg text-sm font-semibold mb-7 transition-all text-center block ${
                   tier.popular
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90 btn-shimmer glow-primary btn-glow'
                     : 'bg-secondary text-foreground hover:bg-muted border border-border btn-glow'
                 }`}
               >
                 {tier.cta}
-              </button>
+              </Link>
 
               <ul className="space-y-3 flex-1">
                 {tier.features.map((f) => (
