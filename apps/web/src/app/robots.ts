@@ -65,6 +65,10 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: 'meta-externalagent',
         allow: '/',
       },
+      {
+        userAgent: 'GoogleOther',
+        allow: '/',
+      },
     ],
     sitemap: 'https://auditkit.dev/sitemap.xml',
   };
