@@ -1118,6 +1118,63 @@ export default function LandingPage() {
         />
       </section>
 
+      {/* aidevshield Open Source */}
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        <div className="relative border border-border rounded-2xl overflow-hidden bg-card">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-cyan-500/5" />
+          <div className="relative p-10 sm:p-14 flex flex-col lg:flex-row items-start lg:items-center gap-10">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-sm mb-5">
+                <Shield className="h-3.5 w-3.5" />
+                Free &amp; Open Source
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">
+                aidevshield
+              </h2>
+              <p className="text-lg text-muted-foreground mb-4 max-w-xl">
+                Security scanner for AI coding tool configurations. Like <code className="text-sm bg-muted px-1.5 py-0.5 rounded font-mono">npm audit</code>, but for AI workflows.
+              </p>
+              <p className="text-sm text-muted-foreground mb-6 max-w-xl leading-relaxed">
+                Catches prompt injection in GitHub Actions, supply chain attacks in npm lifecycle scripts, invisible Unicode backdoors in AI config files, and more. The same patterns behind Clinejection, Cacheract, and the Shai-Hulud npm worm.
+              </p>
+              <div className="bg-muted/50 border border-border rounded-lg px-5 py-3.5 font-mono text-sm mb-6 inline-block">
+                <span className="text-muted-foreground">$</span>{' '}
+                <span className="text-emerald-400">npx aidevshield scan .</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/aidevshield"
+                  className="text-sm bg-primary text-primary-foreground px-5 py-2.5 rounded-lg hover:bg-primary/90 transition btn-shimmer font-medium"
+                >
+                  Learn More
+                </Link>
+                <a
+                  href="https://github.com/aidevshield/aidevshield"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition"
+                >
+                  <Github className="h-4 w-4" />
+                  View on GitHub
+                </a>
+              </div>
+            </div>
+            <div className="w-full lg:w-80 shrink-0 bg-background/80 border border-border rounded-xl p-5 font-mono text-xs leading-relaxed space-y-1.5">
+              <p className="text-muted-foreground">  aidevshield v1.0.0 — AI Workflow Security Scanner</p>
+              <p className="text-muted-foreground mt-2">  Scanning: ./my-project</p>
+              <p className="text-muted-foreground">  Checks: workflows | package.json | AI configs</p>
+              <p className="mt-3"><span className="text-red-400 font-bold">[CRITICAL]</span> <span className="text-muted-foreground">.github/workflows/ai-triage.yml:18</span></p>
+              <p className="text-foreground pl-4">Wildcard user permissions on AI workflow</p>
+              <p className="mt-2"><span className="text-red-400 font-bold">[CRITICAL]</span> <span className="text-muted-foreground">.cursorrules:1</span></p>
+              <p className="text-foreground pl-4">Hidden Unicode characters detected</p>
+              <p className="mt-2"><span className="text-amber-400 font-bold">[HIGH]</span> <span className="text-muted-foreground">node_modules/evil-pkg/package.json</span></p>
+              <p className="text-foreground pl-4">curl | sh in postinstall script</p>
+              <p className="mt-3 text-muted-foreground">  6 issues found (2 critical, 1 high, 2 medium, 1 low)</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-border/50 py-16">
         <div className="max-w-6xl mx-auto px-6">
@@ -1147,6 +1204,7 @@ export default function LandingPage() {
                 <li><Link href="/docs" className="hover:text-foreground transition">API Reference</Link></li>
                 <li><Link href="/docs" className="hover:text-foreground transition">SDK Guide</Link></li>
                 <li><Link href="/docs" className="hover:text-foreground transition">Self-Hosting</Link></li>
+                <li><Link href="/aidevshield" className="hover:text-foreground transition">aidevshield (OSS)</Link></li>
               </ul>
             </div>
             <div>
