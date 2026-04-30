@@ -5,6 +5,7 @@ export interface BlogPost {
   content: string;
   author: string;
   publishedAt: string;
+  updatedAt?: string;
   tags: string[];
   readTime: string;
   seoTitle: string;
@@ -1126,14 +1127,15 @@ CREATE TABLE tenant_retention (
   },
   {
     slug: 'siem-integration-audit-logs',
-    title: 'SIEM Integration Guide: Connecting Audit Logs to Splunk, Datadog & Elastic',
+    title: 'How to Stream Audit Logs to Splunk, Datadog, or Elastic (2026 Guide)',
     description:
-      'Enterprise customers expect audit log data in their SIEM. Learn how to stream audit events to Splunk, Datadog, and Elastic with proper formatting and reliability.',
-    seoTitle: 'SIEM Integration for Audit Logs: Splunk, Datadog, Elastic | AuditKit',
+      'Stream audit logs to Splunk HEC, Datadog, or Elastic in under 50 lines. Covers CEF/LEEF/ECS format mapping, exactly-once delivery, and the 3 enterprise patterns that actually scale.',
+    seoTitle: 'Stream Audit Logs to Splunk, Datadog, or Elastic: 2026 Guide',
     seoDescription:
-      'Learn how to integrate audit logs with Splunk, Datadog, and Elastic. Covers streaming vs batch, format normalization, delivery guarantees, and enterprise deployment patterns.',
+      'Stream audit logs to Splunk HEC, Datadog, or Elastic in under 50 lines of code. Covers CEF/LEEF/ECS format mapping, exactly-once delivery guarantees, batch vs streaming patterns, and the 3 enterprise integration patterns that actually scale at 10M+ events/day.',
     author: 'AuditKit Team',
     publishedAt: '2026-03-18',
+    updatedAt: '2026-04-29',
     tags: ['SIEM', 'Integration', 'DevOps'],
     readTime: '8 min read',
     content: `
@@ -1150,6 +1152,14 @@ CREATE TABLE tenant_retention (
         Security teams evaluate vendors on whether audit events can be ingested into their existing
         monitoring pipeline. Providing native SIEM integration removes a common objection during
         enterprise sales cycles and demonstrates security maturity.
+      </p>
+      <p>
+        SIEM ingestion is also an explicit requirement of several federal frameworks. NIST SP 800-92
+        (<a href="https://csrc.nist.gov/pubs/sp/800/92/final" rel="noopener" target="_blank">Guide to Computer Security Log Management</a>)
+        prescribes centralized log aggregation and retention, and FedRAMP and CMMC Level 2 controls
+        (<a href="https://csrc.nist.gov/projects/risk-management/sp800-53-controls/release-search#!/control?version=5.1&number=AU-6" rel="noopener" target="_blank">NIST 800-53 AU-6</a>)
+        require log review tooling that, in practice, means a SIEM. Customers in regulated sectors
+        will treat your audit log endpoints as in-scope for their own compliance audits.
       </p>
 
       <h2>Should You Stream Events or Batch Export Them?</h2>

@@ -60,6 +60,8 @@ export default async function BlogPostPage({ params }: PageProps) {
   const prevPost = currentIndex > 0 ? blogPosts[currentIndex - 1] : null;
   const nextPost = currentIndex < blogPosts.length - 1 ? blogPosts[currentIndex + 1] : null;
 
+  const updatedAt = (post as { updatedAt?: string }).updatedAt || post.publishedAt;
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -67,7 +69,7 @@ export default async function BlogPostPage({ params }: PageProps) {
     description: post.description,
     image: 'https://auditkit.dev/og-default.png',
     datePublished: post.publishedAt,
-    dateModified: post.publishedAt,
+    dateModified: updatedAt,
     author: {
       '@type': 'Organization',
       name: post.author,
@@ -170,12 +172,33 @@ export default async function BlogPostPage({ params }: PageProps) {
               <Calendar className="h-4 w-4" />
               <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
             </span>
+            {updatedAt && updatedAt !== post.publishedAt && (
+              <span className="inline-flex items-center gap-1.5 text-muted-foreground/70">
+                Updated <time dateTime={updatedAt}>{formatDate(updatedAt)}</time>
+              </span>
+            )}
             <span className="inline-flex items-center gap-1.5">
               <Clock className="h-4 w-4" />
               {post.readTime}
             </span>
           </div>
         </header>
+
+        {/* Answer-lead / TL;DR — citable summary for AEO. LLMs preferentially
+            cite tight definitional blocks at the top of an article. */}
+        {post.description && (
+          <aside
+            aria-label="Summary"
+            className="mb-10 rounded-xl border border-primary/30 bg-primary/5 p-5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-2">
+              TL;DR
+            </p>
+            <p className="text-base leading-relaxed text-foreground/90">
+              {post.description}
+            </p>
+          </aside>
+        )}
 
         {/* Content */}
         <div
