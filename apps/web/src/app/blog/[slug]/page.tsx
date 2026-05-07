@@ -218,12 +218,38 @@ export default async function BlogPostPage({ params }: PageProps) {
         <div className="mt-12 border border-primary/20 rounded-xl p-8 bg-primary/5 text-center">
           <h3 className="text-xl font-bold mb-2">Ready to ship audit logging?</h3>
           <p className="text-muted-foreground mb-4 max-w-lg mx-auto text-sm">
-            AuditKit gives you tamper-evident audit trails and SOC 2 evidence collection in one platform. Start free.
+            AuditKit gives you tamper-evident audit trails and SOC 2 evidence collection in one platform. Start free, or skip the trial below.
           </p>
-          <Link href="/signup" className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all">
-            Get Started Free
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link href="/signup" className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all">
+              Get Started Free
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <a
+              href="https://buy.stripe.com/5kQ00kbhe7TV1ND2gZ4gg00"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 border border-primary/30 text-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:border-primary/60 transition-colors"
+            >
+              Starter $99/mo
+            </a>
+            <a
+              href="https://buy.stripe.com/8x2fZi3OM5LN1NDcVD4gg01"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 border border-primary/30 text-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:border-primary/60 transition-colors"
+            >
+              Pro $299/mo
+            </a>
+            <a
+              href="https://buy.stripe.com/4gM7sM2KI2zB4ZP5tb4gg02"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 border border-primary/30 text-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:border-primary/60 transition-colors"
+            >
+              Business $499/mo
+            </a>
+          </div>
         </div>
 
         {/* Related Posts */}
