@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { UserPlus, Loader2, AlertCircle } from 'lucide-react';
 import { setToken } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
+import { trackSignup } from '@/lib/analytics';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -44,6 +45,7 @@ export default function SignupPage() {
       });
 
       setToken(data.token);
+      trackSignup(email, 'free');
       router.push('/dashboard/overview');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error. Please try again.');

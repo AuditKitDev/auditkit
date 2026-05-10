@@ -116,6 +116,47 @@ export function createSysadminRouter(db: Database) {
     });
   });
 
+  // GET /dashboard/sysadmin/users/recent — recent signups
+  router.get('/users/recent', async (c) => {
+    const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 100);
+
+    const recentUsers = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        emailVerified: users.emailVerified,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt))
+      .limit(limit);
+
+    return c.json({
+      data: recentUsers.map((u) => ({
+        ...u,
+        createdAt: u.createdAt?.toISOString(),
+      })),
+    });
+  });
+
+  // GET /dashboard/sysadmin/users/stats — total user count and last signup
+  router.get('/users/stats', async (c) => {
+    const [totalResult] = await db.select({ count: count() }).from(users);
+
+    const [lastUser] = await db
+      .select({ createdAt: users.createdAt })
+      .from(users)
+      .orderBy(desc(users.createdAt))
+      .limit(1);
+
+    return c.json({
+      totalUsers: totalResult?.count ?? 0,
+      lastSignupAt: lastUser?.createdAt?.toISOString() ?? null,
+    });
+  });
+
   // GET /dashboard/sysadmin/actions — distinct action types for filter dropdown
   router.get('/actions', async (c) => {
     const actions = await db

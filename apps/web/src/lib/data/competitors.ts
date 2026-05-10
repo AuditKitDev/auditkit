@@ -530,6 +530,324 @@ export const competitors: Competitor[] = [
       },
     ],
   },
+  {
+    slug: 'sprinto',
+    name: 'Sprinto',
+    pricing: 'Starting ~$5,000-$10,000/yr (annual contracts, sales-led)',
+    category: 'GRC',
+    description:
+      'Compare AuditKit and Sprinto for SOC 2 compliance. Sprinto is positioned as a cheaper Drata/Vanta alternative for early-stage startups; AuditKit is open source with tamper-proof evidence at $99/mo and a free self-hosted option.',
+    features: [
+      { feature: 'Open source', auditkit: true, competitor: false },
+      { feature: 'Self-hosted option', auditkit: true, competitor: false },
+      { feature: 'Tamper-proof evidence (hash chain)', auditkit: true, competitor: false },
+      { feature: 'Merkle tree proofs', auditkit: true, competitor: false },
+      { feature: 'Multi-language audit log SDKs', auditkit: 'TS, Python, Go, Java', competitor: 'Limited' },
+      { feature: 'Policy templates', auditkit: true, competitor: true },
+      { feature: 'Evidence vault', auditkit: true, competitor: true },
+      { feature: 'Continuous control monitoring', auditkit: 'Roadmap', competitor: true },
+      { feature: 'Vendor risk management', auditkit: 'Basic', competitor: true },
+      { feature: 'Auditor portal', auditkit: 'Built-in', competitor: 'Add-on' },
+      { feature: 'Transparent published pricing', auditkit: true, competitor: false },
+      { feature: 'Self-serve trial without sales call', auditkit: true, competitor: false },
+      { feature: 'Monthly billing (no annual lock-in)', auditkit: true, competitor: false },
+      { feature: 'SOC 2 starting price', auditkit: '$99/mo (free self-host)', competitor: '~$5K+/yr' },
+      { feature: 'Cryptographic evidence integrity', auditkit: true, competitor: false },
+    ],
+    strengths: [
+      'Lower priced than Drata or Vanta — entry point under $10K/yr',
+      'Continuous control monitoring across cloud and SaaS',
+      'Established vendor risk management workflows',
+      'Mature integrations with major identity providers and cloud platforms',
+      'Active customer success team and onboarding support',
+    ],
+    weaknesses: [
+      'Annual contracts required — no monthly billing option',
+      'Sales-led purchase requires a demo before access to pricing',
+      'No self-hosting option for organizations with data residency requirements',
+      'No cryptographic evidence integrity (hash chains, Merkle proofs)',
+      'No open-source codebase to inspect or extend',
+      'Audit log functionality is basic compared to dedicated audit log platforms',
+      'Pricing scales aggressively as you add competitors and seats',
+    ],
+    auditkitAdvantages: [
+      {
+        title: '99% lower entry cost',
+        description:
+          'AuditKit cloud starts at $99/mo ($1,188/yr) vs Sprinto\'s ~$5,000-$10,000/yr typical entry. Self-hosted is free under AGPLv3. Same core SOC 2 evidence and audit log capabilities at a fraction of the cost — ideal for pre-seed through Series A startups where Sprinto pricing is still hard to justify.',
+      },
+      {
+        title: 'Self-serve onboarding (no demo required)',
+        description:
+          'Sign up, drop in the SDK, start logging audit events the same day. Sprinto requires a sales call and onboarding process before you can use the product. For startups with a SOC 2 deadline measured in weeks, the difference between same-day setup and 3-4 week onboarding is substantial.',
+      },
+      {
+        title: 'Cryptographic evidence integrity Sprinto cannot match',
+        description:
+          'AuditKit hash-chains every audit event so any tampering shows up as a broken chain — and exports Merkle proofs that an auditor can independently verify. Sprinto\'s evidence is stored in a database with database-level access controls; it has no cryptographic integrity verification. Auditors increasingly ask about this.',
+      },
+      {
+        title: 'Open source under AGPLv3',
+        description:
+          'Self-host on your infrastructure for $0 in licensing. Inspect the codebase, audit the hash-chain implementation, extend the SDK for custom needs. Sprinto is a closed-source SaaS — you trust the vendor or you don\'t use the product.',
+      },
+      {
+        title: 'Drop-in SDK in four languages',
+        description:
+          'TypeScript, Python, Go, and Java SDKs with the same event schema across all four. Sprinto\'s audit log functionality is basic and integrates via cloud-platform connectors rather than direct in-application instrumentation.',
+      },
+      {
+        title: 'Auditor portal included, not added-on',
+        description:
+          'AuditKit ships a read-only auditor portal at no extra cost — auditors pull tenant-scoped, time-bounded evidence directly without burning your engineering team\'s week. Sprinto charges for advanced auditor access in higher tiers.',
+      },
+    ],
+    faqs: [
+      {
+        question: 'Is AuditKit a Sprinto alternative?',
+        answer:
+          'Yes, particularly for the audit log and evidence-collection slice of the SOC 2 platform. Sprinto is a full GRC platform — vendor risk, continuous control monitoring, policy management — and AuditKit covers the audit log + evidence portal at much lower cost with cryptographic integrity Sprinto does not have. For startups whose primary SOC 2 need is "tamper-proof audit logs and an auditor-friendly evidence portal," AuditKit replaces 80% of Sprinto\'s value at 1-5% of the cost. For organizations needing the full GRC platform (vendor risk, control monitoring, policy library), Sprinto plus AuditKit can coexist — Sprinto for the platform layer, AuditKit for the audit log layer.',
+      },
+      {
+        question: 'How does AuditKit compare to Sprinto on price?',
+        answer:
+          'AuditKit cloud starts at $99/month ($1,188/year) with monthly billing and no annual commitment. AuditKit self-hosted is free under AGPLv3. Sprinto typically starts around $5,000-$10,000/year on annual contracts. For early-stage startups, the AuditKit cloud tier is a 4-10x cost reduction for the audit log and evidence-collection use case.',
+      },
+      {
+        question: 'What does Sprinto have that AuditKit does not?',
+        answer:
+          'Sprinto is a fuller GRC platform: continuous control monitoring across cloud and SaaS, mature vendor risk management workflows, policy management with version control, and broader pre-built integrations with identity providers and cloud platforms. AuditKit\'s focus is the audit log + evidence portal slice — narrower scope, deeper capability in that slice (cryptographic integrity, multi-language SDKs, open source), and dramatically lower cost.',
+      },
+      {
+        question: 'Can I use AuditKit and Sprinto together?',
+        answer:
+          'Yes. Many organizations run a full GRC platform like Sprinto for control monitoring and policy management, and use AuditKit for the application-layer audit log that the GRC platform cannot generate. AuditKit\'s audit events flow into Sprinto\'s evidence vault via export or webhook, giving auditors both the platform-level monitoring evidence and the application-level audit trail.',
+      },
+      {
+        question: 'Will an auditor accept AuditKit evidence in place of Sprinto?',
+        answer:
+          'Yes. AuditKit produces tenant-scoped, time-bounded, cryptographically verifiable evidence exports that auditors specifically appreciate. The hash-chained event log and Merkle proofs are stronger evidence integrity than what most GRC platforms (Sprinto included) provide. The deciding factor for auditors is evidence quality, not vendor brand — AuditKit\'s evidence quality is competitive or superior.',
+      },
+      {
+        question: 'Can I switch from Sprinto to AuditKit?',
+        answer:
+          'Yes — most often this happens at Sprinto contract renewal. AuditKit can be deployed in parallel during the final 60-90 days of the Sprinto contract, with audit events logged to both during the transition. Once the team is comfortable with AuditKit\'s evidence-export workflow, the team cuts over fully at Sprinto renewal. Self-hosted deployments take roughly 1-2 days; cloud is same-day.',
+      },
+    ],
+  },
+  {
+    slug: 'secureframe',
+    name: 'Secureframe',
+    pricing: 'Starting ~$7,000-$15,000/yr (annual contracts, sales-led)',
+    category: 'GRC',
+    description:
+      'Compare AuditKit and Secureframe for SOC 2 compliance. Secureframe is a Drata/Vanta-tier GRC platform with strong auditor relationships; AuditKit is open source with tamper-proof evidence at $99/mo and free self-hosting.',
+    features: [
+      { feature: 'Open source', auditkit: true, competitor: false },
+      { feature: 'Self-hosted option', auditkit: true, competitor: false },
+      { feature: 'Tamper-proof evidence (hash chain)', auditkit: true, competitor: false },
+      { feature: 'Merkle tree proofs', auditkit: true, competitor: false },
+      { feature: 'Multi-language audit log SDKs', auditkit: 'TS, Python, Go, Java', competitor: 'Limited' },
+      { feature: 'Policy templates', auditkit: true, competitor: true },
+      { feature: 'Evidence vault', auditkit: true, competitor: true },
+      { feature: 'Auditor partner network', auditkit: 'Self-serve', competitor: 'Strong' },
+      { feature: 'Continuous control monitoring', auditkit: 'Roadmap', competitor: true },
+      { feature: 'Vendor risk management', auditkit: 'Basic', competitor: true },
+      { feature: 'Auditor portal', auditkit: 'Built-in', competitor: 'Included' },
+      { feature: 'Transparent published pricing', auditkit: true, competitor: false },
+      { feature: 'Self-serve trial without sales call', auditkit: true, competitor: false },
+      { feature: 'Monthly billing (no annual lock-in)', auditkit: true, competitor: false },
+      { feature: 'SOC 2 starting price', auditkit: '$99/mo (free self-host)', competitor: '~$7K+/yr' },
+      { feature: 'Cryptographic evidence integrity', auditkit: true, competitor: false },
+    ],
+    strengths: [
+      'Strong auditor partner network — auditor introductions are bundled with the platform',
+      'Mature continuous control monitoring across cloud, SaaS, and code repos',
+      'Polished vendor risk management workflows',
+      'Multi-framework support (SOC 2, ISO 27001, HIPAA, PCI, GDPR) in one platform',
+      'Established trust center for sharing compliance posture with prospects',
+    ],
+    weaknesses: [
+      'Annual contracts starting around $7,000-$15,000/year, no monthly billing',
+      'Sales-led purchase requires demo before access to pricing',
+      'No self-hosting option for organizations with data residency requirements',
+      'No cryptographic evidence integrity (hash chains or Merkle proofs)',
+      'Closed source — no ability to inspect or extend the audit logging implementation',
+      'Audit log functionality is GRC-style (platform-collected) rather than application-instrumented',
+      'Pricing scales aggressively for multi-framework or multi-entity organizations',
+    ],
+    auditkitAdvantages: [
+      {
+        title: '85-99% lower entry cost',
+        description:
+          'AuditKit cloud starts at $99/mo ($1,188/yr) vs Secureframe\'s ~$7,000-$15,000/yr typical entry. Self-hosted is free under AGPLv3. For startups whose primary SOC 2 need is the audit log + evidence portion of the platform, AuditKit delivers that core value at 1-15% of Secureframe\'s cost.',
+      },
+      {
+        title: 'Cryptographic evidence integrity Secureframe cannot match',
+        description:
+          'AuditKit hash-chains every audit event so any tampering shows up as a broken chain — and exports Merkle proofs that an auditor can independently verify. Secureframe stores evidence in a database with database-level access controls; it has no cryptographic integrity verification. The integrity story matters more every audit cycle as auditors raise the bar.',
+      },
+      {
+        title: 'Open source under AGPLv3',
+        description:
+          'Self-host on your own infrastructure for $0 in licensing. Inspect the codebase, audit the hash-chain implementation, extend the SDK for custom needs. Secureframe is a closed-source SaaS — you trust the vendor on evidence integrity claims, with no way to verify them independently.',
+      },
+      {
+        title: 'Self-serve onboarding (no demo required)',
+        description:
+          'Sign up, drop in the SDK, start logging audit events the same day. Secureframe requires a sales call and a multi-week onboarding process before the platform is fully configured for your environment.',
+      },
+      {
+        title: 'Application-level audit log instrumentation',
+        description:
+          'AuditKit instruments inside your application via SDK — every business event (user invited, role changed, data accessed, billing modified) gets a structured audit event with cryptographic chain integrity. Secureframe\'s audit log is platform-collected — it pulls infrastructure events from cloud and SaaS connectors but cannot capture application-internal business events. SOC 2 auditors care about both layers; Secureframe covers one, AuditKit covers the other (and the two are complementary).',
+      },
+      {
+        title: 'Monthly billing with no lock-in',
+        description:
+          'AuditKit is month-to-month. Cancel anytime, change tiers anytime, no annual commitment. Secureframe is annual contracts only.',
+      },
+    ],
+    faqs: [
+      {
+        question: 'Is AuditKit a Secureframe alternative?',
+        answer:
+          'Partial. Secureframe is a full GRC platform with auditor partnerships, vendor risk, continuous control monitoring, and multi-framework support; AuditKit covers the audit log + evidence portal slice with cryptographic integrity Secureframe does not have. For startups whose primary SOC 2 need is "tamper-proof audit logs and auditor-friendly evidence," AuditKit replaces ~80% of Secureframe\'s value for that slice at 1-15% of the cost. For organizations needing auditor partnerships or full GRC platform breadth, the two products are complementary rather than competitive.',
+      },
+      {
+        question: 'How does AuditKit compare to Secureframe on price?',
+        answer:
+          'AuditKit cloud starts at $99/month ($1,188/year) with monthly billing. Self-hosted is free under AGPLv3. Secureframe typically starts around $7,000-$15,000/year on annual contracts. For most early-stage SaaS startups, this is a 6-15x cost reduction for the audit log and evidence-collection use case.',
+      },
+      {
+        question: 'What does Secureframe have that AuditKit does not?',
+        answer:
+          'Secureframe has stronger auditor partner relationships (auditor intros bundled with the platform), continuous control monitoring across cloud and SaaS via mature integrations, vendor risk workflows, and multi-framework breadth (SOC 2, ISO 27001, HIPAA, PCI, GDPR) in one platform. AuditKit\'s focus is the audit log + evidence slice with cryptographic integrity, multi-language SDKs, and open source — narrower scope but deeper capability in that scope.',
+      },
+      {
+        question: 'Can I use AuditKit and Secureframe together?',
+        answer:
+          'Yes — and many organizations do. The two products operate at different layers: Secureframe at the GRC platform layer (control monitoring, policy management, vendor risk), AuditKit at the application audit log layer (in-app event instrumentation with cryptographic integrity). AuditKit\'s evidence exports flow into Secureframe\'s evidence vault, giving auditors a unified view across both layers.',
+      },
+      {
+        question: 'Will an auditor accept AuditKit evidence?',
+        answer:
+          'Yes. AuditKit produces tenant-scoped, time-bounded, cryptographically verifiable evidence exports. The hash-chained event log and Merkle proofs are stronger evidence integrity than what most GRC platforms provide. Auditors increasingly value the cryptographic integrity story, particularly for high-stakes audits.',
+      },
+      {
+        question: 'Can I switch from Secureframe to AuditKit?',
+        answer:
+          'For the audit log and evidence-collection slice, yes. The transition usually happens at Secureframe contract renewal, with AuditKit deployed in parallel during the final 60-90 days. Self-hosted deployments take 1-2 days; cloud is same-day. For organizations using Secureframe\'s broader GRC platform features (control monitoring, vendor risk), the right move is often to keep Secureframe and add AuditKit specifically for the application-layer audit log — the two complement rather than compete.',
+      },
+    ],
+  },
+  {
+    slug: 'thoropass',
+    name: 'Thoropass',
+    pricing: 'Starting ~$8,000-$20,000/yr (annual contracts, includes auditor)',
+    category: 'GRC',
+    description:
+      'Compare AuditKit and Thoropass for SOC 2 compliance. Thoropass bundles compliance software with auditor services in one contract; AuditKit is open source with tamper-proof evidence at $99/mo and a free self-hosted option.',
+    features: [
+      { feature: 'Open source', auditkit: true, competitor: false },
+      { feature: 'Self-hosted option', auditkit: true, competitor: false },
+      { feature: 'Tamper-proof evidence (hash chain)', auditkit: true, competitor: false },
+      { feature: 'Merkle tree proofs', auditkit: true, competitor: false },
+      { feature: 'Multi-language audit log SDKs', auditkit: 'TS, Python, Go, Java', competitor: 'Limited' },
+      { feature: 'Bundled audit services (CPA firm)', auditkit: false, competitor: true },
+      { feature: 'Policy templates', auditkit: true, competitor: true },
+      { feature: 'Evidence vault', auditkit: true, competitor: true },
+      { feature: 'Continuous control monitoring', auditkit: 'Roadmap', competitor: true },
+      { feature: 'Auditor portal', auditkit: 'Built-in', competitor: 'Bundled with audit' },
+      { feature: 'Multi-framework (SOC 2, ISO, HIPAA)', auditkit: 'SOC 2 first', competitor: true },
+      { feature: 'Transparent published pricing', auditkit: true, competitor: false },
+      { feature: 'Self-serve trial without sales call', auditkit: true, competitor: false },
+      { feature: 'Monthly billing (no annual lock-in)', auditkit: true, competitor: false },
+      { feature: 'SOC 2 starting price', auditkit: '$99/mo (free self-host)', competitor: '~$8K+/yr (incl. audit)' },
+      { feature: 'Cryptographic evidence integrity', auditkit: true, competitor: false },
+      { feature: 'Independent CPA selection', auditkit: 'Bring your own', competitor: 'Tied to platform' },
+    ],
+    strengths: [
+      'Bundles compliance software with audit services from a single provider — one contract, one bill',
+      'Continuous control monitoring across cloud and SaaS via mature integrations',
+      'Multi-framework support (SOC 2, ISO 27001, HIPAA, GDPR) in one platform',
+      'Full-service onboarding with dedicated customer success',
+      'Established auditor relationships shorten time-to-audit-report',
+    ],
+    weaknesses: [
+      'Annual contracts starting around $8,000-$20,000/year — pricing gates early-stage startups',
+      'CPA firm tied to the platform — limits flexibility to use a preferred or specialty auditor',
+      'Sales-led purchase requires demo and scoping calls before pricing or product access',
+      'No self-hosting option for organizations with data residency or sovereignty requirements',
+      'No cryptographic evidence integrity (hash chains or Merkle proofs)',
+      'Closed source — no ability to inspect or extend the audit logging implementation',
+      'Audit log functionality is collected through cloud connectors rather than instrumented in-application',
+    ],
+    auditkitAdvantages: [
+      {
+        title: '85-99% lower entry cost (and bring-your-own auditor flexibility)',
+        description:
+          'AuditKit cloud starts at $99/mo ($1,188/yr) vs Thoropass\'s ~$8,000-$20,000/yr typical entry — and Thoropass\'s pricing includes an auditor bundle that may or may not be the right CPA firm for your business. AuditKit lets you choose any AICPA-licensed auditor independently. Self-hosted is free under AGPLv3.',
+      },
+      {
+        title: 'Cryptographic evidence integrity Thoropass cannot match',
+        description:
+          'AuditKit hash-chains every audit event so any tampering shows up as a broken chain — and exports Merkle proofs that an auditor can independently verify. Thoropass stores evidence in a database with database-level access controls; it has no cryptographic integrity verification.',
+      },
+      {
+        title: 'Open source under AGPLv3',
+        description:
+          'Self-host on your own infrastructure for $0 in licensing. Inspect the codebase, audit the hash-chain implementation, extend the SDK for custom needs. Thoropass is a closed-source SaaS bundled with a CPA firm — you trust the vendor on evidence integrity claims, with no way to verify them independently.',
+      },
+      {
+        title: 'Self-serve onboarding (no demo required)',
+        description:
+          'Sign up, drop in the SDK, start logging audit events the same day. Thoropass requires a sales call, scoping conversation, and contract signature before product access. For startups with a SOC 2 deadline measured in weeks, the difference between same-day setup and 4-6 week onboarding is substantial.',
+      },
+      {
+        title: 'Auditor independence',
+        description:
+          'AuditKit produces clean, tenant-scoped, cryptographically verifiable evidence exports that any AICPA-licensed CPA firm can use. You pick your auditor based on industry expertise, geography, price, and reputation — not on which platform they\'re tied to. Thoropass\'s bundled-auditor model is convenient for some, restrictive for others.',
+      },
+      {
+        title: 'Application-level audit log instrumentation',
+        description:
+          'AuditKit instruments inside your application via SDK — every business event (user invited, role changed, data accessed, billing modified) gets a structured audit event with cryptographic chain integrity. Thoropass\'s audit log is platform-collected from cloud and SaaS connectors, which captures infrastructure events but cannot capture application-internal business events. SOC 2 auditors want both layers.',
+      },
+    ],
+    faqs: [
+      {
+        question: 'Is AuditKit a Thoropass alternative?',
+        answer:
+          'For the audit log + evidence portion, yes. Thoropass is a bundled compliance platform plus audit services in one contract — strong if you want one-vendor convenience and don\'t care which specific CPA firm performs the audit. AuditKit is the audit log + evidence layer specifically, with cryptographic integrity Thoropass does not have, plus the freedom to use any auditor independently. For startups whose primary need is "tamper-proof audit logs and clean evidence exports," AuditKit replaces ~80% of Thoropass\'s software value at a fraction of the cost — and you keep auditor flexibility.',
+      },
+      {
+        question: 'How does AuditKit compare to Thoropass on price?',
+        answer:
+          'AuditKit cloud starts at $99/month ($1,188/year) with monthly billing. Self-hosted is free under AGPLv3. Thoropass typically starts around $8,000-$20,000/year on annual contracts that bundle the audit fee. Comparing apples to apples: AuditKit + a regional AICPA CPA firm for the audit ($7K-$15K) usually totals less than Thoropass\'s bundled price, with the same SOC 2 report at the end and the freedom to choose your auditor.',
+      },
+      {
+        question: 'What does Thoropass have that AuditKit does not?',
+        answer:
+          'Thoropass\'s biggest differentiator is the bundled audit services — one contract covers compliance software AND the audit. That\'s convenient for startups that don\'t want to source an auditor separately. Thoropass also has continuous control monitoring across cloud and SaaS via mature connectors, and supports multiple compliance frameworks (SOC 2, ISO 27001, HIPAA, GDPR) on a single platform. AuditKit\'s focus is the audit log + evidence slice — narrower scope, deeper capability in that slice, and you bring your own auditor.',
+      },
+      {
+        question: 'Why might I prefer to bring my own auditor instead of using Thoropass\'s bundled CPA?',
+        answer:
+          'Three common reasons. First, industry expertise — a CPA firm that specializes in your vertical (fintech, healthtech, etc.) often produces a more useful audit. Second, price — regional AICPA-licensed firms often charge significantly less than the platform-bundled audit fee. Third, continuity — once you have a relationship with an auditor, you typically want to keep them across multiple audit cycles for context efficiency. AuditKit\'s evidence exports work with any AICPA firm.',
+      },
+      {
+        question: 'Can I use AuditKit and Thoropass together?',
+        answer:
+          'Yes — and this is a sensible pattern. Run Thoropass for the broad GRC platform (control monitoring, policy management, vendor risk, multi-framework support) and add AuditKit for the application-layer audit log with cryptographic integrity. AuditKit\'s evidence exports flow into Thoropass\'s evidence vault. Auditors get a unified view across both layers. The cost of AuditKit ($99-$999/mo) is rounding error against Thoropass\'s annual bundle.',
+      },
+      {
+        question: 'Will an auditor accept AuditKit evidence?',
+        answer:
+          'Yes. AuditKit produces tenant-scoped, time-bounded, cryptographically verifiable evidence exports. The hash-chained event log and Merkle proofs are stronger evidence integrity than what most GRC platforms (Thoropass included) provide. Any AICPA-licensed CPA firm can perform a SOC 2 audit using AuditKit\'s evidence — auditors care about evidence quality, not vendor brand.',
+      },
+    ],
+  },
 ];
 
 export function getCompetitor(slug: string): Competitor | undefined {

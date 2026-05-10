@@ -4,6 +4,7 @@ import { eq, and, gte } from 'drizzle-orm';
 import { users, sessions, projects, apiKeys, passwordResetTokens, emailVerificationTokens, refreshTokens } from '../db/schema.js';
 import { emailService } from '../services/email.js';
 import { logAdminActivity } from '../services/admin-log.js';
+import { notifySignup } from '../services/signup-notifications.js';
 import type { Database } from '../db/index.js';
 
 function hashToken(token: string): string {
@@ -215,6 +216,9 @@ export function createAuthRouter(db: Database) {
       const verifyUrl = `${frontendUrl}/dashboard/verification?token=${verificationRaw}`;
       return emailService.sendVerificationEmail(user.email, verifyUrl);
     }).catch(() => {});
+
+    // Slack notification (fire-and-forget)
+    notifySignup({ email: user.email, name: user.name, role });
 
     logAdminActivity({
       actorId: user.id,

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { LogIn, Loader2, AlertCircle } from 'lucide-react';
 import { setToken } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
+import { trackLogin } from '@/lib/analytics';
 
 export default function LoginPage() {
   return (
@@ -35,6 +36,7 @@ function LoginForm() {
       });
 
       setToken(data.token);
+      trackLogin(email);
       const redirect = searchParams.get('redirect');
       const SAFE_REDIRECT_RE = /^\/[a-zA-Z0-9\-_/]+$/;
       if (redirect && SAFE_REDIRECT_RE.test(redirect)) {

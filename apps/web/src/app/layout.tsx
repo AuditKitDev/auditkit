@@ -4,7 +4,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'AuditKit — Audit logs for B2B SaaS',
+    default: 'AuditKit: Audit logs for B2B SaaS',
     template: '%s | AuditKit',
   },
   description:
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     canonical: 'https://auditkit.dev',
   },
   openGraph: {
-    title: 'AuditKit — Audit logs for B2B SaaS',
+    title: 'AuditKit: Audit logs for B2B SaaS',
     description:
       'Drop-in audit logs for B2B SaaS. Open source, tamper-evident, enterprise-ready.',
     url: 'https://auditkit.dev',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AuditKit — Audit logs for B2B SaaS',
+    title: 'AuditKit: Audit logs for B2B SaaS',
     description:
       'Drop-in audit logs for B2B SaaS. Open source, tamper-evident, enterprise-ready.',
   },

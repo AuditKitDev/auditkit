@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(fly deploy:*)",
+      "Read(//c/Users/ratki/Desktop/**)"
+    ]
+  }
+}
