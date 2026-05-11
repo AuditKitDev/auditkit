@@ -54,7 +54,20 @@ export default async function BlogPostPage({ params }: PageProps) {
   const post = getPostBySlug(slug);
   if (!post) notFound();
 
-  const relatedPosts = blogPosts.filter((p) => p.slug !== post.slug).slice(0, 3);
+  // Tag-overlap-weighted related posts: prefer posts sharing the most tags,
+  // then fall back to recency. Far better than first-3-in-array for SEO and UX.
+  const relatedPosts = blogPosts
+    .filter((p) => p.slug !== post.slug)
+    .map((p) => ({
+      post: p,
+      overlap: p.tags.filter((t) => post.tags.includes(t)).length,
+    }))
+    .sort((a, b) => {
+      if (b.overlap !== a.overlap) return b.overlap - a.overlap;
+      return new Date(b.post.publishedAt).getTime() - new Date(a.post.publishedAt).getTime();
+    })
+    .slice(0, 3)
+    .map((entry) => entry.post);
 
   const currentIndex = blogPosts.findIndex(p => p.slug === slug);
   const prevPost = currentIndex > 0 ? blogPosts[currentIndex - 1] : null;
@@ -213,6 +226,35 @@ export default async function BlogPostPage({ params }: PageProps) {
             prose-li:marker:text-primary/50"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
+
+        {/* Share buttons */}
+        <div className="mt-12 flex flex-wrap items-center gap-3 border-t border-border pt-6 text-sm">
+          <span className="text-muted-foreground">Share this article:</span>
+          <a
+            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(`https://auditkit.dev/blog/${post.slug}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-border px-3 py-1.5 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+          >
+            Share on X
+          </a>
+          <a
+            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://auditkit.dev/blog/${post.slug}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-border px-3 py-1.5 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+          >
+            Share on LinkedIn
+          </a>
+          <a
+            href={`https://news.ycombinator.com/submitlink?u=${encodeURIComponent(`https://auditkit.dev/blog/${post.slug}`)}&t=${encodeURIComponent(post.title)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-border px-3 py-1.5 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+          >
+            Submit to HN
+          </a>
+        </div>
 
         {/* CTA */}
         <div className="mt-12 border border-primary/20 rounded-xl p-8 bg-primary/5 text-center">

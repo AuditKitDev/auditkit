@@ -60,21 +60,52 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
 
       {/* Footer */}
       <footer className="border-t border-border py-12">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Logo size="sm" />
-            <span className="text-muted-foreground text-sm">AGPLv3 + Commercial</span>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <Logo size="sm" />
+              <span className="text-muted-foreground text-sm">AGPLv3 + Commercial</span>
+            </div>
+            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <Link href="/docs" className="hover:text-foreground transition">
+                Docs
+              </Link>
+              <Link href="/blog" className="hover:text-foreground transition">
+                Blog
+              </Link>
+              <Link href="/#pricing" className="hover:text-foreground transition">
+                Pricing
+              </Link>
+            </div>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link href="/docs" className="hover:text-foreground transition">
-              Docs
-            </Link>
-            <Link href="/blog" className="hover:text-foreground transition">
-              Blog
-            </Link>
-            <Link href="/#pricing" className="hover:text-foreground transition">
-              Pricing
-            </Link>
+          <div className="border-t border-border/40 pt-6 mb-6">
+            <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-3">Audit Logging Comparisons</p>
+            <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
+              <li><Link href="/compare/vanta" className="hover:text-foreground transition">vs Vanta</Link></li>
+              <li><Link href="/compare/drata" className="hover:text-foreground transition">vs Drata</Link></li>
+              <li><Link href="/compare/sprinto" className="hover:text-foreground transition">vs Sprinto</Link></li>
+              <li><Link href="/compare/secureframe" className="hover:text-foreground transition">vs Secureframe</Link></li>
+              <li><Link href="/compare/thoropass" className="hover:text-foreground transition">vs Thoropass</Link></li>
+              <li><Link href="/compare/aikido" className="hover:text-foreground transition">vs Aikido</Link></li>
+              <li><Link href="/compare/pangea" className="hover:text-foreground transition">vs Pangea</Link></li>
+              <li><Link href="/compare/retraced" className="hover:text-foreground transition">vs Retraced</Link></li>
+              <li><Link href="/compare/workos" className="hover:text-foreground transition">vs WorkOS</Link></li>
+            </ul>
+          </div>
+          <div className="border-t border-border/40 pt-6">
+            <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-3">More from GrimLabs</p>
+            <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
+              <li><a href="https://chirpreply.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">ChirpReply</a></li>
+              <li><a href="https://signalixiq.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">SignalixIQ</a></li>
+              <li><a href="https://sitecrawliq.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">SiteCrawlIQ</a></li>
+              <li><a href="https://datareconiq.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">DataReconIQ</a></li>
+              <li><a href="https://cloakshare.dev" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">CloakShare</a></li>
+              <li><a href="https://marquiq.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">MarquIQ</a></li>
+              <li><a href="https://rivalbeam.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">RivalBeam</a></li>
+              <li><a href="https://coipulse.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">COIPulse</a></li>
+              <li><a href="https://agentergon.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">AgentErgon</a></li>
+              <li><a href="https://otdcheck.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">OTDCheck</a></li>
+            </ul>
           </div>
         </div>
       </footer>

@@ -1178,7 +1178,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border/50 py-16">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-12 mb-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
             <div>
               <div className="mb-4">
                 <Logo size="md" />
@@ -1210,13 +1210,31 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold text-sm mb-4">Compare</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><Link href="/compare/vanta" className="hover:text-foreground transition">AuditKit vs Vanta</Link></li>
-                <li><Link href="/compare/drata" className="hover:text-foreground transition">AuditKit vs Drata</Link></li>
-                <li><Link href="/compare/spreadsheets" className="hover:text-foreground transition">AuditKit vs Spreadsheets</Link></li>
-                <li><Link href="/compare/workos" className="hover:text-foreground transition">AuditKit vs WorkOS</Link></li>
-                <li><Link href="/compare/pangea" className="hover:text-foreground transition">AuditKit vs Pangea</Link></li>
-                <li><Link href="/compare/retraced" className="hover:text-foreground transition">AuditKit vs Retraced</Link></li>
+                <li><Link href="/compare/vanta" className="hover:text-foreground transition">vs Vanta</Link></li>
+                <li><Link href="/compare/drata" className="hover:text-foreground transition">vs Drata</Link></li>
+                <li><Link href="/compare/sprinto" className="hover:text-foreground transition">vs Sprinto</Link></li>
+                <li><Link href="/compare/secureframe" className="hover:text-foreground transition">vs Secureframe</Link></li>
+                <li><Link href="/compare/thoropass" className="hover:text-foreground transition">vs Thoropass</Link></li>
+                <li><Link href="/compare/aikido" className="hover:text-foreground transition">vs Aikido</Link></li>
+                <li><Link href="/compare/workos" className="hover:text-foreground transition">vs WorkOS</Link></li>
+                <li><Link href="/compare/pangea" className="hover:text-foreground transition">vs Pangea</Link></li>
+                <li><Link href="/compare/retraced" className="hover:text-foreground transition">vs Retraced</Link></li>
                 <li><a href="mailto:hello@auditkit.dev" className="hover:text-foreground transition">Contact</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm mb-4">More from GrimLabs</h4>
+              <ul className="space-y-2.5 text-sm text-muted-foreground">
+                <li><a href="https://chirpreply.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">ChirpReply — AI receptionist</a></li>
+                <li><a href="https://signalixiq.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">SignalixIQ — AI commerce visibility</a></li>
+                <li><a href="https://sitecrawliq.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">SiteCrawlIQ — SEO + AI search audit</a></li>
+                <li><a href="https://datareconiq.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">DataReconIQ — fuzzy dedup</a></li>
+                <li><a href="https://cloakshare.dev" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">CloakShare — secure doc sharing</a></li>
+                <li><a href="https://marquiq.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">MarquIQ — autonomous marketing</a></li>
+                <li><a href="https://rivalbeam.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">RivalBeam — competitive intel</a></li>
+                <li><a href="https://coipulse.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">COIPulse — COI tracking</a></li>
+                <li><a href="https://agentergon.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">AgentErgon — AI for SMBs</a></li>
+                <li><a href="https://otdcheck.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition">OTDCheck — VIN check &amp; OTD calc</a></li>
               </ul>
             </div>
           </div>

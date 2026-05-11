@@ -14,6 +14,493 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'soc-2-vs-iso-27001-which-first',
+    title: 'SOC 2 vs ISO 27001: Which to Pursue First in 2026',
+    description:
+      'SOC 2 vs ISO 27001 head-to-head: scope, cost, auditor pool, sales acceleration, and the right order for a B2B SaaS pursuing both. The wrong-order decision costs 4-6 months of redundant work.',
+    seoTitle: 'SOC 2 vs ISO 27001: Which to Pursue First (2026 Decision Guide)',
+    seoDescription:
+      'Compare SOC 2 vs ISO 27001 by scope, cost, audit timeline, customer demand by region, and overlap. The right framework order saves $30K and 4-6 months for B2B SaaS pursuing both.',
+    author: 'AuditKit Team',
+    publishedAt: '2026-05-10',
+    tags: ['SOC 2', 'ISO 27001', 'Compliance', 'Comparison'],
+    readTime: '8 min read',
+    content: `
+      <h2>The Question Every B2B SaaS Eventually Asks</h2>
+      <p>
+        Once your B2B SaaS hits its first 5-10 enterprise prospects, security questionnaires start arriving.
+        Half of them want SOC 2 Type II. Half want ISO 27001. A handful want both. Your team has to pick
+        which framework to pursue first — and the wrong choice typically costs 4-6 months of redundant work
+        and $30K-$60K in repeated auditor fees.
+      </p>
+      <p>
+        This guide compares SOC 2 and ISO 27001 on the dimensions that actually matter for the decision,
+        and recommends an order based on your customer profile.
+      </p>
+
+      <h2>The Quick Answer</h2>
+      <ul>
+        <li><strong>If &gt; 70% of your enterprise prospects are US-based:</strong> SOC 2 Type II first, then add ISO 27001 in year 2.</li>
+        <li><strong>If &gt; 50% are EU/UK/APAC enterprises:</strong> ISO 27001 first, then add SOC 2 Type II.</li>
+        <li><strong>Mixed customer base, no strong skew:</strong> SOC 2 Type II first (cheaper to start, faster to first certification, US auditor pool is larger).</li>
+        <li><strong>Already on the SOC 2 path:</strong> finish it, then pursue ISO 27001 — there is 60-70% control overlap, so the second framework is much cheaper than the first.</li>
+      </ul>
+      <p>
+        The rest of this post explains the trade-offs behind these recommendations.
+      </p>
+
+      <h2>SOC 2 vs ISO 27001: The Frameworks at a Glance</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>SOC 2</th>
+            <th>ISO 27001</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Issued by</td>
+            <td>AICPA (American Institute of CPAs)</td>
+            <td>ISO (International Organization for Standardization)</td>
+          </tr>
+          <tr>
+            <td>Primary market</td>
+            <td>North America (US, Canada)</td>
+            <td>EU, UK, APAC, increasingly global</td>
+          </tr>
+          <tr>
+            <td>Output</td>
+            <td>Attestation report (Type I or Type II)</td>
+            <td>Certificate of compliance</td>
+          </tr>
+          <tr>
+            <td>Validity</td>
+            <td>12 months (re-audit annually)</td>
+            <td>3 years (with annual surveillance audits)</td>
+          </tr>
+          <tr>
+            <td>Auditor pool</td>
+            <td>Licensed CPAs only (smaller pool, US-heavy)</td>
+            <td>Accredited certification bodies (larger pool, global)</td>
+          </tr>
+          <tr>
+            <td>Average first-year cost</td>
+            <td>$30K-$80K all-in</td>
+            <td>$25K-$60K all-in</td>
+          </tr>
+          <tr>
+            <td>Time to first certification</td>
+            <td>6-9 months (Type II) / 3-4 months (Type I)</td>
+            <td>9-12 months</td>
+          </tr>
+          <tr>
+            <td>Public artifact</td>
+            <td>NDA-gated report (cannot publish freely)</td>
+            <td>Public certificate (can display on website)</td>
+          </tr>
+          <tr>
+            <td>Controls</td>
+            <td>~64 (Common Criteria + optional categories)</td>
+            <td>~93 (Annex A) + ISMS process requirements</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>The Customer-Demand Test</h2>
+      <p>
+        The single most important input to this decision is which framework your customers actually ask for.
+        Pull your last 20 enterprise security questionnaires and count:
+      </p>
+      <ul>
+        <li>How many demanded SOC 2 Type II specifically?</li>
+        <li>How many demanded ISO 27001 specifically?</li>
+        <li>How many accepted either?</li>
+      </ul>
+      <p>
+        US-headquartered enterprises overwhelmingly demand SOC 2. Their procurement teams have institutionalized
+        the SOC 2 report as the artifact, and many cannot operationally accept ISO 27001 in its place without
+        a contractual addendum.
+      </p>
+      <p>
+        EU, UK, and APAC enterprises overwhelmingly demand ISO 27001. ISO 27001 is recognized globally and
+        carries explicit weight under regulations like the EU's NIS2 directive. SOC 2 reports are accepted as
+        supplementary but rarely as the primary security artifact.
+      </p>
+      <p>
+        For mixed customer bases, the framework you do first should match where the majority of your near-term
+        revenue lives.
+      </p>
+
+      <h2>Cost: The Real Numbers</h2>
+      <p>
+        The cost difference between SOC 2 and ISO 27001 is smaller than vendors will tell you. Both are
+        expensive at first; both become much cheaper in year 2 once your controls are in place.
+      </p>
+      <p>
+        <strong>SOC 2 Type II first-year all-in cost</strong> for a 10-50 person B2B SaaS:
+      </p>
+      <ul>
+        <li>Auditor fees (CPA firm): $15K-$40K</li>
+        <li>Compliance platform (Drata, Vanta, AuditKit cloud, or self-hosted equivalent): $0-$25K</li>
+        <li>Penetration test (typically required): $8K-$15K</li>
+        <li>Internal labor (Security/Eng time): 200-400 hours, value ~$15K-$30K</li>
+        <li><strong>Total: $30K-$80K depending on scope and tooling choices</strong></li>
+      </ul>
+      <p>
+        <strong>ISO 27001 first-year all-in cost</strong> for the same company:
+      </p>
+      <ul>
+        <li>Certification body fees: $10K-$25K</li>
+        <li>ISMS consultant (often required for first time): $10K-$25K</li>
+        <li>Compliance platform: $0-$25K</li>
+        <li>Internal labor (longer process): 300-500 hours, value ~$20K-$40K</li>
+        <li><strong>Total: $25K-$60K depending on scope and consulting choices</strong></li>
+      </ul>
+      <p>
+        ISO 27001 is slightly cheaper on average but takes longer. The hourly burn is roughly the same.
+      </p>
+
+      <h2>The 60-70% Overlap (and Why Order Matters)</h2>
+      <p>
+        If you eventually need both, the order matters because there is substantial control overlap. Roughly
+        60-70% of the controls in SOC 2's Common Criteria map directly to ISO 27001's Annex A controls.
+      </p>
+      <p>
+        <strong>The overlapping controls include:</strong> access control, change management, vendor risk
+        management, incident response, business continuity, encryption in transit and at rest, asset
+        management, employee onboarding/offboarding, audit logging.
+      </p>
+      <p>
+        <strong>SOC 2-only controls include:</strong> the Trust Services Criteria specific to availability,
+        processing integrity, confidentiality, and privacy categories if elected.
+      </p>
+      <p>
+        <strong>ISO 27001-only controls include:</strong> the ISMS process requirements (clause 4-10) — the
+        formal information security management system itself — which has no direct SOC 2 analog. ISO 27001
+        is more "the system" than "the controls."
+      </p>
+      <p>
+        If you do SOC 2 first, adding ISO 27001 the next year typically costs 50-60% of the SOC 2 first-year
+        cost, because most controls are already in place. If you do ISO 27001 first, adding SOC 2 the next
+        year costs roughly the same.
+      </p>
+
+      <h2>Why SOC 2 First (for US-heavy customer bases)</h2>
+      <p>
+        Four practical reasons to start with SOC 2 if your customers are mostly US-based:
+      </p>
+      <ol>
+        <li>
+          <strong>Faster first artifact.</strong> SOC 2 Type I (a point-in-time attestation) can be issued in
+          3-4 months. ISO 27001's first certification audit cannot begin until you have ~3 months of evidence,
+          and the typical total is 9-12 months. If you need an artifact to close pending enterprise deals
+          this quarter, SOC 2 Type I is the only realistic option.
+        </li>
+        <li>
+          <strong>Larger US auditor pool.</strong> Hundreds of CPA firms can issue SOC 2 attestations. ISO
+          certification bodies are fewer and have longer waitlists in the US.
+        </li>
+        <li>
+          <strong>US procurement teams expect SOC 2 by default.</strong> They have a procurement playbook
+          built around SOC 2 reports. Substituting ISO 27001 often requires a contractual addendum or special
+          approval, which adds 2-4 weeks to deal cycles.
+        </li>
+        <li>
+          <strong>Compliance tooling is SOC 2-first.</strong> Drata, Vanta, Secureframe, AuditKit, etc. all
+          ship SOC 2 templates and evidence collection as primary. ISO 27001 support is added later and is
+          less polished.
+        </li>
+      </ol>
+
+      <h2>Why ISO 27001 First (for EU/UK/APAC-heavy customer bases)</h2>
+      <p>
+        Four reasons to start with ISO 27001 if your customers are mostly outside North America:
+      </p>
+      <ol>
+        <li>
+          <strong>EU procurement requires it.</strong> Many EU enterprises will not start a SaaS evaluation
+          without ISO 27001. The directive-level recognition (NIS2, GDPR Article 32) makes it the de facto
+          regional standard.
+        </li>
+        <li>
+          <strong>Public artifact you can display.</strong> ISO 27001 certificates can be published on your
+          website and shared without an NDA. SOC 2 reports require NDA to share. The marketing value of a
+          public ISO 27001 logo is real for EU/UK buyers.
+        </li>
+        <li>
+          <strong>3-year validity reduces administrative overhead.</strong> SOC 2 re-audits annually; ISO
+          27001 certifies for 3 years with smaller annual surveillance audits. Over 3 years, total auditor
+          time and cost is often lower for ISO 27001.
+        </li>
+        <li>
+          <strong>The ISMS is itself a business asset.</strong> ISO 27001's information security management
+          system clause requirements force you to build a real, documented security operations capability —
+          not just check controls. That capability also serves as a foundation for any future framework
+          (NIS2, DORA, etc.).
+        </li>
+      </ol>
+
+      <h2>The Audit Log Requirement (Same for Both)</h2>
+      <p>
+        Both SOC 2 and ISO 27001 require tamper-evident audit logging. SOC 2 anchors this under CC6.1 (logical
+        access) and CC7.2 (system monitoring). ISO 27001 anchors it under Annex A.8.15 (logging) and A.8.16
+        (monitoring activities).
+      </p>
+      <p>
+        The good news: if you build audit logging well for one framework, it satisfies the other. The audit
+        log infrastructure (immutable, hash-chained, tenant-scoped, queryable) is identical. Only the
+        evidence-collection workflow differs (SOC 2 wants quarterly access reviews; ISO 27001 wants annual
+        risk reviews).
+      </p>
+      <p>
+        <a href="https://github.com/AuditKitDev/auditkit">AuditKit</a> ships templates for both SOC 2 and
+        ISO 27001 evidence collection, so the same log infrastructure feeds both frameworks. Self-host is
+        free under AGPLv3; cloud starts at $99/mo.
+      </p>
+
+      <h2>What to Avoid</h2>
+      <ul>
+        <li>
+          <strong>Pursuing both simultaneously in year 1.</strong> Common founder mistake. The internal labor
+          burn is brutal because every control needs to be evidenced twice (in two slightly different
+          formats). Sequence them.
+        </li>
+        <li>
+          <strong>Optimizing for the cheapest auditor.</strong> Cheap auditors leave more findings, which
+          generate more remediation work, which costs more than the auditor fee gap. Get 3 quotes from
+          mid-tier auditors and pick the one with the best B2B SaaS reference list.
+        </li>
+        <li>
+          <strong>Treating the framework as a checkbox.</strong> The point of SOC 2 / ISO 27001 is to build
+          a real security capability. Companies who treat it as compliance theater have higher breach rates
+          and lose the certification on re-audit.
+        </li>
+        <li>
+          <strong>Picking a framework before checking customer demand.</strong> Pull the questionnaires first.
+          Decide second.
+        </li>
+      </ul>
+
+      <h2>The Bottom Line</h2>
+      <p>
+        SOC 2 and ISO 27001 are both good frameworks for B2B SaaS. The right order depends on where your
+        customers live and how quickly you need the first artifact. Most US-headquartered companies should
+        do SOC 2 Type II first; most EU-headquartered companies should do ISO 27001 first; mixed customer
+        bases should default to SOC 2 because of the faster Type I path.
+      </p>
+      <p>
+        Whichever you choose, the underlying infrastructure — especially audit logging — is reusable across
+        both. Get the logging right once and you cover 60-70% of the second framework's requirements when
+        you eventually add it.
+      </p>
+    `,
+  },
+  {
+    slug: 'audit-logging-ai-applications-soc-2-eu-ai-act',
+    title: 'Audit Logging for AI Applications: SOC 2, GDPR, and EU AI Act Compliance',
+    description:
+      'AI applications need audit logs that go beyond traditional SaaS. Cover model inferences, prompt injection attempts, output filtering, and the new EU AI Act requirements — without rebuilding your logging stack.',
+    seoTitle: 'Audit Logging for AI Apps: SOC 2 + GDPR + EU AI Act (2026 Guide)',
+    seoDescription:
+      'How to instrument audit logs for AI/LLM applications: what to capture per inference, EU AI Act Article 12 requirements, GDPR retention, and the SOC 2 controls that change when your app uses AI.',
+    author: 'AuditKit Team',
+    publishedAt: '2026-05-10',
+    tags: ['AI', 'SOC 2', 'EU AI Act', 'GDPR', 'Compliance'],
+    readTime: '9 min read',
+    content: `
+      <h2>Why AI Applications Need Different Audit Logs</h2>
+      <p>
+        If your SaaS app uses an LLM — Claude, GPT-4, Gemini, an open-source model on your own infrastructure —
+        your audit logging requirements just got more complicated. The "who did what to which resource" model
+        that satisfies SOC 2 for traditional CRUD apps does not capture what auditors, regulators, and
+        enterprise procurement teams now want to see for AI features.
+      </p>
+      <p>
+        Three regulatory and contractual pressures are converging in 2026:
+      </p>
+      <ul>
+        <li><strong>EU AI Act (effective August 2026)</strong> — Article 12 mandates "automatic recording of events" for high-risk AI systems, with specific retention requirements. The definition of "high-risk" includes a broader range of SaaS use cases than founders typically assume.</li>
+        <li><strong>SOC 2 auditor expectations shifted in 2025</strong> — auditors now expect to see prompt/response logging, model version tracking, and prompt injection detection as part of CC7.2 (system monitoring). Not yet codified in the TSC, but consistently flagged in audit reports.</li>
+        <li><strong>Enterprise procurement security questionnaires</strong> — the 2026 vendor security questionnaires from large enterprises (Fortune 500, financial services, healthcare) now include 15-30 specific questions about AI logging that did not exist in 2024 questionnaires.</li>
+      </ul>
+      <p>
+        The good news: the underlying infrastructure (immutable, tenant-scoped, queryable audit logs) is the same
+        one you would build for traditional SOC 2 compliance. What changes is the schema and the events you capture.
+      </p>
+
+      <h2>What to Log for Every AI Inference</h2>
+      <p>
+        For every call to an LLM (or any AI model that affects user-facing behavior), capture these fields:
+      </p>
+      <ul>
+        <li><strong>actor</strong> — the user or system that triggered the inference (same as traditional audit logs)</li>
+        <li><strong>tenant_id</strong> — for multi-tenant SaaS, scope the log to the customer org</li>
+        <li><strong>model_id</strong> — exact model identifier (e.g., <code>claude-opus-4-1-20250805</code>, <code>gpt-4o-2024-08-06</code>) — not just "Claude" or "GPT-4"</li>
+        <li><strong>model_provider</strong> — Anthropic, OpenAI, AWS Bedrock, self-hosted, etc.</li>
+        <li><strong>system_prompt_hash</strong> — SHA-256 of the system prompt used. Do NOT store the full system prompt in every log entry (storage explosion); store the hash and link to a versioned system_prompt table.</li>
+        <li><strong>user_input_hash</strong> — SHA-256 of the user's input. For high-risk applications, also store the full input (with PII redaction).</li>
+        <li><strong>output_hash</strong> — SHA-256 of the model's output</li>
+        <li><strong>tokens_in</strong>, <strong>tokens_out</strong> — usage metrics for cost attribution and abuse detection</li>
+        <li><strong>safety_filter_triggered</strong> — boolean for whether the provider's safety filters fired</li>
+        <li><strong>prompt_injection_score</strong> — your classifier's score for suspected injection (or null if not run)</li>
+        <li><strong>output_filter_action</strong> — what your post-processing layer did to the output (passed, redacted, refused)</li>
+        <li><strong>latency_ms</strong> — performance metric</li>
+        <li><strong>occurred_at</strong> — timestamp</li>
+      </ul>
+      <p>
+        The hashes are the operational compromise that makes this scale. You can verify what was said
+        without storing every prompt verbatim. For the small subset of inferences flagged as suspicious
+        (high prompt-injection score, safety filter fired, or sampled for QA), store the full content
+        with PII redaction.
+      </p>
+
+      <h2>EU AI Act Article 12 Requirements (the Specifics)</h2>
+      <p>
+        The EU AI Act takes effect in stages, with most high-risk system requirements active by August 2026.
+        Article 12 specifically requires "automatic recording of events" for high-risk AI systems. The text is
+        general enough that compliance is interpretive, but the European Commission's draft guidance from
+        Q4 2025 clarifies the expectation:
+      </p>
+      <ul>
+        <li><strong>Recording during the entire lifecycle</strong> — from training (or fine-tuning) through every inference</li>
+        <li><strong>Tamper-evident records</strong> — hash-chained or equivalent integrity protection</li>
+        <li><strong>Retention period</strong> — 6 months minimum for inference logs; longer for training event logs</li>
+        <li><strong>Identifiable to natural persons</strong> — for inferences that affect a specific person, the log must support tracing back to that person (with appropriate access controls under GDPR)</li>
+        <li><strong>Accessible to authorities</strong> — when requested under Article 12(3), the operator must be able to provide logs within a defined timeframe (likely 30 days for non-urgent requests)</li>
+      </ul>
+      <p>
+        "High-risk" under Annex III covers a broader range of SaaS use cases than founders typically realize.
+        Examples that fall into high-risk territory include AI features that affect employment decisions
+        (resume screening, performance evaluation), creditworthiness, educational outcomes, access to
+        essential services, or law enforcement. If your product touches any of these areas, Article 12 applies.
+      </p>
+
+      <h2>SOC 2 + AI: The Three Controls That Change</h2>
+      <p>
+        SOC 2 itself has not added an "AI" control yet. But three existing Trust Services Criteria are now
+        interpreted more strictly when your system uses AI:
+      </p>
+      <ul>
+        <li>
+          <strong>CC6.1 (Logical Access)</strong> — must extend to AI APIs. Document who can call your LLM
+          provider APIs and through what intermediaries. Service-account credentials for OpenAI/Anthropic
+          need the same access control as your database credentials.
+        </li>
+        <li>
+          <strong>CC7.2 (System Monitoring)</strong> — auditors now expect monitoring of model performance,
+          prompt injection attempts, and output anomalies as part of "monitoring system performance and
+          security events." Generic application-level logs are no longer sufficient.
+        </li>
+        <li>
+          <strong>CC7.3 (Anomaly Detection)</strong> — your audit log queries need to surface AI-specific
+          anomalies: a 10x spike in safety_filter_triggered events, unusual prompt-injection scores from
+          a single tenant, large outputs that bypass post-filters. The log infrastructure has to support
+          these queries.
+        </li>
+      </ul>
+
+      <h2>GDPR Considerations for AI Audit Logs</h2>
+      <p>
+        AI audit logs intersect with GDPR in two places:
+      </p>
+      <ol>
+        <li>
+          <strong>The log itself contains personal data</strong> — actor identifiers are usually personal
+          data. If you store user inputs (or output content that references the user), that's personal data
+          under Article 4. Standard GDPR principles apply: lawful basis (legitimate interest or contract),
+          purpose limitation, retention limits, and subject access rights.
+        </li>
+        <li>
+          <strong>The log enables the right to explanation</strong> — Article 22 of GDPR grants users the
+          right not to be subject to "solely automated" decisions. When users request information about an
+          automated decision, your audit log is what surfaces the relevant inference: the model, the prompt,
+          the output, the time. Without this log, you cannot respond to Article 22 requests.
+        </li>
+      </ol>
+      <p>
+        Retention recommendation: 12 months for AI inference logs (sufficient for most GDPR access requests
+        and SOC 2 evidence), with PII fields hashed by month 3 unless flagged for active investigation.
+      </p>
+
+      <h2>How AuditKit Handles AI Logging</h2>
+      <p>
+        AuditKit's schema supports AI-specific fields out of the box. A typical AI inference log call looks like:
+      </p>
+      <pre><code>auditkit.log({
+  actor: 'user_abc123',
+  action: 'ai.inference',
+  resource: 'support_response',
+  tenant_id: 'tenant_xyz',
+  metadata: {
+    model_id: 'claude-opus-4-1-20250805',
+    model_provider: 'anthropic',
+    system_prompt_hash: 'sha256:abc...',
+    user_input_hash: 'sha256:def...',
+    output_hash: 'sha256:ghi...',
+    tokens_in: 1240,
+    tokens_out: 380,
+    safety_filter_triggered: false,
+    prompt_injection_score: 0.02,
+    output_filter_action: 'passed',
+    latency_ms: 1840
+  }
+});</code></pre>
+      <p>
+        Every event is SHA-256 hash-chained on write, so any tampering with historical logs breaks the chain
+        and is detectable. Tenant-scoped queries let you respond to Article 22 GDPR requests (per-user
+        inference history) without exposing other tenants' logs.
+      </p>
+      <p>
+        For high-risk systems under the EU AI Act, AuditKit's retention policies can be set per-event-type
+        — 6 months minimum on <code>ai.inference</code> events, 24 months on <code>ai.model_change</code>
+        events, indefinite on <code>ai.training_run</code> events.
+      </p>
+
+      <h2>The Common Mistakes</h2>
+      <ul>
+        <li>
+          <strong>Logging the full prompt in every inference event</strong> — storage explosion. Use hashes
+          and a versioned prompt table.
+        </li>
+        <li>
+          <strong>No model version tracking</strong> — "we use Claude" is not sufficient. Auditors need to
+          know which exact model version made which inference. Versions change behavior; logs must too.
+        </li>
+        <li>
+          <strong>Treating user input and model output as opaque blobs</strong> — they're personal data when
+          they reference identifiable individuals. GDPR Article 5 (data minimization) applies.
+        </li>
+        <li>
+          <strong>Not logging safety filter triggers</strong> — when the LLM provider's safety filter fires,
+          that's a meaningful security event. Auditors will ask for the rate of these events; you should
+          know.
+        </li>
+        <li>
+          <strong>Forgetting training-time events</strong> — if you fine-tune a model on customer data, that
+          training event is loggable and may be subject to longer retention than inference events.
+        </li>
+      </ul>
+
+      <h2>The Bottom Line</h2>
+      <p>
+        Your existing audit log infrastructure (the one you built for SOC 2) is the foundation. AI applications
+        add a schema layer on top — model identifiers, prompt/output hashes, safety filter flags, prompt injection
+        scores — and a retention layer that matches the regulatory environment (EU AI Act for high-risk systems,
+        GDPR for personal data, SOC 2 for security operations).
+      </p>
+      <p>
+        The teams that get this right in 2026 will close enterprise deals 30-60 days faster than teams who
+        treat AI logging as a future problem. Vendor security questionnaires are already asking about it.
+        SOC 2 auditors are already flagging it. The EU AI Act enforces it by August.
+      </p>
+      <p>
+        <a href="https://github.com/AuditKitDev/auditkit">AuditKit is open-source (AGPLv3) and self-hostable</a>,
+        or use the cloud tier starting at $99/mo. Either way, the AI logging schema is built in.
+      </p>
+    `,
+  },
+  {
     slug: 'audit-logs-soc-2-b2b-saas',
     title: 'Why Your B2B SaaS Needs Audit Logs Before SOC 2',
     description:
@@ -2953,6 +3440,295 @@ await batch.commit();</code></pre>
         <li>Use <code>auditLog.batch()</code> for bulk operations to avoid 1:1 network overhead per event.</li>
         <li>Evidence export with chain proof gives auditors the cryptographically verifiable trail they want — and removes the week-before-the-audit scramble.</li>
         <li>Start with a focused event taxonomy and resist the urge to log everything; an audit log is more useful when it captures the events that matter and excludes the noise.</li>
+      </ul>
+    `,
+  },
+  {
+    slug: 'add-audit-logs-express-app',
+    title: 'How to Add Audit Logs to an Express.js Application (2026 Guide)',
+    description:
+      'Step-by-step guide to adding tamper-evident, multi-tenant audit logs to an Express.js or Node.js API using the AuditKit SDK. Covers middleware patterns, route-level instrumentation, async batching, and tenant-scoped evidence export.',
+    seoTitle: 'How to Add Audit Logs to Express.js / Node.js (2026 Guide) | AuditKit',
+    seoDescription:
+      'Add tamper-evident, multi-tenant audit logs to Express.js or Node.js APIs in under 10 minutes. Covers middleware, route handlers, batch logging, tenant scoping, and evidence export with real code.',
+    author: 'AuditKit Team',
+    publishedAt: '2026-05-10',
+    tags: ['Express', 'Node.js', 'TypeScript', 'Audit Logs', 'Developer Guide', 'SOC 2'],
+    readTime: '7 min read',
+    content: `
+      <p>
+        If you are building a B2B SaaS API on Express.js (or Fastify, Koa, NestJS — most patterns transfer)
+        and an enterprise customer just asked for SOC 2 evidence, this is the 10-minute version of adding
+        tamper-evident audit logs. Everything below uses the AuditKit SDK, which works in any Node.js
+        runtime and produces hash-chained, tenant-scoped events out of the box.
+      </p>
+
+      <h2>What Should an Express.js API Log for SOC 2?</h2>
+      <p>
+        SOC 2 auditors care about a specific subset of API events. The pattern is consistent:
+      </p>
+      <ul>
+        <li>Authentication events (sign in, sign out, token issuance, token revocation, password reset).</li>
+        <li>Organization and team events (create org, invite member, accept invite, change role, remove member).</li>
+        <li>Permission changes (grant role, revoke role, change scope on an API key).</li>
+        <li>Data access on sensitive resources (read of customer data, export of records, API key usage).</li>
+        <li>Configuration changes (security settings, integration tokens, webhook endpoints, billing changes).</li>
+      </ul>
+      <p>
+        Skip routine reads of public data, health checks, and status pings. A focused audit log is more
+        credible to an auditor than a wide one with low signal-to-noise.
+      </p>
+
+      <h2>How Do I Install the AuditKit SDK?</h2>
+      <pre><code>npm install @auditkit/sdk
+# or
+pnpm add @auditkit/sdk</code></pre>
+      <p>Add credentials to your environment:</p>
+      <pre><code>AUDITKIT_API_KEY=sk_your_key_here
+AUDITKIT_BASE_URL=https://api.auditkit.dev</code></pre>
+      <p>
+        Self-hosters point <code>AUDITKIT_BASE_URL</code> at their own deployment. The SDK reads both
+        environment variables automatically.
+      </p>
+
+      <h2>Where Should the AuditKit Client Live?</h2>
+      <p>
+        Create one shared client instance in your infrastructure module so the SDK reuses HTTP connections
+        across requests:
+      </p>
+      <pre><code>// src/lib/auditkit.ts
+import { AuditKit } from '@auditkit/sdk';
+
+export const auditLog = new AuditKit({
+  apiKey: process.env.AUDITKIT_API_KEY!,
+  baseURL: process.env.AUDITKIT_BASE_URL,
+});</code></pre>
+      <p>
+        Import <code>auditLog</code> from this module wherever you need to record an event. The client is
+        thread-safe and batches events asynchronously by default.
+      </p>
+
+      <h2>How Do I Log Events from Express Route Handlers?</h2>
+      <p>
+        The simplest pattern is to log directly inside route handlers after the business operation completes:
+      </p>
+      <pre><code>// src/routes/team.ts
+import { Router } from 'express';
+import { db } from '../lib/db';
+import { auditLog } from '../lib/auditkit';
+import { requireAuth } from '../middleware/auth';
+
+const router = Router();
+
+router.post('/invite', requireAuth, async (req, res) => {
+  const { email, role } = req.body;
+  const { userId, orgId } = req.session;
+
+  const invite = await db.invite.create({
+    data: { email, role, orgId, invitedBy: userId },
+  });
+
+  await auditLog.event({
+    actor: userId,
+    action: 'org.member.invite',
+    resource: invite.id,
+    tenantId: orgId,
+    metadata: {
+      inviteEmail: email,
+      role,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    },
+  });
+
+  res.json({ id: invite.id });
+});
+
+export default router;</code></pre>
+      <p>
+        The pattern is consistent: <strong>actor</strong> (who did it), <strong>action</strong> (dotted
+        namespace), <strong>resource</strong> (what they did it to), <strong>tenantId</strong> (critical
+        for multi-tenant SaaS), and <strong>metadata</strong> for anything else an auditor might want.
+      </p>
+
+      <h2>Should I Log from Express Middleware?</h2>
+      <p>
+        Sparingly — and selectively. Express middleware runs on every matching request, so logging there
+        produces a lot of noise. Use middleware logging for two cases:
+      </p>
+      <ol>
+        <li><strong>Authentication failures and unauthorized access attempts</strong> — high-signal security events.</li>
+        <li><strong>Sensitive data exports (CSV, JSON, PDF)</strong> — auditors specifically want these tracked.</li>
+      </ol>
+      <pre><code>// src/middleware/auditExport.ts
+import type { Request, Response, NextFunction } from 'express';
+import { auditLog } from '../lib/auditkit';
+
+export function auditExportMiddleware(req: Request, res: Response, next: NextFunction) {
+  const isExport =
+    req.path.endsWith('.csv') ||
+    req.path.endsWith('.json') ||
+    req.query.format === 'export';
+
+  if (!isExport) return next();
+
+  res.on('finish', () => {
+    if (res.statusCode >= 200 && res.statusCode < 300 && req.session?.userId) {
+      auditLog.event({
+        actor: req.session.userId,
+        action: 'data.export',
+        resource: req.path,
+        tenantId: req.session.orgId,
+        metadata: {
+          method: req.method,
+          query: req.query,
+          ipAddress: req.ip,
+          responseSize: res.get('content-length'),
+        },
+      });
+    }
+  });
+
+  next();
+}</code></pre>
+      <p>
+        For everyday business events, log inside route handlers — never in catch-all middleware.
+      </p>
+
+      <h2>How Do I Show Each Tenant Their Own Audit Trail?</h2>
+      <p>
+        The most-requested enterprise feature is "let our customers see their own audit trail." With
+        tenant-scoped events, this is a single endpoint:
+      </p>
+      <pre><code>// src/routes/audit.ts
+import { Router } from 'express';
+import { auditLog } from '../lib/auditkit';
+import { requireAuth } from '../middleware/auth';
+
+const router = Router();
+
+router.get('/audit', requireAuth, async (req, res) => {
+  const { orgId } = req.session;
+  const { limit = 100, cursor } = req.query;
+
+  const events = await auditLog.list({
+    tenantId: orgId,
+    limit: Number(limit),
+    cursor: cursor as string | undefined,
+    order: 'desc',
+  });
+
+  res.json(events);
+});
+
+export default router;</code></pre>
+      <p>
+        Because every event is tenant-scoped at the SDK layer, customer A never sees customer B's events.
+        SOC 2 auditors specifically look for this isolation in the application code.
+      </p>
+
+      <h2>How Do I Handle High-Throughput Operations?</h2>
+      <p>
+        For bulk operations (data imports, batch user provisioning, scheduled jobs), use the SDK's batch
+        interface to avoid one network round-trip per event:
+      </p>
+      <pre><code>// src/jobs/importContacts.ts
+import { auditLog } from '../lib/auditkit';
+
+export async function importContacts(records: Contact[], orgId: string, actorId: string) {
+  const batch = auditLog.batch();
+
+  for (const record of records) {
+    await db.contact.create({ data: record });
+
+    batch.event({
+      actor: actorId,
+      action: 'contact.create',
+      resource: record.id,
+      tenantId: orgId,
+      metadata: { source: 'bulk-import', email: record.email },
+    });
+  }
+
+  await batch.commit();
+}</code></pre>
+      <p>
+        For a 10,000-record import, batched logging is roughly 50x faster than individual events because
+        the SDK sends a single batch request with the full hash chain computed server-side.
+      </p>
+
+      <h2>How Do I Export Evidence for an Auditor?</h2>
+      <p>
+        At audit time, your auditor wants a tenant-scoped, time-bounded evidence export. AuditKit's export
+        endpoint produces it directly:
+      </p>
+      <pre><code>// scripts/export-evidence.ts
+import { auditLog } from '../src/lib/auditkit';
+import { writeFile } from 'node:fs/promises';
+
+const evidence = await auditLog.exportEvidence({
+  tenantId: 'org_acme_corp',
+  startDate: '2025-11-01',
+  endDate: '2026-04-30',
+  format: 'csv',
+  includeChainProof: true,
+});
+
+await writeFile('acme-corp-audit-evidence.csv', evidence);</code></pre>
+      <p>
+        With <code>includeChainProof: true</code>, the export includes the cryptographic hash chain proof
+        so the auditor can independently verify that no events were tampered with during the observation
+        window. This is what makes the auditor's review fast: clean, verifiable evidence in a format they
+        can read directly.
+      </p>
+
+      <h2>What About Performance? Will This Slow Down My API?</h2>
+      <p>
+        The AuditKit SDK dispatches events asynchronously by default. <code>auditLog.event</code> returns
+        immediately; the network round-trip happens in the background. Typical overhead is under 0.5ms on
+        the request path. For a 200ms-baseline API endpoint, audit logging adds well under 1% latency.
+      </p>
+      <p>
+        For graceful shutdown (SIGTERM, container restart), call <code>auditLog.flush()</code> in your
+        shutdown handler to ensure any pending batched events are sent before the process exits:
+      </p>
+      <pre><code>process.on('SIGTERM', async () => {
+  await auditLog.flush();
+  server.close();
+});</code></pre>
+
+      <h2>Do These Patterns Work With Fastify, Koa, NestJS?</h2>
+      <p>
+        Yes. The SDK is framework-agnostic. The patterns translate directly:
+      </p>
+      <ul>
+        <li><strong>Fastify:</strong> Use the same patterns inside <code>fastify.post()</code> handlers and lifecycle hooks.</li>
+        <li><strong>Koa:</strong> Use middleware functions with <code>ctx</code> instead of <code>req</code>/<code>res</code>; otherwise identical.</li>
+        <li><strong>NestJS:</strong> Inject the AuditKit client as a service via the standard DI container; call from controllers or interceptors.</li>
+      </ul>
+      <p>
+        The mental model is the same regardless of framework: log structured events with actor, action,
+        resource, and tenantId. The framework is just plumbing.
+      </p>
+
+      <h2>What Should I Do Next?</h2>
+      <ul>
+        <li>Audit your existing routes and add events for the SOC 2-relevant operations identified at the top of this post.</li>
+        <li>Add the audit-trail viewer endpoint so enterprise customers can self-serve their compliance evidence.</li>
+        <li>Configure SIEM streaming if you have Splunk, Datadog, or Elastic — events flow there in real time.</li>
+        <li>Run an evidence export for the previous 30 days as a smoke test, and verify the chain proof.</li>
+        <li>Document your event taxonomy so your team uses consistent action names going forward.</li>
+      </ul>
+
+      <h2>Key Takeaways</h2>
+      <ul>
+        <li>Add the AuditKit SDK in 4 lines: install, configure env vars, create the shared client, log events.</li>
+        <li>Log from route handlers for business events. Use middleware for security events and data exports only.</li>
+        <li>Always include <code>tenantId</code> — multi-tenant scoping is what makes the audit log enterprise-ready.</li>
+        <li>Use <code>auditLog.batch()</code> for high-throughput operations to keep latency low and throughput high.</li>
+        <li>Call <code>auditLog.flush()</code> in your SIGTERM handler so pending events ship before the process exits.</li>
+        <li>Evidence export with chain proof removes the week-before-the-audit scramble — the auditor verifies integrity independently.</li>
+        <li>Patterns transfer directly to Fastify, Koa, and NestJS — the SDK is framework-agnostic.</li>
       </ul>
     `,
   },

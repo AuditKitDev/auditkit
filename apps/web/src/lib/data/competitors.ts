@@ -848,6 +848,106 @@ export const competitors: Competitor[] = [
       },
     ],
   },
+  {
+    slug: 'aikido',
+    name: 'Aikido Security',
+    pricing: 'Starting ~$200-$15,000/yr (developer-priced, scales by team size)',
+    category: 'GRC',
+    description:
+      'Compare AuditKit and Aikido for SOC 2 compliance. Aikido is a developer-first security platform (SAST, DAST, container scanning, cloud posture) with bolt-on compliance modules; AuditKit is the application-layer audit log with cryptographic evidence integrity at $99/mo or free self-hosted.',
+    features: [
+      { feature: 'Open source', auditkit: true, competitor: false },
+      { feature: 'Self-hosted option', auditkit: true, competitor: false },
+      { feature: 'Tamper-proof evidence (hash chain)', auditkit: true, competitor: false },
+      { feature: 'Merkle tree proofs', auditkit: true, competitor: false },
+      { feature: 'Multi-language audit log SDKs', auditkit: 'TS, Python, Go, Java', competitor: 'No app-layer SDK' },
+      { feature: 'Static code analysis (SAST)', auditkit: false, competitor: true },
+      { feature: 'Dynamic application testing (DAST)', auditkit: false, competitor: true },
+      { feature: 'Container vulnerability scanning', auditkit: false, competitor: true },
+      { feature: 'Cloud posture management (CSPM)', auditkit: false, competitor: true },
+      { feature: 'Application audit log', auditkit: 'Built-in', competitor: 'Not core focus' },
+      { feature: 'SOC 2 evidence collection', auditkit: 'App-layer events', competitor: 'Infra/code-layer' },
+      { feature: 'Auditor portal', auditkit: 'Built-in', competitor: 'Compliance Hub add-on' },
+      { feature: 'Transparent published pricing', auditkit: true, competitor: 'Partial (free tier published, enterprise quoted)' },
+      { feature: 'Self-serve trial without sales call', auditkit: true, competitor: true },
+      { feature: 'Monthly billing', auditkit: true, competitor: 'Available on lower tiers' },
+      { feature: 'Cryptographic evidence integrity', auditkit: true, competitor: false },
+    ],
+    strengths: [
+      'Developer-first onboarding — sign up, connect a repo, see vulnerability findings in minutes',
+      'Comprehensive infrastructure-layer security: SAST, DAST, container scanning, IaC scanning, CSPM',
+      'Strong free tier for open-source projects and small teams',
+      'Mature integrations with GitHub, GitLab, Bitbucket, AWS, GCP, Azure',
+      'Compliance Hub bundles SOC 2 / ISO 27001 / HIPAA control mappings on top of the security findings',
+    ],
+    weaknesses: [
+      'Application audit log is not a core focus — Aikido captures infrastructure and code events but not in-app business events (user invited, role changed, data exported)',
+      'Enterprise pricing is quoted, not published',
+      'Compliance Hub is a higher-tier add-on rather than included in base plans',
+      'No cryptographic evidence integrity (hash chains or Merkle proofs)',
+      'Closed source — no ability to inspect or extend the implementation',
+      'Audit log functionality, where present, is Aikido-event-focused rather than tenant-scoped multi-customer SaaS audit logging',
+    ],
+    auditkitAdvantages: [
+      {
+        title: 'Different layer of the security stack — complementary, not competitive',
+        description:
+          'Aikido covers code-layer and infrastructure-layer security (SAST, DAST, container scanning, CSPM). AuditKit covers application-layer audit logging — the events your customers and auditors care about. Most B2B SaaS organizations need both: Aikido (or similar) for SCA/SAST/CSPM, AuditKit for the in-application audit trail your customers can see and your auditor can verify.',
+      },
+      {
+        title: 'Tenant-scoped, customer-visible audit trails',
+        description:
+          'AuditKit ships an audit log architecture designed for multi-tenant B2B SaaS — every event is tenant-scoped so your enterprise customers can pull their own audit trail. This is the feature that closes enterprise deals. Aikido does not have a customer-facing audit log surface; it is a security-team-facing platform for code and infra events.',
+      },
+      {
+        title: 'Cryptographic evidence integrity',
+        description:
+          'AuditKit hash-chains every event so any tampering shows up as a broken chain — and exports Merkle proofs that an auditor can independently verify. Aikido stores its findings and audit data in a database with database-level access controls; it has no cryptographic integrity verification.',
+      },
+      {
+        title: 'Open source under AGPLv3',
+        description:
+          'Self-host the audit log infrastructure on your own deployment for $0 in licensing. Inspect the codebase, audit the hash-chain implementation, extend the SDK for custom needs. Aikido is a closed-source SaaS with self-hosted options only at the highest enterprise tier.',
+      },
+      {
+        title: 'Application-level instrumentation',
+        description:
+          'AuditKit instruments inside your application via SDK — every business event (user invited, role changed, data accessed, billing modified) gets a structured audit event with cryptographic chain integrity. Aikido captures security events from infrastructure connectors and code analysis, which complements rather than replaces in-app audit logging.',
+      },
+    ],
+    faqs: [
+      {
+        question: 'Is AuditKit an Aikido alternative?',
+        answer:
+          'Not really — they cover different layers. Aikido is a developer-first security platform (SAST, DAST, container scanning, cloud posture management). AuditKit is the application-layer audit log with cryptographic evidence integrity. Most B2B SaaS organizations need both: Aikido (or a similar security platform) for code and infrastructure security, AuditKit for the in-application audit trail customers and auditors specifically want. AuditKit is not a replacement for Aikido and vice versa.',
+      },
+      {
+        question: 'How does AuditKit complement Aikido for SOC 2?',
+        answer:
+          'For SOC 2, auditors look at multiple layers: code security (CC7.1), infrastructure security (CC6.1), and application audit logs (CC7.2, CC7.3). Aikido covers the code and infrastructure layers comprehensively. AuditKit covers the application audit log layer. Running both gives the auditor a full view of evidence across all the relevant Trust Services Criteria, with each layer using the best tool for that scope.',
+      },
+      {
+        question: 'Can AuditKit replace Aikido for any use case?',
+        answer:
+          'For the application audit log slice, yes. If you only need application-level audit events (who did what to what when, in your SaaS app) and not code or infrastructure security scanning, AuditKit alone is sufficient. If you also need SAST, DAST, container scanning, or cloud posture management, Aikido (or a similar platform) is still required — AuditKit does not cover those layers.',
+      },
+      {
+        question: 'How does pricing compare?',
+        answer:
+          'They are not directly comparable because they cover different problems. Aikido starts free for open-source projects and small teams, scaling into the thousands of dollars per year for enterprise teams with the full security platform. AuditKit cloud starts at $99/month ($1,188/year) for the application audit log; self-hosted is free. For organizations comparing total compliance-tooling spend, the typical pattern is Aikido (or an equivalent) for security scanning + AuditKit for application audit logs, with the combined cost often less than a single GRC platform like Drata or Vanta.',
+      },
+      {
+        question: 'Should I use AuditKit, Aikido, or both?',
+        answer:
+          'For most B2B SaaS startups: both. Aikido covers a category (code and infrastructure security) where AuditKit does not compete. AuditKit covers a category (multi-tenant application audit logs with cryptographic integrity) where Aikido does not compete. Running both gives complete SOC 2 evidence coverage at a combined cost typically lower than a single full GRC platform.',
+      },
+      {
+        question: 'Does Aikido provide tenant-scoped customer-facing audit trails?',
+        answer:
+          'No. Aikido is a security-team-facing platform — its events are scoped to your organization for your security team to consume. AuditKit is purpose-built for multi-tenant B2B SaaS where each customer needs to see their own audit trail in your product. If your enterprise prospects are asking for customer-facing audit visibility, AuditKit is the layer that delivers it.',
+      },
+    ],
+  },
 ];
 
 export function getCompetitor(slug: string): Competitor | undefined {
