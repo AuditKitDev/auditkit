@@ -243,7 +243,7 @@ export const blogPosts: BlogPost[] = [
 
       <h2>The Audit Log Requirement (Same for Both)</h2>
       <p>
-        Both SOC 2 and ISO 27001 require tamper-evident audit logging. SOC 2 anchors this under CC6.1 (logical
+        Both <a href="/compliance/soc2">SOC 2</a> and <a href="/compliance/iso27001">ISO 27001</a> require tamper-evident audit logging. SOC 2 anchors this under CC6.1 (logical
         access) and CC7.2 (system monitoring). ISO 27001 anchors it under Annex A.8.15 (logging) and A.8.16
         (monitoring activities).
       </p>
@@ -320,7 +320,7 @@ export const blogPosts: BlogPost[] = [
         Three regulatory and contractual pressures are converging in 2026:
       </p>
       <ul>
-        <li><strong>EU AI Act (effective August 2026)</strong> — Article 12 mandates "automatic recording of events" for high-risk AI systems, with specific retention requirements. The definition of "high-risk" includes a broader range of SaaS use cases than founders typically assume.</li>
+        <li><strong><a href="/compliance/eu-ai-act">EU AI Act</a> (effective August 2026)</strong> — Article 12 mandates "automatic recording of events" for high-risk AI systems, with specific retention requirements. The definition of "high-risk" includes a broader range of SaaS use cases than founders typically assume.</li>
         <li><strong>SOC 2 auditor expectations shifted in 2025</strong> — auditors now expect to see prompt/response logging, model version tracking, and prompt injection detection as part of CC7.2 (system monitoring). Not yet codified in the TSC, but consistently flagged in audit reports.</li>
         <li><strong>Enterprise procurement security questionnaires</strong> — the 2026 vendor security questionnaires from large enterprises (Fortune 500, financial services, healthcare) now include 15-30 specific questions about AI logging that did not exist in 2024 questionnaires.</li>
       </ul>
@@ -402,7 +402,7 @@ export const blogPosts: BlogPost[] = [
 
       <h2>GDPR Considerations for AI Audit Logs</h2>
       <p>
-        AI audit logs intersect with GDPR in two places:
+        AI audit logs intersect with <a href="/compliance/gdpr">GDPR</a> in two places:
       </p>
       <ol>
         <li>
@@ -516,8 +516,8 @@ export const blogPosts: BlogPost[] = [
       <h2>What Are Audit Logs and Why Do They Matter for SOC 2?</h2>
       <p>
         Audit logs are chronological records of every significant action taken within your application.
-        They capture who did what, when, and to which resource. For B2B SaaS companies pursuing SOC 2
-        Type II certification, audit logs are not optional — they are a foundational requirement under
+        They capture who did what, when, and to which resource. For B2B SaaS companies pursuing <a href="/compliance/soc2">SOC 2
+        Type II certification</a>, audit logs are not optional — they are a foundational requirement under
         the Common Criteria (CC) controls, specifically CC6.1, CC7.2, and CC7.3.
       </p>
       <p>
@@ -729,7 +729,7 @@ export const blogPosts: BlogPost[] = [
 
       <h2>What Retention Policies Should You Implement?</h2>
       <p>
-        Retention requirements vary by regulation and customer contract. GDPR may require you to
+        Retention requirements vary by regulation and customer contract. <a href="/compliance/gdpr">GDPR</a> may require you to
         delete user data upon request, but SOC 2 requires you to retain audit evidence. The solution
         is to separate personally identifiable information (PII) from the audit event itself. Store
         actor references (user IDs) rather than names and emails. When a user is deleted, the audit
@@ -781,7 +781,7 @@ export const blogPosts: BlogPost[] = [
     content: `
       <h2>What Specific Audit Log Capabilities Does SOC 2 Require?</h2>
       <p>
-        SOC 2 does not hand you a checklist of fields to log. Instead, it defines Trust Services Criteria
+        <a href="/compliance/soc2">SOC 2</a> does not hand you a checklist of fields to log. Instead, it defines Trust Services Criteria
         (TSC) — outcome-based controls that your audit logs must satisfy. The ambiguity is intentional:
         AICPA wants the criteria to apply across different architectures. But for engineering teams, this
         ambiguity creates confusion. Here is a concrete mapping of what auditors actually look for.
@@ -949,7 +949,7 @@ export const blogPosts: BlogPost[] = [
         <li><strong>Wrong retention model</strong> — application logs are typically rotated after 30-90 days to manage storage costs. Compliance frameworks require audit data for twelve months to seven years. Mixing the two forces you to either over-retain application logs or under-retain audit data.</li>
       </ul>
       <p>
-        SOC 2 auditors, ISO 27001 assessors, and HIPAA compliance officers all understand this distinction.
+        SOC 2 auditors, <a href="/compliance/iso27001">ISO 27001</a> assessors, and <a href="/compliance/hipaa">HIPAA</a> compliance officers all understand this distinction.
         When they ask for your audit trail, they expect a dedicated system with structured queries,
         integrity guarantees, and proper access controls — not a Kibana dashboard pointed at your
         application log index.
@@ -1093,7 +1093,7 @@ export const blogPosts: BlogPost[] = [
     content: `
       <h2>What Does HIPAA Actually Require for Audit Trails?</h2>
       <p>
-        The HIPAA Security Rule establishes audit trail requirements under 45 CFR 164.312(b),
+        The <a href="/compliance/hipaa">HIPAA</a> Security Rule establishes audit trail requirements under 45 CFR 164.312(b),
         the Audit Controls standard. It requires covered entities and business associates to
         "implement hardware, software, and/or procedural mechanisms that record and examine
         activity in information systems that contain or use electronic protected health information
@@ -1543,7 +1543,7 @@ CREATE TABLE audit_events_2026_03
       <h2>How Do You Handle Per-Tenant Retention Policies?</h2>
       <p>
         Different tenants need different retention periods. A healthcare customer might need
-        seven years (HIPAA), while a startup might only need ninety days. Implementing this
+        seven years (<a href="/compliance/hipaa">HIPAA</a>), while a startup might only need ninety days. Implementing this
         with a shared table requires a retention metadata table:
       </p>
       <pre><code>-- Retention configuration per tenant
@@ -1629,7 +1629,7 @@ CREATE TABLE tenant_retention (
       <h2>Why Do Enterprise Customers Need Audit Logs in Their SIEM?</h2>
       <p>
         Security Information and Event Management (SIEM) platforms are the central nervous system
-        of enterprise security operations. Security analysts monitor Splunk, Datadog, or Elastic
+        of enterprise security operations. Security analysts monitor <a href="/compare/splunk">Splunk</a>, <a href="/compare/datadog">Datadog</a>, or Elastic
         dashboards for anomalies across every system in their environment — identity providers,
         cloud infrastructure, SaaS applications, and internal tools. If your audit logs are not
         in their SIEM, your application is a blind spot.
@@ -1842,7 +1842,7 @@ CREATE TABLE tenant_retention (
     content: `
       <h2>Why Does GDPR Make Audit Logging Complicated?</h2>
       <p>
-        Most compliance frameworks say "log more." GDPR says "log carefully." The tension is
+        Most compliance frameworks say "log more." <a href="/compliance/gdpr">GDPR</a> says "log carefully." The tension is
         fundamental: you need audit trails to demonstrate compliance with GDPR's accountability
         principle (Article 5(2)), but the audit trail itself contains personal data that is subject
         to GDPR's data minimization, purpose limitation, and erasure requirements.
@@ -2047,12 +2047,12 @@ CREATE TABLE tenant_retention (
             <td>A.12.4.1 requires log retention "for an agreed period." Your ISMS policy defines the period; auditors verify you follow it. Common: 12-24 months.</td>
           </tr>
           <tr>
-            <td><strong>PCI DSS v4.0</strong></td>
+            <td><strong><a href="/compliance/pci-dss">PCI DSS</a> v4.0</strong></td>
             <td>12 months</td>
             <td>Requirement 10.7: retain audit trail history for at least 12 months, with at least 3 months immediately available for analysis.</td>
           </tr>
           <tr>
-            <td><strong>SOX (Sarbanes-Oxley)</strong></td>
+            <td><strong><a href="/compliance/sox">SOX</a> (Sarbanes-Oxley)</strong></td>
             <td>7 years</td>
             <td>Section 802 requires retention of audit work papers and financial records for 7 years. Applies to public companies and their service providers.</td>
           </tr>
@@ -2287,7 +2287,7 @@ CREATE TABLE tenant_retention (
 
       <h2>How Does Open Source Accelerate SOC 2 and Compliance Audits?</h2>
       <p>
-        SOC 2 auditors evaluate your vendor management controls — how you assess and monitor
+        <a href="/compliance/soc2">SOC 2</a> auditors evaluate your vendor management controls — how you assess and monitor
         third-party services. When you use a closed-source audit logging vendor, you need to
         request their SOC 2 report, trust their security whitepaper at face value, accept their
         penetration test summary without seeing the findings, and rely on contractual commitments
@@ -2327,7 +2327,7 @@ CREATE TABLE tenant_retention (
     content: `
       <h2>What Does ISO 27001 Require for Logging?</h2>
       <p>
-        ISO 27001:2022 addresses logging requirements primarily through Annex A controls in the
+        <a href="/compliance/iso27001">ISO 27001</a>:2022 addresses logging requirements primarily through Annex A controls in the
         A.8 (Technology) category. The key control is <strong>A.8.15 — Logging</strong>, which
         states: "Logs that record activities, exceptions, faults and other relevant events shall
         be produced, stored, protected and analysed." This single control encompasses event
@@ -2498,7 +2498,7 @@ CREATE TABLE tenant_retention (
     content: `
       <h2>The Full Evidence List Auditors Request</h2>
       <p>
-        SOC 2 auditors do not show up and ask vague questions. They arrive with a prepared
+        <a href="/compliance/soc2">SOC 2</a> auditors do not show up and ask vague questions. They arrive with a prepared
         request list — often called a PBC (Prepared By Client) list — and they expect specific
         artifacts. Understanding what is on that list before the audit starts is the single
         most important thing you can do to avoid delays.
@@ -2792,7 +2792,7 @@ CREATE TABLE tenant_retention (
     content: `
       <h2>Why Policies Are the Foundation of SOC 2</h2>
       <p>
-        SOC 2 auditors evaluate your controls against the Trust Services Criteria, and
+        <a href="/compliance/soc2">SOC 2</a> auditors evaluate your controls against the Trust Services Criteria, and
         controls start with policies. A policy defines what your organization commits to
         doing. A control is the mechanism that enforces or implements that commitment. Without
         written policies, there is no baseline for the auditor to evaluate — and no way to
@@ -3043,8 +3043,8 @@ CREATE TABLE tenant_retention (
         below are based on common buyer-reported quotes for a 5-50 person SaaS doing SOC 2 Type II. Expect annual contracts.
       </p>
       <ul>
-        <li><strong>Drata:</strong> roughly $7,500 to $15,000/yr for SOC 2 alone, scaling to $20,000 to $40,000/yr for multi-framework (SOC 2 + ISO 27001 + HIPAA). They quote per-employee on the high end.</li>
-        <li><strong>Vanta:</strong> roughly $8,000 to $18,000/yr for SOC 2 alone, with similar multi-framework jumps. Vanta is often the most aggressive on discounts for early-stage startups.</li>
+        <li><strong><a href="/compare/drata">Drata</a>:</strong> roughly $7,500 to $15,000/yr for SOC 2 alone, scaling to $20,000 to $40,000/yr for multi-framework (SOC 2 + ISO 27001 + HIPAA). They quote per-employee on the high end.</li>
+        <li><strong><a href="/compare/vanta">Vanta</a>:</strong> roughly $8,000 to $18,000/yr for SOC 2 alone, with similar multi-framework jumps. Vanta is often the most aggressive on discounts for early-stage startups.</li>
         <li><strong>Secureframe:</strong> roughly $7,000 to $15,000/yr for SOC 2, often bundled with auditor introductions.</li>
         <li><strong>Sprinto:</strong> roughly $5,000 to $10,000/yr — typically positioned cheaper than Drata/Vanta.</li>
         <li><strong>Thoropass and TrustCloud:</strong> $5,000 to $20,000/yr depending on scope and audit bundling.</li>
@@ -3152,7 +3152,7 @@ CREATE TABLE tenant_retention (
     readTime: '8 min read',
     content: `
       <p>
-        If you are building a B2B SaaS on Next.js and an enterprise prospect just asked for SOC 2 evidence,
+        If you are building a B2B SaaS on Next.js and an enterprise prospect just asked for <a href="/compliance/soc2">SOC 2</a> evidence,
         you need audit logs in your application — not next quarter, this week. This guide shows how to add
         tamper-evident, multi-tenant audit logs to a Next.js App Router application using the AuditKit SDK.
         Total setup time is under 10 minutes; the cryptographic chain integrity is built in.
@@ -3458,7 +3458,7 @@ await batch.commit();</code></pre>
     content: `
       <p>
         If you are building a B2B SaaS API on Express.js (or Fastify, Koa, NestJS — most patterns transfer)
-        and an enterprise customer just asked for SOC 2 evidence, this is the 10-minute version of adding
+        and an enterprise customer just asked for <a href="/compliance/soc2">SOC 2</a> evidence, this is the 10-minute version of adding
         tamper-evident audit logs. Everything below uses the AuditKit SDK, which works in any Node.js
         runtime and produces hash-chained, tenant-scoped events out of the box.
       </p>
