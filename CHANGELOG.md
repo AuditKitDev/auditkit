@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/AuditKitDev/auditkit/compare/v1.0.0...v1.1.0) (2026-05-12)
+
+
+### Features
+
+* **pSEO:** framework x industry matrix (16 new audit-for/ pages) ([f5f8de5](https://github.com/AuditKitDev/auditkit/commit/f5f8de5e1adb5b9aae424f0871139a1c4a05c391)), closes [hi#commercial-intent](https://github.com/hi/issues/commercial-intent)
+
 # 1.0.0 (2026-05-10)
 
 
