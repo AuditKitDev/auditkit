@@ -29,12 +29,12 @@ import { Hero } from '@/components/marketing/hero';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'AuditKit — Audit Logs & SOC 2 Prep for B2B SaaS',
+  title: 'AuditKit: Audit Logs & SOC 2 Prep for B2B SaaS',
   description:
     'Stop losing enterprise deals to compliance gaps. Tamper-proof audit trails and SOC 2 evidence collection in one open-source platform. From $99/mo.',
   alternates: { canonical: 'https://auditkit.dev' },
   openGraph: {
-    title: 'AuditKit — Audit Logs & SOC 2 Prep for B2B SaaS',
+    title: 'AuditKit: Audit Logs & SOC 2 Prep for B2B SaaS',
     description:
       'Stop losing enterprise deals to compliance gaps. Tamper-proof audit trails and SOC 2 evidence collection in one open-source platform. From $99/mo.',
     url: 'https://auditkit.dev',
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AuditKit — Open-Source Audit Logs & SOC 2 Compliance for B2B SaaS',
+    title: 'AuditKit: Open-Source Audit Logs & SOC 2 Compliance for B2B SaaS',
     description:
       'Ship tamper-evident audit trails in 5 minutes. SOC 2 evidence collection, policy templates, and compliance automation. Open source, from $0/mo.',
   },
