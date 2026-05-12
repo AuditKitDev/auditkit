@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/AuditKitDev/auditkit/compare/v1.1.0...v1.2.0) (2026-05-12)
+
+
+### Features
+
+* **tools:** free compliance framework comparison + tools index ([3ab0d01](https://github.com/AuditKitDev/auditkit/commit/3ab0d01a9464a32c82d519a3401708fa6d255be8)), closes [hi#commercial-](https://github.com/hi/issues/commercial-) [hi#commercial-intent](https://github.com/hi/issues/commercial-intent)
+
 # [1.1.0](https://github.com/AuditKitDev/auditkit/compare/v1.0.0...v1.1.0) (2026-05-12)
 
 
