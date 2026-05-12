@@ -4,6 +4,7 @@ import { getAllFrameworkSlugs as getAllComplianceSlugs } from '@/lib/data/compli
 import { getAllDevFrameworkSlugs as getAllGuideFrameworkSlugs } from '@/lib/data/frameworks';
 import { getAllIndustrySlugs } from '@/lib/data/industries';
 import { getAllCompetitorSlugs } from '@/lib/data/competitors';
+import { getAllMatrixSlugs } from '@/lib/data/framework-industry-matrix';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://auditkit.dev';
@@ -39,6 +40,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: now,
     changeFrequency: 'monthly' as const,
     priority: 0.7,
+  }));
+
+  // Framework × Industry matrix pSEO pages
+  const matrixEntries: MetadataRoute.Sitemap = getAllMatrixSlugs().map((slug) => ({
+    url: `${baseUrl}/audit-for/${slug}`,
+    lastModified: now,
+    changeFrequency: 'monthly' as const,
+    priority: 0.75,
   }));
 
   // Dynamic competitor pages (new ones only — existing static pages already listed)
@@ -82,6 +91,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...complianceEntries,
     ...guideEntries,
     ...industryEntries,
+    ...matrixEntries,
     ...newCompareEntries,
     ...blogEntries,
   ];
