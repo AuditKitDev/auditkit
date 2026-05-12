@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Terminal, BookOpen, Blocks, Eye, Globe, Key, FileJson } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Documentation — SDK, API & Integration Guide',
+  title: 'Documentation: SDK, API & Integration Guide',
   description:
     'Complete AuditKit developer documentation. TypeScript SDK reference, REST API endpoints, React viewer component, framework integrations for Next.js, Hono, and Drizzle.',
   alternates: { canonical: 'https://auditkit.dev/docs' },
