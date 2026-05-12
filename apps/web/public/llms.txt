@@ -6,6 +6,30 @@
 
 AuditKit is a drop-in audit logging platform for B2B SaaS applications. It provides tamper-proof event recording using SHA-256 hash chaining and Merkle tree proofs, tenant-scoped log isolation, an embeddable React viewer component, and compliance-ready exports for SOC 2, ISO 27001, HIPAA, and GDPR.
 
+## Free Tools (no signup required)
+
+- Compliance Framework Comparison: /tools/compliance-comparison — Compare SOC 2, ISO 27001, HIPAA, GDPR, FedRAMP, PCI DSS, CMMC, DORA, NIS2, SOX, and EU AI Act side-by-side. Up to 4 frameworks at once. Real data sourced from primary regulatory texts (AICPA, ISO/IEC, NIST, 45 CFR 164, PCI DSS v4.0).
+- All free tools: /tools
+
+## Framework × Industry Matrix Pages (16 pages)
+
+High-buyer-intent audit-logging guides for specific framework + industry combinations:
+- /audit-for/soc2-for-fintech
+- /audit-for/pci-dss-for-fintech
+- /audit-for/sox-for-fintech
+- /audit-for/dora-for-fintech
+- /audit-for/iso27001-for-fintech
+- /audit-for/hipaa-for-healthcare
+- /audit-for/soc2-for-healthcare
+- /audit-for/gdpr-for-healthcare
+- /audit-for/iso27001-for-healthcare
+- /audit-for/soc2-for-edtech
+- /audit-for/gdpr-for-edtech
+- /audit-for/iso27001-for-edtech
+- /audit-for/fedramp-for-govtech
+- /audit-for/cmmc-for-govtech
+- /audit-for/soc2-for-govtech
+
 ## Key Capabilities
 
 - **Tamper-Proof Logging**: SHA-256 hash chain with Merkle tree cryptographic proofs. Every event is linked to the previous one. Any modification breaks the chain.
