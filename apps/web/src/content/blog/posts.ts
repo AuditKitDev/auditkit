@@ -3732,6 +3732,222 @@ await writeFile('acme-corp-audit-evidence.csv', evidence);</code></pre>
       </ul>
     `,
   },
+  {
+    slug: 'compliance-frameworks-2026-side-by-side',
+    title: 'Compliance Frameworks for B2B SaaS in 2026: SOC 2 vs ISO 27001 vs HIPAA vs GDPR vs PCI DSS vs FedRAMP — Side-By-Side',
+    description:
+      'Every modern B2B SaaS eventually needs multiple compliance attestations. This guide compares 11 frameworks (SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS, FedRAMP, CMMC, DORA, NIS2, SOX, EU AI Act) on scope, audit log requirements, retention, and overlap so you can plan the right multi-framework strategy.',
+    seoTitle: 'Compliance Frameworks 2026: SOC 2 vs ISO 27001 vs HIPAA vs GDPR Compared',
+    seoDescription:
+      'Side-by-side comparison of 11 compliance frameworks for B2B SaaS. SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS, FedRAMP, CMMC, DORA, NIS2, SOX, EU AI Act — audit log requirements, retention, overlap.',
+    author: 'AuditKit Team',
+    publishedAt: '2026-05-12',
+    tags: ['Compliance', 'SOC 2', 'ISO 27001', 'HIPAA', 'GDPR', 'PCI DSS', 'FedRAMP', 'Comparison'],
+    readTime: '14 min read',
+    content: `
+      <h2>The Multi-Framework Reality</h2>
+      <p>
+        Most B2B SaaS companies start with SOC 2. By year 3, they need at least two more. Enterprise customers in healthcare want HIPAA, EU customers want ISO 27001 and GDPR, fintech customers want PCI DSS, and government customers want FedRAMP. The companies that plan for multi-framework attestations from the start avoid 6-18 months of repeated implementation work.
+      </p>
+      <p>
+        This guide compares <strong>11 compliance frameworks</strong> on the dimensions that matter for the decision: scope, audit log requirements, retention, who requires it, and how the frameworks overlap. Use it to pick the right starting framework and to plan the order for everything after.
+      </p>
+      <p>
+        For the interactive version with up-to-4 framework selection, use the free <a href="/tools/compliance-comparison">Compliance Framework Comparison tool</a> — same data, queryable in your browser.
+      </p>
+
+      <h2>The 11 Frameworks Compared</h2>
+
+      <h3>SOC 2 (AICPA Trust Services Criteria)</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> US enterprise B2B procurement, virtually every Fortune 500 vendor review</li>
+        <li><strong>Audit log retention:</strong> Minimum 1 year (Type II window typically 3-12 months)</li>
+        <li><strong>Key logging requirements:</strong> CC6.1 (logical access), CC7.2 (system monitoring), CC8.1 (change management)</li>
+        <li><strong>Audit cost:</strong> $30K-$100K depending on scope and auditor</li>
+        <li><strong>Industries that demand it:</strong> All US B2B SaaS, fintech, healthcare adjacent, edtech</li>
+      </ul>
+      <p>SOC 2 Type II is the default starting point for most B2B SaaS. The Trust Services Criteria are flexible enough to fit most products, and the audit pool is large. <a href="/compliance/soc2">Full SOC 2 guide</a>.</p>
+
+      <h3>ISO 27001 (Information Security Management)</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> EU enterprise, UK enterprise, APAC enterprise, government adjacents</li>
+        <li><strong>Audit log retention:</strong> Organization-defined (typically 1-3 years per risk assessment)</li>
+        <li><strong>Key logging requirements:</strong> A.8.15 (Logging), A.8.16 (Monitoring), A.8.17 (Clock synchronization), A.8.18 (Privileged utility programs)</li>
+        <li><strong>Audit cost:</strong> $30K-$80K plus annual surveillance audits</li>
+        <li><strong>Industries that demand it:</strong> Anything sold internationally, EU government, UK health, APAC financial</li>
+      </ul>
+      <p>ISO 27001 is the international default. If you have any European or APAC enterprise customers, you'll need it. <a href="/compliance/iso27001">Full ISO 27001 guide</a>.</p>
+
+      <h3>HIPAA (Health Insurance Portability and Accountability Act)</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> Any US healthcare-adjacent product touching ePHI</li>
+        <li><strong>Audit log retention:</strong> 6 years (per 45 CFR 164.530(j))</li>
+        <li><strong>Key logging requirements:</strong> 45 CFR 164.312(b) audit controls — every ePHI access logged with user, timestamp, action</li>
+        <li><strong>Audit cost:</strong> Self-attestation possible; OCR audits triggered by breaches</li>
+        <li><strong>Industries that demand it:</strong> EHR, telemedicine, healthcare SaaS, behavioral health, insurance</li>
+      </ul>
+      <p>HIPAA is mandatory if you touch ePHI. The audit log requirement (164.312(b)) is one of the most-cited OCR finding gaps. <a href="/compliance/hipaa">Full HIPAA guide</a> and <a href="/audit-for/hipaa-for-healthcare">HIPAA for Healthcare SaaS</a>.</p>
+
+      <h3>GDPR (EU General Data Protection Regulation)</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> Anyone processing EU resident data (extraterritorial)</li>
+        <li><strong>Audit log retention:</strong> Data minimization applies — retain only as long as needed for stated purpose</li>
+        <li><strong>Key logging requirements:</strong> Article 30 records of processing activities; Article 32 security of processing; Article 33 72-hour breach notification</li>
+        <li><strong>Audit cost:</strong> Self-attestation; fines up to 4% of global annual revenue under Article 83</li>
+        <li><strong>Industries that demand it:</strong> Any SaaS with even a single EU user</li>
+      </ul>
+      <p>GDPR is extraterritorial — it applies based on the data subject, not the company location. Most US SaaS companies are technically subject to GDPR but haven't done the work. <a href="/compliance/gdpr">Full GDPR guide</a>.</p>
+
+      <h3>PCI DSS v4.0 (Payment Card Industry Data Security Standard)</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> Anyone touching cardholder data</li>
+        <li><strong>Audit log retention:</strong> 12 months minimum, 3 months immediately available (Req 10.7)</li>
+        <li><strong>Key logging requirements:</strong> Requirement 10 — comprehensive event logging, log integrity protection via hash (10.5.2 in v4.0), automated review</li>
+        <li><strong>Audit cost:</strong> $5K-$25K for SAQ; QSA assessments $50K-$200K for higher merchant levels</li>
+        <li><strong>Industries that demand it:</strong> Fintech, e-commerce, payment processors, SaaS billing</li>
+      </ul>
+      <p>PCI DSS v4.0 (effective March 2024) is the first version to explicitly require cryptographic log integrity. <a href="/compliance/pci-dss">Full PCI DSS guide</a> and <a href="/audit-for/pci-dss-for-fintech">PCI DSS for Fintech</a>.</p>
+
+      <h3>FedRAMP (Federal Risk and Authorization Management Program)</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> Anyone selling to federal civilian agencies</li>
+        <li><strong>Audit log retention:</strong> 1 year online, 3 years total (per NIST SP 800-53 AU-11)</li>
+        <li><strong>Key logging requirements:</strong> AU control family (16 controls) — AU-2 (events), AU-3 (content), AU-9 (protection), AU-12 (generation)</li>
+        <li><strong>Audit cost:</strong> $100K-$1M+ depending on impact level (Low/Moderate/High)</li>
+        <li><strong>Industries that demand it:</strong> Govtech, defense IT, federal contractors</li>
+      </ul>
+      <p>FedRAMP is the most expensive and time-intensive compliance journey (typically 18-36 months from start to ATO). AU-9 (audit log protection) is one of the most rigorously assessed control families. <a href="/compliance/fedramp">Full FedRAMP guide</a> and <a href="/audit-for/fedramp-for-govtech">FedRAMP for Govtech</a>.</p>
+
+      <h3>CMMC 2.0 (Cybersecurity Maturity Model Certification)</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> DoD contractors handling CUI (Controlled Unclassified Information)</li>
+        <li><strong>Audit log retention:</strong> Organization-defined per NIST SP 800-171</li>
+        <li><strong>Key logging requirements:</strong> AU family from NIST SP 800-171 (mirrors FedRAMP AU controls but lighter scope)</li>
+        <li><strong>Audit cost:</strong> $50K-$300K depending on level (1, 2, or 3)</li>
+        <li><strong>Industries that demand it:</strong> Defense Industrial Base contractors, defense-adjacent SaaS</li>
+      </ul>
+      <p>CMMC 2.0 is rolling out across the Defense Industrial Base through 2028. Level 2 (NIST SP 800-171) is the most common requirement. <a href="/audit-for/cmmc-for-govtech">CMMC for Govtech</a>.</p>
+
+      <h3>DORA (Digital Operational Resilience Act, EU)</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> EU financial entities AND their non-EU ICT providers (extraterritorial)</li>
+        <li><strong>Audit log retention:</strong> 5 years minimum for ICT incident records (Article 10)</li>
+        <li><strong>Key logging requirements:</strong> ICT-related incident detection and reporting, third-party access logs, operational resilience testing evidence</li>
+        <li><strong>Audit cost:</strong> Embedded in existing financial regulatory audit cycles</li>
+        <li><strong>Industries that demand it:</strong> Fintech selling to EU banks, payment institutions, investment firms</li>
+      </ul>
+      <p>DORA became enforceable January 2025. US fintech vendors with EU customers are in scope. The 4-hour incident notification requirement means logs must be queryable in real-time. <a href="/audit-for/dora-for-fintech">DORA for Fintech</a>.</p>
+
+      <h3>NIS2 (EU Network and Information Security Directive)</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> EU operators of essential and important entities; expanded scope from NIS1</li>
+        <li><strong>Audit log retention:</strong> Not explicitly defined; aligns with national implementation</li>
+        <li><strong>Key logging requirements:</strong> Security event logging, monitoring of security incidents, incident reporting within 24h initial / 72h full</li>
+        <li><strong>Audit cost:</strong> National competent authority assessments; varies by member state</li>
+        <li><strong>Industries that demand it:</strong> EU critical infrastructure, cybersecurity vendors, cloud providers, digital service providers</li>
+      </ul>
+
+      <h3>SOX (Sarbanes-Oxley Act)</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> US publicly-traded companies (and their material vendors)</li>
+        <li><strong>Audit log retention:</strong> 7 years for audit workpapers (Section 802)</li>
+        <li><strong>Key logging requirements:</strong> Section 404 internal controls — all financial reporting system access and changes logged</li>
+        <li><strong>Audit cost:</strong> $1M-$10M+ annually for SOX 404(b) compliance at public companies</li>
+        <li><strong>Industries that demand it:</strong> Vendors to public companies, especially financial reporting tools</li>
+      </ul>
+      <p>SOX applies indirectly to vendors via ICFR scope. SOC 1 Type II reports are the standard way fintech SaaS documents SOX-relevant controls. <a href="/audit-for/sox-for-fintech">SOX for Fintech</a>.</p>
+
+      <h3>EU AI Act</h3>
+      <ul>
+        <li><strong>Who requires it:</strong> Anyone deploying AI systems in the EU (extraterritorial)</li>
+        <li><strong>Audit log retention:</strong> Risk-based; high-risk AI systems require continuous logs</li>
+        <li><strong>Key logging requirements:</strong> Article 12 (record-keeping) — automatic logging of high-risk AI events, traceability of decisions</li>
+        <li><strong>Audit cost:</strong> Conformity assessments for high-risk systems</li>
+        <li><strong>Industries that demand it:</strong> Any AI/ML SaaS with EU users; high-risk categories include hiring, credit scoring, healthcare AI</li>
+      </ul>
+
+      <h2>The Overlap Matrix (What You Build Once Covers Multiple Frameworks)</h2>
+
+      <p>This is the most under-appreciated insight in multi-framework strategy: <strong>audit log infrastructure built for one framework typically satisfies 60-80% of the requirements for 3-5 others.</strong></p>
+
+      <h3>What audit log infrastructure satisfies multiple frameworks?</h3>
+      <ul>
+        <li><strong>Tamper-evident logging (hash chains + Merkle proofs):</strong> SOC 2 CC7.2, ISO 27001 A.8.15, HIPAA 164.312(b), PCI DSS 10.5.2, FedRAMP AU-9, NIST SP 800-171 AU-9</li>
+        <li><strong>Tenant-isolated audit pipelines:</strong> SOC 2 CC6.3, ISO 27001 A.5.15, GDPR Article 32, HIPAA 164.308(a)(4)</li>
+        <li><strong>Real-time SIEM streaming:</strong> SOC 2 CC7.2, ISO 27001 A.8.16, PCI DSS 10.4, FedRAMP AU-6, DORA Article 10</li>
+        <li><strong>Long-term retention (7+ years):</strong> SOX 802, HIPAA 164.530(j), DORA Article 10 (5 years), FedRAMP AU-11 (3 years)</li>
+        <li><strong>Auditor-accessible evidence portal:</strong> Every framework</li>
+      </ul>
+
+      <p>This is why <strong>AuditKit's design philosophy</strong> is "build once, attest everywhere." A single hash-chained, tenant-isolated, SIEM-streaming audit log infrastructure satisfies the audit log requirements for SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS, FedRAMP, CMMC, DORA, and SOX simultaneously. <a href="/pricing">See pricing</a>.</p>
+
+      <h2>Recommended Order by Customer Profile</h2>
+
+      <p>Pick your starting framework based on where your enterprise customers are:</p>
+
+      <h3>If you sell primarily to US B2B SaaS / fintech</h3>
+      <ol>
+        <li><strong>SOC 2 Type II first</strong> (default — gates 80%+ of enterprise deals)</li>
+        <li>ISO 27001 second (if you have any EU/APAC customers)</li>
+        <li>Then HIPAA if you're healthcare-adjacent</li>
+        <li>Then PCI DSS if you touch cards</li>
+      </ol>
+
+      <h3>If you sell primarily to EU / UK / APAC</h3>
+      <ol>
+        <li><strong>ISO 27001 first</strong> — required by most EU enterprise procurement</li>
+        <li>GDPR compliance baseline (always)</li>
+        <li>SOC 2 if you also want US enterprise</li>
+        <li>DORA if you sell to EU financial entities</li>
+      </ol>
+
+      <h3>If you sell to US healthcare</h3>
+      <ol>
+        <li><strong>HIPAA first</strong> — required to be a Business Associate</li>
+        <li>SOC 2 Type II second (hospitals and payers want both)</li>
+        <li>ISO 27001 if you have international healthcare customers</li>
+      </ol>
+
+      <h3>If you sell to US federal civilian agencies</h3>
+      <ol>
+        <li><strong>FedRAMP first</strong> (Moderate baseline most common) — required for ATO</li>
+        <li>SOC 2 Type II in parallel for state and local government</li>
+        <li>ISO 27001 if internationally expansive</li>
+      </ol>
+
+      <h3>If you sell to DoD</h3>
+      <ol>
+        <li><strong>CMMC Level 2 first</strong> (NIST SP 800-171 baseline) — required for CUI handling</li>
+        <li>FedRAMP if also targeting civilian agencies</li>
+      </ol>
+
+      <h2>Industry-Specific Combinations</h2>
+
+      <p>For specific industry × framework combinations, we maintain detailed guides:</p>
+      <ul>
+        <li><strong>Fintech:</strong> <a href="/audit-for/soc2-for-fintech">SOC 2</a>, <a href="/audit-for/pci-dss-for-fintech">PCI DSS</a>, <a href="/audit-for/sox-for-fintech">SOX</a>, <a href="/audit-for/dora-for-fintech">DORA</a>, <a href="/audit-for/iso27001-for-fintech">ISO 27001</a></li>
+        <li><strong>Healthcare SaaS:</strong> <a href="/audit-for/hipaa-for-healthcare">HIPAA</a>, <a href="/audit-for/soc2-for-healthcare">SOC 2</a>, <a href="/audit-for/gdpr-for-healthcare">GDPR</a>, <a href="/audit-for/iso27001-for-healthcare">ISO 27001</a></li>
+        <li><strong>Edtech:</strong> <a href="/audit-for/soc2-for-edtech">SOC 2</a>, <a href="/audit-for/gdpr-for-edtech">GDPR</a>, <a href="/audit-for/iso27001-for-edtech">ISO 27001</a></li>
+        <li><strong>Govtech:</strong> <a href="/audit-for/fedramp-for-govtech">FedRAMP</a>, <a href="/audit-for/cmmc-for-govtech">CMMC</a>, <a href="/audit-for/soc2-for-govtech">SOC 2</a></li>
+      </ul>
+
+      <h2>Use the Interactive Tool</h2>
+      <p>
+        This article gives you the static comparison. For an interactive view — pick up to 4 frameworks and see them side-by-side — use the free <a href="/tools/compliance-comparison">Compliance Framework Comparison tool</a>. No signup required.
+      </p>
+
+      <h2>Key Takeaways</h2>
+      <ul>
+        <li><strong>Pick the first framework by where your enterprise customers are</strong> — US default SOC 2, EU default ISO 27001, healthcare HIPAA, federal FedRAMP, DoD CMMC.</li>
+        <li><strong>Plan for at least 2-3 frameworks within 24 months.</strong> Single-framework strategy doesn't survive your first internationalization or vertical expansion.</li>
+        <li><strong>Audit log infrastructure is the most under-appreciated leverage point.</strong> Build it once with tamper-evident logging + tenant isolation + SIEM streaming + long retention, and it satisfies 60-80% of every framework's audit requirements.</li>
+        <li><strong>PCI DSS v4.0 (March 2024) explicitly mandates hash-based log integrity.</strong> Assessor expectations have caught up — policy-only controls no longer pass.</li>
+        <li><strong>DORA's January 2025 enforceability has extraterritorial reach.</strong> US fintech vendors with EU bank customers are in scope and need the 4-hour incident reporting infrastructure.</li>
+        <li><strong>HIPAA 164.312(b) and 45 CFR 164.530(j)</strong> (6-year retention) are two of the most-cited OCR finding gaps. Audit logs need to be both tamper-evident and retained.</li>
+        <li><strong>Use the interactive <a href="/tools/compliance-comparison">comparison tool</a></strong> when scoping multi-framework strategy with stakeholders — same data, queryable by framework selection.</li>
+      </ul>
+    `,
+  },
 ];
 
 export function getPostBySlug(slug: string): BlogPost | undefined {
