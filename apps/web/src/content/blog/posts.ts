@@ -4219,6 +4219,118 @@ FOR UPDATE SKIP LOCKED LIMIT 100;
       </ul>
     `,
   },
+  {
+    slug: 'audit-log-vs-activity-log-vs-event-log',
+    title: 'Audit Log vs Activity Log vs Event Log: The Differences That Matter for Compliance',
+    description:
+      'Engineers use these terms interchangeably. Auditors don\'t. The differences determine whether your logs pass SOC 2 / ISO 27001 / HIPAA / PCI DSS audits — or fail them. Definitions, requirements, and the architectural mistake that causes 30% of audit-log findings.',
+    seoTitle: 'Audit Log vs Activity Log vs Event Log: The Compliance Differences',
+    seoDescription:
+      'Three different log categories with different compliance requirements. What auditors expect from each. Why treating activity logs as audit logs fails SOC 2 / PCI DSS / HIPAA.',
+    author: 'AuditKit Team',
+    publishedAt: '2026-05-13',
+    tags: ['Engineering', 'Compliance', 'Audit Logging', 'SOC 2', 'HIPAA', 'PCI DSS'],
+    readTime: '11 min read',
+    content: `
+      <h2>Three Terms, Three Different Things</h2>
+      <p>Engineers use "audit log," "activity log," and "event log" interchangeably. Compliance auditors don't. The terms refer to three structurally different log categories with different requirements for completeness, integrity, retention, and access control. Confusing them is the root cause of about 30% of "your audit logs don't qualify" findings in SOC 2 Type II audits.</p>
+
+      <h2>Definitions</h2>
+      <h3>Event log</h3>
+      <p>The broadest category. <strong>Any record produced by a system about something that happened.</strong> Application logs, infrastructure logs, observability traces. Operational, short retention (days-weeks), no integrity guarantees. Most event log data is noise.</p>
+
+      <h3>Activity log</h3>
+      <p><strong>A user-facing record of what a specific user did in the application.</strong> Powers "Recent activity" UIs. Medium retention (90 days - 1 year), best-effort integrity, structured for human display.</p>
+
+      <h3>Audit log</h3>
+      <p><strong>A compliance-grade, tamper-evident, complete record of security and compliance-relevant events.</strong> What an external auditor will sample during SOC 2 Type II, ISO 27001, HIPAA, PCI DSS, FedRAMP. Must be complete, tamper-evident (cryptographic), tenant-isolated, queryable, and retained per framework (1-7 years).</p>
+
+      <h2>The Hierarchy</h2>
+      <p>The three categories are nested. Every audit log is conceptually a kind of activity log. Every activity log is conceptually a kind of event log. But the requirements get progressively stricter:</p>
+      <pre><code>Event logs (millions/day)
+     ↓ filter to user-meaningful events
+  Activity logs (thousands/day)
+     ↓ filter to compliance-relevant events + add integrity
+  Audit logs (hundreds/day)</code></pre>
+      <p>A B2B SaaS at $10M ARR typically generates 5-50M event entries/day, 5K-50K activity entries/day, 500-5K audit entries/day. Three orders of magnitude.</p>
+
+      <h2>The Compliance Failure: Treating Activity Logs as Audit Logs</h2>
+      <p>Most common compliance gap: a dev team built activity logs for the UI and assumed those satisfy audit requirements. Auditor reviews and finds:</p>
+      <ul>
+        <li><strong>No integrity guarantees.</strong> Database access could modify or delete rows. Fails SOC 2 CC7.2, fails PCI DSS 10.5.2 hash-based integrity, fails HIPAA 164.312(c).</li>
+        <li><strong>Inconsistent completeness.</strong> Activity logs are best-effort. Auditors sample expecting 100% completeness.</li>
+        <li><strong>Short retention.</strong> Activity logs typically retain 90 days. SOC 2 samples over 3-12 months; HIPAA requires 6 years.</li>
+        <li><strong>No tenant isolation.</strong> One missed WHERE clause leaks cross-tenant.</li>
+        <li><strong>Free-form action strings.</strong> "user.update" vs "User Updated" vs "USER_UPDATE." Auditors can't sample consistently.</li>
+      </ul>
+      <p>The fix: build audit logs as a separate concern from activity logs. Activity logs serve the UI; audit logs serve compliance.</p>
+
+      <h2>Requirements by Log Type</h2>
+
+      <h3>Event log requirements</h3>
+      <ul><li>Captured for debugging</li><li>Searchable</li><li>Cost-controlled (sampleable)</li><li>Short retention (7-30 days)</li><li>No integrity requirement</li><li>No tenant isolation requirement</li></ul>
+
+      <h3>Activity log requirements</h3>
+      <ul><li>User-meaningful actions only</li><li>Display-ready format</li><li>Per-user / per-org scope</li><li>Medium retention (90 days - 1 year)</li><li>Best-effort integrity</li><li>Soft tenant isolation (app-level)</li></ul>
+
+      <h3>Audit log requirements</h3>
+      <ul>
+        <li><strong>Complete capture</strong> of every compliance-relevant event</li>
+        <li><strong>Cryptographic integrity</strong> (hash chain + Merkle proofs)</li>
+        <li><strong>Strict tenant isolation</strong> (Row-Level Security)</li>
+        <li><strong>Long-term retention</strong> (1-7 years depending on framework)</li>
+        <li><strong>Structured action taxonomy</strong> (consistent resource.verb format)</li>
+        <li><strong>Auditor-accessible portal</strong></li>
+        <li><strong>SIEM-streamable</strong> for real-time monitoring</li>
+        <li><strong>Storage-level immutability</strong> (WORM, revoked DELETE perms)</li>
+      </ul>
+
+      <h2>The Architectural Mistake</h2>
+      <p>Most B2B SaaS teams build a single "logs" table early and try to use it for all three purposes. By SOC 2 time at Series A, the architecture is unsalvageable: billions of event-log rows, mixed schemas, retention built around storage cost (not compliance), app code with DELETE permissions, app-level tenant scoping.</p>
+      <p>Remediation typically takes 6-12 weeks of senior engineering. Or buy AuditKit and have all of it from day 1. <a href="/pricing">See pricing</a>.</p>
+
+      <h2>The Decision Framework</h2>
+      <ul>
+        <li><strong>Pre-SOC 2:</strong> Build activity logs (UI needs them). Use event logs for debugging. Plan audit logs as separate concern when SOC 2 enters horizon.</li>
+        <li><strong>6-12 months from SOC 2:</strong> Start building audit log infrastructure now.</li>
+        <li><strong>0-3 months from SOC 2:</strong> Buy. AuditKit integrates in 1-2 weeks; satisfies SOC 2 + ISO 27001 + HIPAA + PCI DSS + FedRAMP simultaneously.</li>
+        <li><strong>Mid-audit with activity-log finding:</strong> Standard remediation. Implement audit logs alongside (not replacing) activity logs.</li>
+      </ul>
+
+      <h2>The 5-Question Test</h2>
+      <p>Quick way to tell if you have audit logs or activity logs:</p>
+      <ol>
+        <li>Can you prove no entries have been modified since written? (Integrity)</li>
+        <li>Can you retrieve any specific event from 9 months ago in under 5 minutes? (Retention + queryability)</li>
+        <li>Can you produce every auth event for a specific user across 90 days with no gaps? (Completeness)</li>
+        <li>Can you prove tenant A's logs are isolated from tenant B's at infrastructure level? (Tenant isolation)</li>
+        <li>Can an external auditor query the logs without engineering involvement? (Auditor accessibility)</li>
+      </ol>
+      <p>Yes to all five = audit logs. No to any = activity logs pretending to be audit logs.</p>
+
+      <h2>Industry-Specific Considerations</h2>
+      <ul>
+        <li><strong><a href="/audit-for/soc2-for-fintech">Fintech / SOC 2:</a></strong> Audit logs must capture transaction modifications, approval workflows, privilege escalations. Activity logs alone fail CC7.2.</li>
+        <li><strong><a href="/audit-for/hipaa-for-healthcare">Healthcare / HIPAA:</a></strong> Every ePHI access (including reads) logged per 45 CFR 164.312(b). Activity logs that miss reads fail OCR audits.</li>
+        <li><strong><a href="/audit-for/pci-dss-for-fintech">Cards / PCI DSS:</a></strong> Requirement 10 with hash-based integrity (10.5.2). Activity logs without integrity fail explicitly.</li>
+        <li><strong><a href="/audit-for/fedramp-for-govtech">Government / FedRAMP:</a></strong> AU control family (16 controls). Most stringent. Activity logs irrelevant to assessment.</li>
+        <li><strong><a href="/audit-for/dora-for-fintech">EU fintech / DORA:</a></strong> 5-year retention for ICT incident records. 4-hour query latency for incident reporting.</li>
+      </ul>
+
+      <h2>How AuditKit Fits</h2>
+      <p>Purpose-built audit log infrastructure: hash chain + Merkle proofs, Row-Level Security tenant isolation, structured action taxonomy, configurable retention (1-7 years), auditor portal, SIEM streaming, immutable storage. Compatible with your existing activity logs — runs alongside for audit purposes while activity logs continue serving the UI.</p>
+      <p>$99/mo Starter. <a href="/pricing">See pricing</a> or run the free <a href="/tools/compliance-comparison">compliance framework comparison</a> first.</p>
+
+      <h2>Key Takeaways</h2>
+      <ul>
+        <li>Event logs, activity logs, and audit logs are three different things with three different requirement sets. Confusing them causes ~30% of audit findings.</li>
+        <li>Event logs: operational, short, no integrity. Activity logs: user-facing, medium, best-effort. Audit logs: compliance-grade, long, cryptographic.</li>
+        <li>Don't use one table for all three purposes. By SOC 2 time, the architecture is usually unsalvageable.</li>
+        <li>5-question test: integrity / retention / completeness / tenant isolation / auditor accessibility. Yes to all = audit logs. No to any = activity logs in disguise.</li>
+        <li>AuditKit replaces 4-8 weeks of audit-log engineering with day-1 multi-framework-ready infrastructure.</li>
+      </ul>
+    `,
+  },
 ];
 
 export function getPostBySlug(slug: string): BlogPost | undefined {
