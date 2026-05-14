@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Sparkles, FileCheck2 } from "lucide-react";
+import { ArrowRight, Sparkles, FileCheck2, Calculator } from "lucide-react";
 
 const TITLE = "Free Compliance & Audit Tools | AuditKit";
 const DESCRIPTION =
@@ -21,6 +21,14 @@ const tools = [
     description:
       "Compare SOC 2, ISO 27001, HIPAA, GDPR, FedRAMP, PCI DSS, CMMC, DORA, NIS2, SOX, and EU AI Act side-by-side. Up to 4 frameworks at once.",
     icon: FileCheck2,
+    badge: "Popular",
+  },
+  {
+    href: "/tools/audit-cost-estimator",
+    title: "Audit Cost & Timeline Estimator",
+    description:
+      "Estimate the real Year 1 and Year 2 cost of SOC 2, ISO 27001, HIPAA, PCI DSS, and FedRAMP — auditor fees, internal engineering time, GRC tooling, pen testing, and timeline.",
+    icon: Calculator,
     badge: "New",
   },
 ];

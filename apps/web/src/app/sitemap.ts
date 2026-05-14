@@ -89,6 +89,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/docs`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/tools`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
     { url: `${baseUrl}/tools/compliance-comparison`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${baseUrl}/tools/audit-cost-estimator`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
     // Dynamic pages
     ...complianceEntries,
     ...guideEntries,
