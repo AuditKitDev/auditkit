@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/AuditKitDev/auditkit/compare/v1.2.0...v1.3.0) (2026-05-14)
+
+
+### Features
+
+* **tools:** SOC 2 / ISO 27001 / HIPAA audit cost estimator ([1bdda9a](https://github.com/AuditKitDev/auditkit/commit/1bdda9a0551a770fe0ee885f869d450c73147f7d)), closes [hi#intent](https://github.com/hi/issues/intent)
+
 # [1.2.0](https://github.com/AuditKitDev/auditkit/compare/v1.1.0...v1.2.0) (2026-05-12)
 
 
