@@ -24,8 +24,8 @@ export async function generateMetadata({
   // Lead with the framework name + "Audit Log Requirements 2026" — that is
   // the literal search query enterprise compliance buyers type. The bare
   // framework name (CMMC, ISO27001) carries the click intent.
-  const title = `${framework.name} Audit Log Requirements 2026: Setup Checklist + SDK`;
-  const description = `${framework.description} Includes the exact ${framework.name} audit log fields, retention windows, integrity controls, and a free SDK to ship compliant logs in under a day.`;
+  const title = `${framework.name} Audit Log Requirements 2026: What You Actually Need to Log`;
+  const description = `Pass your ${framework.name} audit the first time. See the exact log fields, retention windows, and integrity controls required, plus a free SDK that ships compliant logs in under a day.`;
   const url = `https://auditkit.dev/compliance/${slug}`;
 
   return {

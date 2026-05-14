@@ -1617,9 +1617,9 @@ CREATE TABLE tenant_retention (
     title: 'How to Stream Audit Logs to Splunk, Datadog, or Elastic (2026 Guide)',
     description:
       'Stream audit logs to Splunk HEC, Datadog, or Elastic in under 50 lines. Covers CEF/LEEF/ECS format mapping, exactly-once delivery, and the 3 enterprise patterns that actually scale.',
-    seoTitle: 'Stream Audit Logs to Splunk, Datadog, or Elastic: 2026 Guide',
+    seoTitle: 'SIEM Integration for Audit Logs: Splunk, Datadog, Elastic in 50 Lines',
     seoDescription:
-      'Stream audit logs to Splunk HEC, Datadog, or Elastic in under 50 lines of code. Covers CEF/LEEF/ECS format mapping, exactly-once delivery guarantees, batch vs streaming patterns, and the 3 enterprise integration patterns that actually scale at 10M+ events/day.',
+      'Ship audit logs to your SIEM in under 50 lines. Covers Splunk HEC, Datadog, and Elastic with CEF/LEEF/ECS format mapping, exactly-once delivery, and 3 patterns that scale past 10M events/day.',
     author: 'AuditKit Team',
     publishedAt: '2026-03-18',
     updatedAt: '2026-04-29',
