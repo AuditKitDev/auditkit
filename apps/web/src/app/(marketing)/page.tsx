@@ -29,23 +29,23 @@ import { Hero } from '@/components/marketing/hero';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'AuditKit: Audit Logs & SOC 2 Prep for B2B SaaS',
+  title: 'AuditKit — Open-Source Audit Logs + SOC 2/ISO/CMMC Evidence (From $39/mo)',
   description:
-    'Stop losing enterprise deals to compliance gaps. Tamper-proof audit trails and SOC 2 evidence collection in one open-source platform. From $99/mo.',
+    'Stop losing enterprise deals to compliance gaps. Tamper-proof audit trails for SOC 2, ISO 27001, HIPAA, CMMC + auto-collected evidence. Open source, 5-min setup, from $39/mo (vs WorkOS $99+/mo).',
   alternates: { canonical: 'https://auditkit.dev' },
   openGraph: {
-    title: 'AuditKit: Audit Logs & SOC 2 Prep for B2B SaaS',
+    title: 'AuditKit — Open-Source Audit Logs + SOC 2/ISO/CMMC Evidence (From $39/mo)',
     description:
-      'Stop losing enterprise deals to compliance gaps. Tamper-proof audit trails and SOC 2 evidence collection in one open-source platform. From $99/mo.',
+      'Stop losing enterprise deals to compliance gaps. Tamper-proof audit trails for SOC 2, ISO 27001, HIPAA, CMMC + auto-collected evidence. Open source, 5-min setup, from $39/mo (vs WorkOS $99+/mo).',
     url: 'https://auditkit.dev',
     siteName: 'AuditKit',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AuditKit: Open-Source Audit Logs & SOC 2 Compliance for B2B SaaS',
+    title: 'AuditKit — Open-Source Audit Logs + SOC 2/ISO/CMMC Evidence (From $39/mo)',
     description:
-      'Ship tamper-evident audit trails in 5 minutes. SOC 2 evidence collection, policy templates, and compliance automation. Open source, from $0/mo.',
+      'Tamper-evident audit trails in 5 minutes. Multi-framework evidence collection (SOC 2, ISO 27001, HIPAA, CMMC). Open source, from $39/mo — half the cost of WorkOS.',
   },
 };
 
