@@ -4,23 +4,23 @@ import { Check, ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'AuditKit vs WorkOS Audit Log — Feature Comparison',
+  title: 'WorkOS Audit Log Alternative 2026: AuditKit Pricing + Feature Comparison',
   description:
-    'Compare AuditKit and WorkOS Audit Log side by side. Open-source flexibility, cryptographic immutability, and self-hosting options WorkOS lacks.',
+    "WorkOS Audit Log alternative head-to-head. AuditKit: open source, hash-chain immutability, $39/mo (vs WorkOS $99+/mo for 100K events). Self-hostable, Merkle proofs, GraphQL API — every feature WorkOS doesn't ship.",
   alternates: { canonical: 'https://auditkit.dev/compare/workos' },
   openGraph: {
-    title: 'AuditKit vs WorkOS Audit Log — Feature Comparison',
+    title: 'WorkOS Audit Log Alternative 2026: AuditKit Pricing + Feature Comparison',
     description:
-      'Compare AuditKit and WorkOS Audit Log side by side. Open-source flexibility, cryptographic immutability, and self-hosting options WorkOS lacks.',
+      "WorkOS Audit Log alternative head-to-head. AuditKit: open source, hash-chain immutability, $39/mo (vs WorkOS $99+/mo for 100K events). Self-hostable, Merkle proofs, GraphQL API — every feature WorkOS doesn't ship.",
     url: 'https://auditkit.dev/compare/workos',
     siteName: 'AuditKit',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AuditKit vs WorkOS Audit Log — Feature Comparison',
+    title: 'WorkOS Audit Log Alternative 2026: AuditKit Pricing + Feature Comparison',
     description:
-      'Compare AuditKit and WorkOS Audit Log side by side. Open-source flexibility, cryptographic immutability, and self-hosting options WorkOS lacks.',
+      "WorkOS Audit Log alternative head-to-head. AuditKit: open source, hash-chain immutability, $39/mo (vs WorkOS $99+/mo for 100K events). Self-hostable, Merkle proofs, GraphQL API — every feature WorkOS doesn't ship.",
   },
 };
 
