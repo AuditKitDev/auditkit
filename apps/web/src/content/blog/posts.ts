@@ -4331,6 +4331,189 @@ FOR UPDATE SKIP LOCKED LIMIT 100;
       </ul>
     `,
   },
+  {
+    slug: 'cmmc-level-2-audit-logging-2026',
+    title: 'CMMC Level 2 Audit Logging Requirements (2026): The 24 AU Controls, In Plain English',
+    description:
+      'CMMC Level 2 requires 24 audit-logging (AU) controls from NIST SP 800-171. This guide walks every control: what to log, retention, automated review, integrity, time sync, and the audit-trail support C3PAOs actually ask about during assessment.',
+    seoTitle: 'CMMC Level 2 Audit Logging: 24 AU Controls Explained (2026 Compliance Guide)',
+    seoDescription:
+      'Every CMMC Level 2 audit-logging requirement explained in plain English. 24 AU controls from NIST 800-171, retention rules, automated review systems, what C3PAO assessors look for, and the logging services that pre-pass these controls.',
+    author: 'AuditKit Team',
+    publishedAt: '2026-05-19',
+    tags: ['CMMC', 'Audit Logging', 'NIST 800-171', 'Compliance'],
+    readTime: '11 min read',
+    content: `
+      <h2>The Short Version</h2>
+      <p>
+        CMMC Level 2 inherits its audit logging requirements from NIST SP 800-171 Rev 2 (and Rev 3, depending
+        on when your assessment is scheduled). Twenty-four of the 110 controls touch logging directly — they
+        are grouped under the "Audit and Accountability" (AU) family. If you are a Defense Industrial Base
+        (DIB) supplier handling Controlled Unclassified Information (CUI), you must demonstrate evidence of
+        each of these controls to your C3PAO assessor before they will recommend certification.
+      </p>
+      <p>
+        This guide walks every AU control in plain English, separates what assessors actually look for from
+        what the standard says, and explains where automated audit log review systems and compliant logging
+        services replace months of manual instrumentation work. Whether you are a 20-person engineering team
+        approaching your first CMMC Level 2 assessment or a primary contractor renewing a hard-won
+        certification, the requirements are the same — the cost of meeting them is not.
+      </p>
+
+      <h2>What CMMC Level 2 Actually Requires for Logging</h2>
+      <p>
+        CMMC 2.0 Level 2 (the "Advanced" tier) maps 1:1 to NIST SP 800-171. Your assessor will reference
+        either 800-171 Rev 2 or Rev 3 depending on your scoping memo. The audit-logging requirements are
+        functionally identical between revisions — Rev 3 reorganizes the controls but does not weaken them.
+      </p>
+      <p>
+        The 24 AU controls answer four questions an assessor will keep returning to:
+      </p>
+      <ol>
+        <li><strong>What events do you capture?</strong> (AU-2, AU-12, AU-3 — event selection, content of records, completeness)</li>
+        <li><strong>Are those records reliable?</strong> (AU-9, AU-10 — integrity protection, non-repudiation, time sync via AU-8)</li>
+        <li><strong>How long do you keep them, and how do you find them?</strong> (AU-11, AU-7 — retention, query and reduction tooling)</li>
+        <li><strong>Who reviews them, and what happens when something is wrong?</strong> (AU-6, AU-5, AU-13 — review, alerting, response to failures)</li>
+      </ol>
+      <p>
+        Every AU control rolls up to one of these four questions. If you can answer all four for your
+        environment with documented evidence, you will pass the audit-logging portion of your CMMC Level 2
+        assessment. Most teams fail not because the controls are difficult, but because their existing
+        observability stack was built for engineers, not for assessors.
+      </p>
+
+      <h2>The 24 AU Controls, In Plain English</h2>
+
+      <h3>Event Selection and Content (AU-2, AU-3, AU-12)</h3>
+      <p>
+        You must define which event types are logged and ensure the records contain enough detail to
+        reconstruct what happened. At minimum: timestamps, source and destination identifiers,
+        the action performed, who or what initiated it, and the outcome (success or failure). Authentication
+        events, privileged-access events, configuration changes, data-access events involving CUI, and
+        security-relevant administrative actions are all in scope. Assessors expect to see a documented
+        event-selection policy and evidence that the implementation matches it — not a vague "we log
+        everything."
+      </p>
+
+      <h3>Time Sync (AU-8)</h3>
+      <p>
+        All systems generating audit records must synchronize to an authoritative time source (usually
+        internal NTP servers stratum-2 or better, themselves synced to a stratum-1 source). Clock drift
+        of more than a few seconds across systems is an automatic finding. If you operate in regulated
+        air-gapped environments, you must document your offline time-distribution approach.
+      </p>
+
+      <h3>Integrity Protection (AU-9, AU-10)</h3>
+      <p>
+        Audit records must be protected against unauthorized access, modification, and deletion. The
+        accepted patterns are write-once storage, cryptographic hash chains, signed log records, or
+        commit to immutable systems (object-locked S3, append-only databases with WORM, or similar).
+        AU-10 also requires non-repudiation: actions logged must be tied to a specific identity
+        in a way that cannot be plausibly denied. This is where many compliance audit-trail
+        support gaps appear in custom-built stacks.
+      </p>
+
+      <h3>Storage and Retention (AU-4, AU-11)</h3>
+      <p>
+        You must size storage to retain audit records for the period specified by your policy.
+        For CMMC Level 2, retention is "at least one year, online and queryable" with the policy
+        typically setting longer terms for specific event categories. Many primes require 3-year
+        or 7-year retention as a contract flow-down. Storage must be protected against capacity
+        exhaustion — running out of disk during a security incident is a finding.
+      </p>
+
+      <h3>Automated Audit Log Review System (AU-6, AU-7)</h3>
+      <p>
+        AU-6 is the single requirement that catches the most engineering teams off-guard. You must
+        review audit records to identify suspicious or inappropriate activity, and you must report
+        findings. Manual log review at any meaningful scale is impossible — most CMMC-compliant
+        organizations implement an automated audit log review system (SIEM with correlation rules,
+        or equivalent) that flags anomalies for human review. AU-7 requires the system to provide
+        the query and reduction tooling assessors and incident responders need to operate
+        efficiently. AuditKit ships with prewired correlation rules for the CMMC-relevant event
+        categories so AU-6 is satisfied at the configuration level, not at the engineering level.
+      </p>
+
+      <h3>Alerting and Response to Audit Failures (AU-5, AU-13)</h3>
+      <p>
+        If the audit logging system itself fails — disk full, agent down, network partition between
+        producer and SIEM — operations must be notified within a defined window and the failure
+        must be remediated. Many CMMC failures here are not the audit log review at all; they are
+        the absence of a documented alert and response runbook for the logging pipeline itself.
+      </p>
+
+      <h3>Privileged User Auditing (AU-2(3), AU-9(4))</h3>
+      <p>
+        Administrative and privileged actions are logged separately and reviewed more frequently
+        than standard user actions. Administrators must not be able to modify the audit records
+        related to their own activity. Most teams meet this by enforcing separation of duties
+        between operations and security/audit roles.
+      </p>
+
+      <h2>What C3PAO Assessors Actually Ask</h2>
+      <p>
+        From the assessor's side, the pattern is consistent across CMMC Level 2 engagements:
+      </p>
+      <ol>
+        <li>"Show me your event-selection policy and prove the implementation matches it."</li>
+        <li>"Walk me through how you would investigate a privileged-access event from last quarter."</li>
+        <li>"Show me your last 30 days of audit-log integrity proofs."</li>
+        <li>"Show me the alert that fired the last time your logging pipeline failed."</li>
+        <li>"Show me the review cadence and the most recent finding from automated audit log review."</li>
+      </ol>
+      <p>
+        Pass these five and you pass the AU family. Fail any of them and you get an assessment finding,
+        which delays certification by 30-90 days at minimum while remediation is verified.
+      </p>
+
+      <h2>The Build-vs-Buy Decision for CMMC-Compliant Audit Trails</h2>
+      <p>
+        Most DIB suppliers below the prime-contractor tier underestimate the engineering cost
+        of building CMMC-compliant audit trails from scratch. A realistic estimate for a team
+        without prior compliance infrastructure:
+      </p>
+      <ul>
+        <li><strong>4-6 weeks</strong> to design the event-selection policy, implement structured logging across services, and instrument privileged actions.</li>
+        <li><strong>2-3 weeks</strong> to stand up integrity protection (hash chains or WORM storage), retention, and an automated review pipeline.</li>
+        <li><strong>2-4 weeks</strong> for the operational runbooks, AU-5 alerting, and gathering the 30+ days of evidence assessors require before certification.</li>
+      </ul>
+      <p>
+        That is a single senior engineer quarter, minimum. AuditKit replaces this work with day-1
+        multi-framework infrastructure that pre-passes the AU family for CMMC Level 2, with
+        equivalent controls for SOC 2 CC7 / ISO 27001 A.12.4 / HIPAA 164.312(b) inherited from
+        the same plumbing. For DIB suppliers approaching their first assessment, the choice is
+        usually between buying compliance-grade audit-log support and pushing your CMMC
+        certification date out by a quarter while you build it yourself.
+      </p>
+
+      <h2>What to Do Before Your Assessment</h2>
+      <ol>
+        <li>Map the 24 AU controls to your existing logging stack. Where you have gaps, document them — assessors prefer honest gap analyses to fabricated coverage.</li>
+        <li>Sample 30 days of audit records and walk one of each event category end-to-end: capture, transmit, store, review, archive.</li>
+        <li>Run a tabletop on each of the five assessor questions above. The team that runs those tabletops in advance passes; the team that walks in cold gets findings.</li>
+        <li>If your existing stack cannot answer the five questions in plain language, you are either using activity logs (not audit logs) or you have a tooling gap. Both are addressable, but they take engineering time you may not have before your assessment date.</li>
+      </ol>
+
+      <h2>How AuditKit Fits</h2>
+      <p>
+        AuditKit is a multi-framework audit-log platform purpose-built for SOC 2, ISO 27001,
+        HIPAA, GDPR, PCI DSS, FedRAMP, CMMC, DORA, and the EU AI Act. For CMMC Level 2
+        specifically, AuditKit ships with:
+      </p>
+      <ul>
+        <li>All 24 AU controls satisfied at the platform level with documented control mappings.</li>
+        <li>Cryptographic hash-chain integrity (AU-9, AU-10) without engineering effort.</li>
+        <li>Built-in automated audit log review with CMMC-tuned correlation rules (AU-6).</li>
+        <li>Alerting and operational runbooks for AU-5 logging-pipeline failures.</li>
+        <li>Pre-built assessor evidence packages — your C3PAO gets exports that map directly to control numbers.</li>
+      </ul>
+      <p>
+        See the <a href="/compliance/cmmc">CMMC compliance page</a> for the full control mapping,
+        or the <a href="/audit-for/cmmc-for-govtech">CMMC for GovTech audit-for guide</a> for a
+        sector-specific implementation plan.
+      </p>
+    `,
+  },
 ];
 
 export function getPostBySlug(slug: string): BlogPost | undefined {
