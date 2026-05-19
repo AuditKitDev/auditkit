@@ -1614,12 +1614,12 @@ CREATE TABLE tenant_retention (
   },
   {
     slug: 'siem-integration-audit-logs',
-    title: 'How to Stream Audit Logs to Splunk, Datadog, or Elastic (2026 Guide)',
+    title: 'Stream Audit Logs to Splunk, Datadog, or Elastic in 50 Lines (2026 Guide)',
     description:
-      'Stream audit logs to Splunk HEC, Datadog, or Elastic in under 50 lines. Covers CEF/LEEF/ECS format mapping, exactly-once delivery, and the 3 enterprise patterns that actually scale.',
-    seoTitle: 'SIEM Integration for Audit Logs: Splunk, Datadog, Elastic in 50 Lines',
+      'Ship audit logs to Splunk HEC, Datadog, or Elastic in under 50 lines of code. Production-ready CEF/LEEF/ECS mapping, exactly-once delivery, retry and backpressure, and the 3 enterprise patterns that scale past 10M events/day.',
+    seoTitle: 'SIEM Audit Log Integration: Splunk + Datadog + Elastic in 50 Lines (2026)',
     seoDescription:
-      'Ship audit logs to your SIEM in under 50 lines. Covers Splunk HEC, Datadog, and Elastic with CEF/LEEF/ECS format mapping, exactly-once delivery, and 3 patterns that scale past 10M events/day.',
+      'Production code to stream audit logs to Splunk HEC, Datadog, or Elastic in under 50 lines. CEF/LEEF/ECS format mapping, exactly-once delivery, 3 enterprise patterns that scale past 10M events/day.',
     author: 'AuditKit Team',
     publishedAt: '2026-03-18',
     updatedAt: '2026-04-29',
@@ -3734,12 +3734,12 @@ await writeFile('acme-corp-audit-evidence.csv', evidence);</code></pre>
   },
   {
     slug: 'compliance-frameworks-2026-side-by-side',
-    title: 'Compliance Frameworks for B2B SaaS in 2026: SOC 2 vs ISO 27001 vs HIPAA vs GDPR vs PCI DSS vs FedRAMP — Side-By-Side',
+    title: '11 Compliance Frameworks Compared (2026): SOC 2 vs ISO 27001 vs HIPAA vs GDPR',
     description:
-      'Every modern B2B SaaS eventually needs multiple compliance attestations. This guide compares 11 frameworks (SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS, FedRAMP, CMMC, DORA, NIS2, SOX, EU AI Act) on scope, audit log requirements, retention, and overlap so you can plan the right multi-framework strategy.',
-    seoTitle: 'Compliance Frameworks 2026: SOC 2 vs ISO 27001 vs HIPAA vs GDPR Compared',
+      'Every B2B SaaS eventually faces multiple frameworks. This guide ranks 11 (SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS, FedRAMP, CMMC, DORA, NIS2, SOX, EU AI Act) by audit log scope, retention, cost, and the right pursuit order so you stop doing redundant audits.',
+    seoTitle: '11 Compliance Frameworks Compared (2026): SOC 2 vs ISO vs HIPAA vs GDPR',
     seoDescription:
-      'Side-by-side comparison of 11 compliance frameworks for B2B SaaS. SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS, FedRAMP, CMMC, DORA, NIS2, SOX, EU AI Act — audit log requirements, retention, overlap.',
+      '11 frameworks side-by-side for B2B SaaS: SOC 2, ISO 27001, HIPAA, GDPR, PCI DSS, FedRAMP, CMMC, DORA, NIS2, SOX, EU AI Act. Log requirements, retention, cost, audit timeline, the right pursuit order.',
     author: 'AuditKit Team',
     publishedAt: '2026-05-12',
     tags: ['Compliance', 'SOC 2', 'ISO 27001', 'HIPAA', 'GDPR', 'PCI DSS', 'FedRAMP', 'Comparison'],
