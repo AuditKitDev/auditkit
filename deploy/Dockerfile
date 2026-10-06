@@ -1,6 +1,6 @@
 # One image: API + MCP + anchor loop. The static site is served by nginx from deploy/site, not from here.
 FROM node:26-alpine AS build
-RUN corepack enable
+RUN npm install -g pnpm@9.15.0
 WORKDIR /src
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages ./packages

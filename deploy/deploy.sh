@@ -11,7 +11,7 @@ echo "== build site locally"
 
 echo "== sync source and site"
 $SSH "mkdir -p /opt/auditkit /var/www/auditkit"
-rsync -az --delete -e "ssh -i $HOME/.ssh/hostinger_vps" --exclude node_modules --exclude '.venv' --exclude 'packages/web/dist' --exclude 'data' "$ROOT/" "$HOST:/opt/auditkit/src/"
+rsync -az --delete -e "ssh -i $HOME/.ssh/hostinger_vps" --exclude node_modules --exclude '.venv' --exclude 'packages/web/dist' --exclude 'data' --exclude 'deploy/.env' --exclude '.git' "$ROOT/" "$HOST:/opt/auditkit/src/"
 rsync -az --delete -e "ssh -i $HOME/.ssh/hostinger_vps" "$ROOT/packages/web/dist/" "$HOST:/var/www/auditkit/"
 
 echo "== container"
