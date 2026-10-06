@@ -5,10 +5,11 @@ import { Hono, type Context } from "hono";
 import { z } from "zod";
 import type { DatabaseSync } from "node:sqlite";
 import { sha256Hex } from "@auditkit/core";
-import { openProject, now, type Config } from "./db.js";
+import { openProject, now, UnknownProjectError, type Config } from "./db.js";
 import type { Signer } from "./signing.js";
 import { search, getEvent, verifyRange, exportLines, getOrCreateTenant } from "./events.js";
-import { anchorsFor, proofForEvent } from "./anchorLoop.js";
+import { anchorsFor, proofForEvent, verifyRoots } from "./anchorLoop.js";
+import { contentDisposition } from "./app.js";
 
 export interface ViewerToken { id: string; tenant: string; expires_at: string; created_at: string; revoked_at: string | null }
 
@@ -38,7 +39,8 @@ function resolve(cfg: Config, token: string | undefined): Resolved | null {
   const m = /^vt_(p_[a-z0-9]+|demo)_[A-Za-z0-9_-]{20,}$/.exec(token ?? "");
   if (!m) return null;
   const projectId = m[1]!;
-  const db = openProject(cfg, projectId);
+  let db: DatabaseSync;
+  try { db = openProject(cfg, projectId); } catch (e) { if (e instanceof UnknownProjectError) return null; throw e; }
   const row = db.prepare(
     "SELECT t.external_id AS tenant FROM viewer_token v JOIN tenant t ON t.id = v.tenant_id WHERE v.token_hash = ? AND v.revoked_at IS NULL AND v.expires_at > ?",
   ).get(sha256Hex(token!), now()) as { tenant: string } | undefined;
@@ -65,7 +67,8 @@ export function buildViewerRoutes(cfg: Config, reg: DatabaseSync, signer: Signer
     const q = c.req.query();
     const query: Parameters<typeof search>[1] = { tenant };
     for (const k of ["actor", "action", "from", "to", "cursor"] as const) if (q[k]) query[k] = q[k];
-    if (q.limit) query.limit = Number(q.limit);
+    const lim = z.coerce.number().int().min(1).max(500).safeParse(q.limit);
+    if (lim.success) query.limit = lim.data;
     return c.json(search(db, query));
   });
   app.get("/api/viewer/events/:id", (c) => {
@@ -81,7 +84,7 @@ export function buildViewerRoutes(cfg: Config, reg: DatabaseSync, signer: Signer
   app.get("/api/viewer/verify", (c) => {
     const { db, projectId, tenant } = c.get("v");
     const q = z.object({ from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
-    return c.json(verifyRange(db, projectId, tenant, q.from, q.to, hasAnchor));
+    return c.json(verifyRange(db, projectId, tenant, q.from, q.to, hasAnchor, (t, a, b) => verifyRoots(db, reg, t, a, b)));
   });
   app.get("/api/viewer/export", (c) => {
     const { db, projectId, tenant } = c.get("v");
@@ -89,7 +92,7 @@ export function buildViewerRoutes(cfg: Config, reg: DatabaseSync, signer: Signer
     const lines = exportLines(db, projectId, tenant, signer, (id) => anchorsFor(reg, id), cfg.publicHost ?? "localhost", q.from, q.to);
     const enc = new TextEncoder();
     const body = new ReadableStream({ pull(ctrl) { const n = lines.next(); if (n.done) ctrl.close(); else ctrl.enqueue(enc.encode(JSON.stringify(n.value) + "\n")); } });
-    return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": `attachment; filename="auditkit-${tenant}.jsonl"` } });
+    return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": contentDisposition(tenant) } });
   });
   app.get("/api/viewer/me", (c) => c.json({ tenant: c.get("v").tenant, project_id: c.get("v").projectId }));
   return app;

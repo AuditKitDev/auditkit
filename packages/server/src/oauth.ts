@@ -14,7 +14,7 @@ import type { Principal, Scope } from "./keys.js";
 const CODE_TTL_MS = 10 * 60 * 1000;
 const ACCESS_TTL_MS = 60 * 60 * 1000;
 const REFRESH_TTL_MS = 30 * 24 * 3600 * 1000;
-const SCOPES: Scope[] = ["read", "write", "erase"];
+const SCOPES: Scope[] = ["read", "write"];
 
 export function migrateOAuth(reg: DatabaseSync): void {
   reg.exec(`
@@ -133,8 +133,10 @@ export function buildOAuthRoutes(reg: DatabaseSync, siteUrl: string): Hono {
     if (q.state) redirect.searchParams.set("state", q.state);
     if (form.decision !== "allow") { redirect.searchParams.set("error", "access_denied"); return c.redirect(redirect.toString(), 302); }
     const projectId = form.project_id ?? "";
-    if (!membership(reg, user.id, projectId)) return c.text("no access to that project", 403);
-    const scopes = (form.scopes ?? "read").split(",").filter((s): s is Scope => (SCOPES as string[]).includes(s));
+    const role = membership(reg, user.id, projectId);
+    if (!role) return c.text("no access to that project", 403);
+    const scopes = (form.scopes ?? "read").split(",").filter((s): s is Scope => (SCOPES as string[]).includes(s)).filter((s) => role !== "viewer" || s === "read");
+    if (scopes.length === 0) return c.text("read-only membership cannot grant write scopes", 403);
     const code = "oac_" + randomBytes(32).toString("base64url");
     reg.prepare("INSERT INTO oauth_code (code_hash, client_id, user_id, project_id, scopes, code_challenge, redirect_uri, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
       .run(sha256Hex(code), q.client_id, user.id, projectId, scopes.join(","), q.code_challenge, q.redirect_uri, new Date(Date.now() + CODE_TTL_MS).toISOString());

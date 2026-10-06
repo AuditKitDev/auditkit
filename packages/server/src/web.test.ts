@@ -6,7 +6,7 @@ import { createHmac } from "node:crypto";
 import { openRegistry, closeAll, type Config } from "./db.js";
 import { loadSigner } from "./signing.js";
 import { buildApp } from "./app.js";
-import { migrateAuth, type Mailer } from "./auth.js";
+import { migrateAuth, setSandboxProject, type Mailer } from "./auth.js";
 import { migrateBilling, applyStripeEvent, type BillingConfig } from "./billing.js";
 import { tick } from "./anchorLoop.js";
 import type { Anchor } from "@auditkit/core";
@@ -34,7 +34,7 @@ beforeAll(() => {
   reg = openRegistry(cfg);
   migrateAuth(reg); migrateBilling(reg);
   reg.prepare("INSERT INTO project (id, name, plan, created_at) VALUES ('demo', 'demo', 'business', '2026-01-01T00:00:00Z')").run();
-  app = buildApp({ cfg, reg, signer: loadSigner(cfg.dataDir), anchorPolicy: { kinds: ["rekor"], interval_seconds: 1 }, web: { mailer, billing, siteUrl: "http://site", secureCookies: false, demoProjectId: "demo" } });
+  app = buildApp({ cfg, reg, signer: loadSigner(cfg.dataDir), anchorPolicy: { kinds: ["rekor"], interval_seconds: 1 }, web: { mailer, billing, siteUrl: "http://site", secureCookies: false, demoProjectId: "demo", proxyTrust: "x-forwarded-for" } });
 });
 afterAll(() => { closeAll(); rmSync(cfg.dataDir, { recursive: true, force: true }); });
 
@@ -44,12 +44,15 @@ describe("auth", () => {
     expect((await req("/auth/magic", { method: "POST", body: JSON.stringify({ email: "not-an-email" }) })).status).toBe(202); // no enumeration
     expect(sent).toHaveLength(1);
     const link = /http:\/\/site(\/auth\/callback\?token=[A-Za-z0-9_-]+)/.exec(sent[0]!)![1]!;
-    const cb = await req(link, { redirect: "manual" });
+    expect((await req(link)).status).toBe(200); // GET only renders the form; scanners cannot consume the token
+    const token = /token=([A-Za-z0-9_-]+)/.exec(link)![1]!;
+    const post = (t: string) => app.request("/auth/callback", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: `token=${t}`, redirect: "manual" });
+    const cb = await post(token);
     expect(cb.status).toBe(302);
     expect(cb.headers.get("location")).toBe("/app");
     cookie = cb.headers.get("set-cookie")!.split(";")[0]!;
     expect(cookie.startsWith("ak_session=")).toBe(true);
-    expect((await req(link, { redirect: "manual" })).headers.get("location")).toContain("error=expired"); // single use
+    expect((await post(token)).headers.get("location")).toContain("error=expired"); // single use
     const me = await (await req("/auth/me")).json();
     expect(me.user.email).toBe("owner@example.com");
     expect((await app.request("/auth/me")).status).toBe(401);
@@ -151,6 +154,22 @@ describe("customer signing keys", () => {
     const keys = await (await req(`/api/app/projects/${projectId}/tenants/signed/keys`)).json();
     expect(keys.keys).toHaveLength(1);
     expect((await req(`/api/app/projects/${projectId}/tenants/signed/keys/${keys.keys[0].id}`, { method: "DELETE" })).status).toBe(200);
+  });
+});
+
+describe("sandbox project", () => {
+  it("new accounts get read-only access to the sandbox; writes and write scopes are refused", async () => {
+    reg.prepare("INSERT INTO project (id, name, plan, created_at) VALUES ('p_sandbox', 'Sample project', 'pro', '2026-01-01T00:00:00Z')").run();
+    setSandboxProject("p_sandbox");
+    sent.length = 0;
+    await req("/auth/magic", { method: "POST", headers: { "x-forwarded-for": "9.9.9.9" }, body: JSON.stringify({ email: "newbie@example.org" }) });
+    const token2 = /token=([A-Za-z0-9_-]+)/.exec(sent[0]!)![1]!;
+    const c2 = (await app.request("/auth/callback", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: `token=${token2}`, redirect: "manual" })).headers.get("set-cookie")!.split(";")[0]!;
+    const { projects } = await (await app.request("/api/app/projects", { headers: { cookie: c2 } })).json();
+    expect(projects.map((p: { id: string; role: string }) => [p.id, p.role])).toContainEqual(["p_sandbox", "viewer"]);
+    expect((await app.request("/api/app/projects/p_sandbox/events", { headers: { cookie: c2 } })).status).toBe(200);
+    expect((await app.request("/api/app/projects/p_sandbox/keys", { method: "POST", headers: { cookie: c2, "content-type": "application/json" }, body: "{}" })).status).toBe(403);
+    setSandboxProject(undefined);
   });
 });
 

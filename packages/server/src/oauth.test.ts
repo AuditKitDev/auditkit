@@ -37,8 +37,8 @@ beforeAll(async () => {
   app = buildApp({ cfg, reg, signer: loadSigner(cfg.dataDir), anchorPolicy: { kinds: [], interval_seconds: 1 }, web: { mailer, billing: { prices: {}, siteUrl: SITE }, siteUrl: SITE, secureCookies: false, demoProjectId: "demo" } });
   // sign the user in once
   await app.request("/auth/magic", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "owner@example.com" }) });
-  const link = /(\/auth\/callback\?token=[A-Za-z0-9_-]+)/.exec(sent[0]!)![1]!;
-  const cb = await app.request(link, { redirect: "manual" });
+  const token = /token=([A-Za-z0-9_-]+)/.exec(sent[0]!)![1]!;
+  const cb = await app.request("/auth/callback", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: `token=${token}`, redirect: "manual" });
   cookie = cb.headers.get("set-cookie")!.split(";")[0]!;
 });
 afterAll(() => { closeAll(); rmSync(cfg.dataDir, { recursive: true, force: true }); });

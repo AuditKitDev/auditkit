@@ -140,11 +140,15 @@ describe("verify, anchor, proof, export", () => {
   it("erasure removes the payload and keeps the chain valid", async () => {
     const list = await (await api("/v1/events?tenant=acme&action=invoice.delete")).json();
     const id = list.events[0].id;
-    expect((await api(`/v1/erase/${id}`, { method: "POST" })).status).toBe(200);
+    const er = await api(`/v1/erase/${id}`, { method: "POST" });
+    expect(er.status).toBe(200);
+    expect((await er.json()).audit).toMatchObject({ tenant: "acme" }); // the erasure is itself on the chain
     const ev = await (await api(`/v1/events/${id}`)).json();
     expect(ev).toMatchObject({ erased: true, payload: null });
     expect((await (await api("/v1/verify?tenant=acme")).json()).valid).toBe(true);
     expect((await api(`/v1/erase/${id}`, { method: "POST" })).status).toBe(404);
+    const audit = await (await api("/v1/events?tenant=acme&action=payload.erased")).json();
+    expect(audit.events[0]).toMatchObject({ target: id, actor: expect.stringMatching(/^key:/) });
   });
 });
 
@@ -197,8 +201,10 @@ describe("tamper tests (direct DB edits must be caught)", () => {
       prev = ev;
     }
     db.prepare("UPDATE tenant SET head_hash = ? WHERE id = ?").run(prev!.event_hash, tid);
-    expect((await verdict("tamper5")).valid).toBe(true); // the chain alone cannot tell
-    // ...but the proof no longer reaches the publicly anchored root.
+    // The chain alone is self-consistent, but server-side verify also rebuilds the Merkle roots: caught.
+    const v = await verdict("tamper5");
+    expect(v).toMatchObject({ valid: false, reason: expect.stringContaining("merkle") });
+    // ...and the proof no longer reaches the publicly anchored root either.
     const last = rows[rows.length - 1]!;
     const proof = await (await api(`/v1/events/${last.id}/proof`)).json();
     expect(verifyProof(proof.event_hash, proof.path_to_tenant_root, proof.tenant_root)).toBe(false);

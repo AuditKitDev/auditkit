@@ -53,7 +53,8 @@ export function makeMailer(apiKey = process.env.RESEND_API_KEY, from = process.e
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SAFE_NEXT = /^\/(?!\/)[A-Za-z0-9_\-./?=&]*$/;
+// Same-origin path only (no scheme, no protocol-relative). Query strings may carry encoded OAuth params.
+const SAFE_NEXT = /^\/(?!\/|\\)[A-Za-z0-9_\-./?=&%:+,~]*$/;
 
 export async function requestMagicLink(reg: DatabaseSync, mailer: Mailer, baseUrl: string, email: string, next = "/app"): Promise<void> {
   const normalized = email.trim().toLowerCase();
@@ -71,6 +72,22 @@ export async function requestMagicLink(reg: DatabaseSync, mailer: Mailer, baseUr
   );
 }
 
+/** Project every new account can read, e.g. the seeded sample for directory reviewers. Set AUDITKIT_SANDBOX_PROJECT. */
+/**
+ * Which header carries the client IP. "x-real-ip": our nginx overwrites it with $remote_addr (production).
+ * "x-forwarded-for": last hop only (an appending proxy). "none": ignore headers; everyone is one bucket,
+ * which is the safe default when no proxy is in front (the container only listens on loopback).
+ */
+export type ProxyTrust = "x-real-ip" | "x-forwarded-for" | "none";
+export function clientIp(c: { req: { header(n: string): string | undefined } }, trust: ProxyTrust = "none"): string {
+  if (trust === "x-real-ip") return c.req.header("x-real-ip") || "local";
+  if (trust === "x-forwarded-for") { const parts = (c.req.header("x-forwarded-for") ?? "").split(","); return parts[parts.length - 1]!.trim() || "local"; }
+  return "local";
+}
+
+let sandboxProjectId: string | undefined = process.env.AUDITKIT_SANDBOX_PROJECT;
+export function setSandboxProject(id: string | undefined): void { sandboxProjectId = id; }
+
 /** Consumes the token; creates the user (and a first project) on first login. Returns the session token to set. */
 export function redeemMagicLink(reg: DatabaseSync, token: string): { session: string; next: string } | null {
   const row = reg.prepare("SELECT email, next, expires_at, used_at FROM login_token WHERE token_hash = ?").get(sha256Hex(token)) as
@@ -83,6 +100,9 @@ export function redeemMagicLink(reg: DatabaseSync, token: string): { session: st
     reg.prepare("INSERT INTO user (id, email, created_at) VALUES (?, ?, ?)").run(user.id, user.email, user.created_at);
     const { id } = createProject(reg, row.email.split("@")[1] ?? "my-project");
     reg.prepare("INSERT INTO membership (user_id, project_id, role, created_at) VALUES (?, ?, 'owner', ?)").run(user.id, id, now());
+    if (sandboxProjectId && reg.prepare("SELECT 1 FROM project WHERE id = ?").get(sandboxProjectId)) {
+      reg.prepare("INSERT OR IGNORE INTO membership (user_id, project_id, role, created_at) VALUES (?, ?, 'viewer', ?)").run(user.id, sandboxProjectId, now());
+    }
   }
   const session = randomBytes(32).toString("base64url");
   reg.prepare("INSERT INTO session (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
@@ -124,10 +144,12 @@ export function userProjects(reg: DatabaseSync, userId: string): Array<{ id: str
 }
 
 /** Simple fixed-window limiter, per key, in memory. Enough for login and demo endpoints on one box. */
-export function rateLimiter(max: number, windowMs: number) {
+export function rateLimiter(max: number, windowMs: number, maxKeys = 50_000) {
   const hits = new Map<string, { n: number; reset: number }>();
   return (key: string): boolean => {
     const t = Date.now();
+    if (hits.size > maxKeys) for (const [k, v] of hits) if (v.reset < t) hits.delete(k);
+    if (hits.size > maxKeys) hits.clear();
     const h = hits.get(key);
     if (!h || h.reset < t) { hits.set(key, { n: 1, reset: t + windowMs }); return true; }
     if (h.n >= max) return false;

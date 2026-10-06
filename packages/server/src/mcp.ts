@@ -5,10 +5,10 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { DatabaseSync } from "node:sqlite";
-import type { Deps } from "./app.js";
+import { planLimitExceeded, type Deps } from "./app.js";
 import type { Principal } from "./keys.js";
 import { ingest, search, getEvent, verifyRange, exportLines, listTenants } from "./events.js";
-import { anchorsFor, proofForEvent } from "./anchorLoop.js";
+import { anchorsFor, proofForEvent, verifyRoots } from "./anchorLoop.js";
 
 const text = (v: unknown) => ({ content: [{ type: "text" as const, text: typeof v === "string" ? v : JSON.stringify(v, null, 2) }] });
 const RO = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
@@ -63,7 +63,7 @@ export function buildMcp(deps: Deps, principal: Principal, db: DatabaseSync): Mc
       inputSchema: { tenant: z.string(), from: z.number().int().min(0).optional(), to: z.number().int().min(0).optional() },
       annotations: RO,
     },
-    async ({ tenant, from, to }) => (can("read") ? text(verifyRange(db, principal.projectId, tenant, from, to, (id) => anchorsFor(deps.reg, id).length > 0)) : text({ error: "key lacks read scope" })),
+    async ({ tenant, from, to }) => (can("read") ? text(verifyRange(db, principal.projectId, tenant, from, to, (id) => anchorsFor(deps.reg, id).length > 0, (t, a, b) => verifyRoots(db, deps.reg, t, a, b))) : text({ error: "key lacks read scope" })),
   );
 
   server.registerTool(
@@ -104,6 +104,8 @@ export function buildMcp(deps: Deps, principal: Principal, db: DatabaseSync): Mc
     },
     async (args) => {
       if (!can("write")) return text({ error: "key lacks write scope" });
+      const limit = planLimitExceeded(deps.reg, db, principal.projectId, 1);
+      if (limit !== null) return text({ error: "plan_limit", message: `monthly event limit of ${limit} reached; upgrade the plan` });
       const [r] = ingest(db, principal.projectId, deps.signer, [{ ...args, target: args.target ?? null }]);
       return text(r);
     },

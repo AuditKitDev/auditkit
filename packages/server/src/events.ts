@@ -2,6 +2,8 @@
 import { randomBytes } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import {
+  canonicalize,
+  sha256Hex,
   chainEvent,
   commitPayload,
   randomSalt,
@@ -27,10 +29,15 @@ export interface EventInput {
   client_sig?: string | undefined;
 }
 
+/** Enough for a client to recompute event_hash offline and check server_sig against the published key. */
 export interface Receipt {
   id: string;
   tenant: string;
+  tenant_id?: string;
+  project_id?: string;
   position: number;
+  occurred_at?: string;
+  payload_commit?: string;
   event_hash: string;
   prev_hash: string;
   server_sig: string;
@@ -59,16 +66,21 @@ const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 export function ingest(db: DatabaseSync, projectId: string, signer: Signer, inputs: EventInput[]): Receipt[] {
   const receipts: Receipt[] = [];
   checkClientSigs(db, inputs);
-  db.exec("BEGIN IMMEDIATE");
+  // Callers already inside a transaction (erase, retention) get a savepoint instead of a nested BEGIN.
+  const nested = db.isTransaction;
+  db.exec(nested ? "SAVEPOINT ingest" : "BEGIN IMMEDIATE");
   try {
     for (const input of inputs) {
       const tenant = getOrCreateTenant(db, input.tenant);
+      const bodyHash = input.idempotency_key ? sha256Hex(canonicalize({ actor: input.actor, action: input.action, target: input.target ?? null, occurred_at: input.occurred_at ?? null, payload: input.payload ?? null })) : null;
       if (input.idempotency_key) {
         const dup = db
-          .prepare("SELECT id, position, event_hash, prev_hash, server_sig FROM event WHERE tenant_id = ? AND idempotency_key = ?")
-          .get(tenant.id, input.idempotency_key) as Omit<Receipt, "tenant"> | undefined;
+          .prepare("SELECT id, position, event_hash, prev_hash, server_sig, idem_hash FROM event WHERE tenant_id = ? AND idempotency_key = ?")
+          .get(tenant.id, input.idempotency_key) as (Omit<Receipt, "tenant"> & { idem_hash: string | null }) | undefined;
         if (dup) {
-          receipts.push({ ...dup, tenant: input.tenant, duplicate: true });
+          if (dup.idem_hash && dup.idem_hash !== bodyHash) throw new IdempotencyConflict(input.idempotency_key);
+          const { idem_hash: _h, ...rc } = dup;
+          receipts.push({ ...rc, tenant: input.tenant, duplicate: true });
           continue;
         }
       }
@@ -97,27 +109,28 @@ export function ingest(db: DatabaseSync, projectId: string, signer: Signer, inpu
       const serverSig = signer.sign(ev.event_hash);
       db.prepare(
         `INSERT INTO event (id, tenant_id, position, occurred_at, received_at, actor, action, target,
-           payload_commit, prev_hash, event_hash, server_sig, client_sig, idempotency_key)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           payload_commit, prev_hash, event_hash, server_sig, client_sig, idempotency_key, idem_hash)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         id, tenant.id, ev.position, ev.occurred_at, now(), ev.actor, ev.action, ev.target,
-        ev.payload_commit, ev.prev_hash, ev.event_hash, serverSig, input.client_sig ?? null, input.idempotency_key ?? null,
+        ev.payload_commit, ev.prev_hash, ev.event_hash, serverSig, input.client_sig ?? null, input.idempotency_key ?? null, bodyHash,
       );
       db.prepare("INSERT INTO payload (event_id, salt, data) VALUES (?, ?, ?)").run(id, salt, JSON.stringify(input.payload ?? null));
       db.prepare("UPDATE tenant SET head_hash = ?, head_position = ? WHERE id = ?").run(ev.event_hash, ev.position, tenant.id);
       tenant.head_hash = ev.event_hash;
       tenant.head_position = ev.position;
-      receipts.push({ id, tenant: input.tenant, position: ev.position, event_hash: ev.event_hash, prev_hash: ev.prev_hash, server_sig: serverSig });
+      receipts.push({ id, tenant: input.tenant, tenant_id: tenant.id, project_id: projectId, position: ev.position, occurred_at: ev.occurred_at, payload_commit: ev.payload_commit, event_hash: ev.event_hash, prev_hash: ev.prev_hash, server_sig: serverSig });
     }
-    db.exec("COMMIT");
+    db.exec(nested ? "RELEASE ingest" : "COMMIT");
   } catch (e) {
-    db.exec("ROLLBACK");
+    db.exec(nested ? "ROLLBACK TO ingest; RELEASE ingest" : "ROLLBACK");
     throw e;
   }
   return receipts;
 }
 
 export class ValidationError extends Error {}
+export class IdempotencyConflict extends Error { constructor(key: string) { super(`idempotency key ${key} was used with a different body`); } }
 
 export interface EventRecord {
   id: string;
@@ -169,11 +182,16 @@ export function search(db: DatabaseSync, q: Query): { events: EventRecord[]; nex
   const args: Array<string | number> = [];
   if (q.tenant) { where.push("t.external_id = ?"); args.push(q.tenant); }
   if (q.actor) { where.push("e.actor = ?"); args.push(q.actor); }
-  if (q.action) { where.push(q.action.endsWith("*") ? "e.action LIKE ?" : "e.action = ?"); args.push(q.action.endsWith("*") ? q.action.slice(0, -1) + "%" : q.action); }
+  if (q.action) {
+    if (q.action.endsWith("*")) { where.push("e.action LIKE ? ESCAPE '\\'"); args.push(q.action.slice(0, -1).replace(/[\\%_]/g, "\\$&") + "%"); }
+    else { where.push("e.action = ?"); args.push(q.action); }
+  }
   if (q.from) { where.push("e.occurred_at >= ?"); args.push(q.from); }
   if (q.to) { where.push("e.occurred_at < ?"); args.push(q.to); }
   if (q.cursor) {
-    const c = db.prepare("SELECT occurred_at, id FROM event WHERE id = ?").get(q.cursor) as { occurred_at: string; id: string } | undefined;
+    const c = (q.tenant
+      ? db.prepare("SELECT e.occurred_at, e.id FROM event e JOIN tenant t ON t.id = e.tenant_id WHERE e.id = ? AND t.external_id = ?").get(q.cursor, q.tenant)
+      : db.prepare("SELECT occurred_at, id FROM event WHERE id = ?").get(q.cursor)) as { occurred_at: string; id: string } | undefined;
     if (c) { where.push("(e.occurred_at < ? OR (e.occurred_at = ? AND e.id < ?))"); args.push(c.occurred_at, c.occurred_at, c.id); }
   }
   const limit = Math.min(Math.max(q.limit ?? 50, 1), 500);
@@ -189,16 +207,28 @@ export function getEvent(db: DatabaseSync, id: string): EventRecord | null {
   return r ? toRecord(r) : null;
 }
 
-/** Crypto-shredding: the payload and its salt go away; the chain's commitment stays. */
-export function erase(db: DatabaseSync, id: string): boolean {
-  return db.prepare("DELETE FROM payload WHERE event_id = ?").run(id).changes === 1;
+/**
+ * Crypto-shredding: the payload and its salt go away; the chain's commitment stays. The erasure itself is
+ * appended to the same tenant chain (`payload.erased`), so a silent shred is impossible.
+ */
+export function erase(db: DatabaseSync, projectId: string, signer: Signer, id: string, actor: string): Receipt | null {
+  const ev = db.prepare("SELECT e.id, t.external_id AS tenant FROM event e JOIN tenant t ON t.id = e.tenant_id WHERE e.id = ?").get(id) as { id: string; tenant: string } | undefined;
+  if (!ev) return null;
+  if (db.prepare("SELECT 1 FROM payload WHERE event_id = ?").get(id) === undefined) return null;
+  db.exec("SAVEPOINT erase");
+  try {
+    db.prepare("DELETE FROM payload WHERE event_id = ?").run(id);
+    const [rc] = ingest(db, projectId, signer, [{ tenant: ev.tenant, actor, action: "payload.erased", target: ev.id, payload: { erased_event: ev.id } }]);
+    db.exec("RELEASE erase");
+    return rc!;
+  } catch (e) { db.exec("ROLLBACK TO erase"); db.exec("RELEASE erase"); throw e; }
 }
 
 function chainRows(db: DatabaseSync, tenantId: string, from: number, to: number): Row[] {
   return db.prepare(`${EVENT_SELECT} WHERE e.tenant_id = ? AND e.position BETWEEN ? AND ? ORDER BY e.position`).all(tenantId, from, to) as Row[];
 }
 
-export function verifyRange(db: DatabaseSync, projectId: string, tenantExt: string, from = 0, to?: number, hasAnchor: (globalRootId: string) => boolean = () => false) {
+export function verifyRange(db: DatabaseSync, projectId: string, tenantExt: string, from = 0, to?: number, hasAnchor: (globalRootId: string) => boolean = () => false, rootCheck?: (tenantId: string, from: number, to: number) => { roots_checked: number; roots_ok: boolean; failed?: { from_position: number; to_position: number; reason: string } }) {
   const tenant = db.prepare("SELECT * FROM tenant WHERE external_id = ?").get(tenantExt) as TenantRow | undefined;
   if (!tenant) return { valid: false as const, position: -1, reason: "unknown tenant" };
   const end = to ?? tenant.head_position;
@@ -220,7 +250,9 @@ export function verifyRange(db: DatabaseSync, projectId: string, tenantExt: stri
   if (end === tenant.head_position && v.head !== tenant.head_hash) {
     return { valid: false as const, position: end, reason: "tenant head does not match chain" };
   }
-  return { ...v, rooted_through: lastRootedPosition(db, tenant.id), anchored_through: lastAnchoredPosition(db, tenant.id, hasAnchor) };
+  const roots = rootCheck?.(tenant.id, from, end);
+  if (roots && !roots.roots_ok) return { valid: false as const, position: roots.failed!.from_position, reason: `merkle: ${roots.failed!.reason}`, roots };
+  return { ...v, roots, rooted_through: lastRootedPosition(db, tenant.id), anchored_through: lastAnchoredPosition(db, tenant.id, hasAnchor) };
 }
 
 /** Highest position covered by a Merkle root (may not be publicly anchored yet). */

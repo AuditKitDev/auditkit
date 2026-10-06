@@ -76,3 +76,13 @@ Demo anchors on the normal tick (every 60 s in prod), so a visitor sees "anchore
 Public JSON routes under `/api/viewer/*` (the HTML page stays at `/viewer`), authenticated by `?token=vt_…` or `Authorization: Bearer vt_…`, always scoped to the token's tenant (a `tenant` query param is ignored):
 `GET /api/viewer/me` → `{ tenant, project_id }`, `GET /api/viewer/events?actor&action&from&to&limit&cursor`, `GET /api/viewer/events/:id`, `GET /api/viewer/events/:id/proof`, `GET /api/viewer/verify?from&to`, `GET /api/viewer/export?from&to`.
 The site serves a static `/viewer` page that reads `token` from the URL and renders the tenant's log, verify button and export link; it is also what customers iframe into their own admin UI.
+
+## Changes 2026-10-06 (security review)
+
+- `GET /auth/callback?token=` renders a page that auto-POSTs to `POST /auth/callback` (form field `token`); only the POST redeems. Mail link scanners can no longer burn the single-use token.
+- `POST /v1/erase/:id` → `{ erased: true, audit: Receipt }`: the erasure is appended to the tenant's chain as `payload.erased` (target = erased event id). Retention shredding appends `payload.retention_shred` per tenant.
+- Customer signing keys: `GET|POST /api/app/projects/:id/tenants/:tenant/keys`, `DELETE …/keys/:keyId`, `POST …/tenants/:tenant/policy { require_client_sig }`; same under `/v1/tenants/:tenant/…` for API keys (write scope; policy needs admin). With a key registered the server verifies `client_sig`; with the policy set it refuses unsigned events.
+- Receipts carry `tenant_id`, `project_id`, `occurred_at`, `payload_commit` so a client can recompute `event_hash` offline.
+- `/v1/verify` (and app/viewer/MCP) now also rebuilds every Merkle root in range and checks the stored paths up to the registry's global root: `roots: { roots_checked, roots_ok }`; a mismatch is `valid:false, reason: "merkle: …"`. Global roots chain: leaf 0 of each global tree is the previous global root.
+- Limits: 1 MB request bodies, 64 KB event payloads, 1200 req/min per API key, demo 2 KB payloads and 200 events per visitor; `Idempotency-Key` reused with a different body → 409 `idempotency_conflict`.
+- Client IP comes from `X-Real-IP` only when `AUDITKIT_PROXY_TRUST=x-real-ip` (our nginx sets it); otherwise headers are ignored.

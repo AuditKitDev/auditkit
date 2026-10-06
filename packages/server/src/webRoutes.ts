@@ -7,12 +7,13 @@ import { openProject, now, type Config } from "./db.js";
 import type { Signer } from "./signing.js";
 import {
   requestMagicLink, redeemMagicLink, userFromSession, destroySession, setSessionCookie, clearSessionCookie, readSessionCookie,
-  membership, userProjects, rateLimiter, type Mailer, type User,
+  membership, userProjects, rateLimiter, clientIp, type Mailer, type User, type ProxyTrust,
 } from "./auth.js";
 import { createProject, createKey, revokeKey, type Scope } from "./keys.js";
-import { ingest, search, getEvent, verifyRange, exportLines, listTenants, ValidationError } from "./events.js";
-import { anchorsFor, proofForEvent } from "./anchorLoop.js";
+import { ingest, search, getEvent, verifyRange, exportLines, listTenants, ValidationError, IdempotencyConflict } from "./events.js";
+import { anchorsFor, proofForEvent, verifyRoots } from "./anchorLoop.js";
 import { planOf } from "./plans.js";
+import { contentDisposition } from "./app.js";
 import { createViewerToken, listViewerTokens, revokeViewerToken } from "./viewer.js";
 import { addTenantKey, listTenantKeys, revokeTenantKey, setRequireClientSig } from "./tenantKeys.js";
 import { checkoutUrl, portalUrl, verifyStripeSignature, applyStripeEvent, BillingNotConfigured, type BillingConfig } from "./billing.js";
@@ -26,6 +27,8 @@ export interface WebDeps {
   siteUrl: string;
   secureCookies: boolean;
   demoProjectId: string;
+  /** See ProxyTrust. Production behind our nginx: "x-real-ip". */
+  proxyTrust?: ProxyTrust;
 }
 
 type Env = { Variables: { user: User; db: DatabaseSync; projectId: string; role: string } };
@@ -41,7 +44,8 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
   const app = new Hono<Env>();
   const loginLimit = rateLimiter(5, 10 * 60 * 1000);
   const demoLimit = rateLimiter(30, 60 * 1000);
-  const ip = (c: Context) => c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || c.req.header("x-real-ip") || "local";
+  const ip = (c: Context) => clientIp(c, d.proxyTrust ?? "none");
+  const DEMO_MAX_PER_VISITOR = 200;
 
   // ---- auth
   app.post("/auth/magic", async (c) => {
@@ -50,9 +54,18 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
     await requestMagicLink(d.reg, d.mailer, d.siteUrl, body.email, body.next);
     return c.json({ sent: true }, 202);
   });
+  // Link scanners (Outlook SafeLinks etc.) GET every URL in an email; the single-use token is only redeemed on POST.
   app.get("/auth/callback", (c) => {
-    const token = c.req.query("token") ?? "";
-    const r = redeemMagicLink(d.reg, token);
+    const token = (c.req.query("token") ?? "").replace(/[^A-Za-z0-9_-]/g, "");
+    if (!token) return c.redirect("/login?error=expired", 302);
+    return c.html(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signing in · AuditKit</title>
+<style>body{margin:0;background:#0b0d10;color:#e6e8eb;font:16px/1.5 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{text-align:center}button{padding:12px 20px;border-radius:8px;border:0;background:#4f8cff;color:#fff;font-weight:600;cursor:pointer}</style></head>
+<body><main><form method="post" action="/auth/callback"><input type="hidden" name="token" value="${token}"><p>Finishing sign-in…</p><button type="submit">Continue</button></form>
+<script>document.forms[0].submit()</script></main></body></html>`);
+  });
+  app.post("/auth/callback", async (c) => {
+    const form = Object.fromEntries((await c.req.formData()).entries()) as Record<string, string>;
+    const r = redeemMagicLink(d.reg, form.token ?? "");
     if (!r) return c.redirect("/login?error=expired", 302);
     setSessionCookie(c, r.session, d.secureCookies);
     return c.redirect(r.next, 302);
@@ -78,6 +91,7 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
     const id = c.req.param("id");
     const role = membership(d.reg, c.get("user").id, id);
     if (!role) return err(c, 404, "not_found", "no such project");
+    if (role === "viewer" && c.req.method !== "GET") return err(c, 403, "forbidden", "read-only membership");
     c.set("projectId", id); c.set("role", role); c.set("db", openProject(d.cfg, id));
     await next();
   });
@@ -149,7 +163,8 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
     const q = c.req.query();
     const query: Parameters<typeof search>[1] = {};
     for (const k of ["tenant", "actor", "action", "from", "to", "cursor"] as const) if (q[k]) query[k] = q[k];
-    if (q.limit) query.limit = Number(q.limit);
+    const lim = z.coerce.number().int().min(1).max(500).safeParse(q.limit);
+    if (lim.success) query.limit = lim.data;
     return c.json(search(c.get("db"), query));
   });
   app.get("/api/app/projects/:id/events/:eventId", (c) => {
@@ -162,14 +177,14 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
   });
   app.get("/api/app/projects/:id/verify", (c) => {
     const q = z.object({ tenant: z.string(), from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
-    return c.json(verifyRange(c.get("db"), c.get("projectId"), q.tenant, q.from, q.to, (id) => anchorsFor(d.reg, id).length > 0));
+    return c.json(verifyRange(c.get("db"), c.get("projectId"), q.tenant, q.from, q.to, (id) => anchorsFor(d.reg, id).length > 0, (t, a, b) => verifyRoots(c.get("db"), d.reg, t, a, b)));
   });
   app.get("/api/app/projects/:id/export", (c) => {
     const q = z.object({ tenant: z.string(), from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
     const lines = exportLines(c.get("db"), c.get("projectId"), q.tenant, d.signer, (id) => anchorsFor(d.reg, id), d.cfg.publicHost ?? "localhost", q.from, q.to);
     const enc = new TextEncoder();
     const body = new ReadableStream({ pull(ctrl) { const n = lines.next(); if (n.done) ctrl.close(); else ctrl.enqueue(enc.encode(JSON.stringify(n.value) + "\n")); } });
-    return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": `attachment; filename="auditkit-${q.tenant}.jsonl"` } });
+    return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": contentDisposition(q.tenant) } });
   });
   app.post("/api/app/projects/:id/billing/checkout", async (c) => {
     if (c.get("role") !== "owner") return err(c, 403, "forbidden", "only the project owner can change billing");
@@ -232,11 +247,16 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
   });
   app.post("/demo/log", async (c) => {
     const body = z.object({ actor: z.string().min(1).max(80), action: z.string().min(1).max(80), target: z.string().max(120).nullable().optional(), payload: z.record(z.unknown()).optional() }).parse(await c.req.json());
-    const [r] = ingest(c.get("db"), d.demoProjectId, d.signer, [{ ...body, tenant: demoTenant(c), target: body.target ?? null }]);
+    if (JSON.stringify(body.payload ?? null).length > 2048) return err(c, 400, "invalid", "demo payloads are limited to 2 KB");
+    const tenant = demoTenant(c);
+    const t = c.get("db").prepare("SELECT head_position FROM tenant WHERE external_id = ?").get(tenant) as { head_position: number } | undefined;
+    if ((t?.head_position ?? -1) + 1 >= DEMO_MAX_PER_VISITOR) return err(c, 429, "rate_limited", `demo chains are limited to ${DEMO_MAX_PER_VISITOR} events; sign up for a real project`);
+    if (monthlyUsage(c.get("db")) >= planOf("free").events_per_month) return err(c, 429, "rate_limited", "the public demo is full for today");
+    const [r] = ingest(c.get("db"), d.demoProjectId, d.signer, [{ ...body, tenant, target: body.target ?? null }]);
     return c.json(r, 201);
   });
   app.get("/demo/events", (c) => c.json(search(c.get("db"), { tenant: demoTenant(c), limit: 20 })));
-  app.get("/demo/verify", (c) => c.json(verifyRange(c.get("db"), d.demoProjectId, demoTenant(c), 0, undefined, (id) => anchorsFor(d.reg, id).length > 0)));
+  app.get("/demo/verify", (c) => c.json(verifyRange(c.get("db"), d.demoProjectId, demoTenant(c), 0, undefined, (id) => anchorsFor(d.reg, id).length > 0, (t, a, b) => verifyRoots(c.get("db"), d.reg, t, a, b))));
   app.get("/demo/proof/:id", (c) => {
     const ev = getEvent(c.get("db"), c.req.param("id"));
     if (!ev || ev.tenant !== demoTenant(c)) return err(c, 404, "not_found", "no such event");
@@ -244,6 +264,7 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
   });
 
   app.onError((e, c) => {
+    if (e instanceof IdempotencyConflict) return c.json({ error: { code: "idempotency_conflict", message: e.message } }, 409);
     if (e instanceof ValidationError) return err(c, 400, "invalid", e.message);
     if (e instanceof z.ZodError) return err(c, 400, "invalid", e.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
     console.error(e);

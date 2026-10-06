@@ -6,7 +6,7 @@ Prepared 2026-10-05. Portal: https://claude.ai/directory/manage (MCP connector).
 
 - Submitting needs "any paid Claude plan" (brief said Pro or Max). Fine.
 - Portal steps confirmed: Listing limits unchanged (name 100, one-liner 200, description 2,000, 1-5 categories, slug permanent). The seven acknowledgments are unchanged.
-- **Auth is stricter than the brief says.** The authentication page lists `custom_connection` as OAuth client ID/secret entered at connection time, and requires emailing mcp-review@anthropic.com to enable it. A plain API-key header (`static_headers`) is "Beta, for a limited set of organizations", and the key is entered by an organization Owner. No self-serve "paste an API key" path is documented. [OWNER: email mcp-review@anthropic.com asking to list a bearer-key (`ak_live_`) server, or accept building OAuth 2.0 (DCR/CIMD) first. Do this before submitting.]
+- **Auth:** the server now implements OAuth 2.1, which is the directory's default path (`oauth_dcr`), so no special approval is needed. The earlier API-key plan (`custom_connection` / `static_headers`) is dropped.
 - Portal also asks for: company name/website, primary contact, data-handling answers (own API; no personal health data; no sponsored content), use cases. Entries below cover them.
 - Category list has no "Security". See Categories.
 
@@ -36,7 +36,7 @@ What you get:
 
 Tools: search_events, get_event, get_proof, verify_range, list_tenants, export_evidence (all read-only) and log_event (appends an event; cannot be undone).
 
-You need an AuditKit account and a project API key. Events and payloads returned to Claude are your own log data. AuditKit does not collect your conversations.
+You need an AuditKit account; you sign in with your email and choose which project to share. Events and payloads returned to Claude are your own log data. AuditKit does not collect your conversations.
 
 (about 1,350 characters)
 
@@ -60,23 +60,31 @@ You need an AuditKit account and a project API key. Events and payloads returned
 
 ## Authentication
 
-Mode: custom connection, API key (see "Changes": needs Anthropic approval).
+Mode: OAuth 2.0 (authorization code + PKCE S256, dynamic client registration). Public clients; no client secret needed. [Portal: choose "OAuth with dynamic client registration".]
+
+Server behavior (packages/server/src/oauth.ts):
+- `/mcp` without a token returns 401 with `WWW-Authenticate: Bearer resource_metadata=...`.
+- Discovery: `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`.
+- `/oauth/register` (DCR; https or localhost redirect URIs), `/oauth/authorize`, `/oauth/token` (refresh-token rotation), `/oauth/revoke`.
+- Redirect URI Claude uses: `https://claude.ai/api/mcp/auth_callback`; Claude Code uses a loopback port.
 
 User steps:
-1. Sign in at https://auditkit.dev/login and open the dashboard.
-2. API keys > Create key. Choose scopes: `read` for search/verify/export, add `write` only to allow log_event.
-3. Copy the key (`ak_live_...`; shown once).
-4. In Claude: Settings > Connectors > Add custom connector. URL `https://api.auditkit.dev/mcp`. Paste the key as the bearer credential.
-5. Ask "list my tenants" to confirm.
+1. In Claude: Settings > Connectors > AuditKit > Connect (or add custom connector with URL `https://api.auditkit.dev/mcp`).
+2. Sign in at AuditKit with your email (magic link).
+3. On the consent page, pick the project and review the scopes: read, write, erase. Approve.
+4. Ask "list my tenants" to confirm.
 
-Keys without the needed scope get `{"error":"key lacks read scope"}` or `write scope` from tools.
+Disconnect any time in Claude, or revoke access from the AuditKit dashboard. Tools return `{"error":"key lacks read scope"}` (or write) if the granted scope is too narrow.
+
+[OWNER: the consent page lists `erase`, but no MCP tool uses it. Consider offering only read and write to Claude, so the connector asks for nothing it cannot use.]
 
 ## Reviewer test account
 
-Provide in the portal Test & launch step:
-- Endpoint https://api.auditkit.dev/mcp and an `ak_test_...` key with `read` and `write` scopes, in a dedicated seeded project [OWNER: create the project and key; no seed script exists in the repo yet].
-- Seed: tenants `acme` and `globex`; about 200 events over the last 30 days (mixed actors and actions such as user.login, role.update, export.download); several anchored roots with Rekor and OpenTimestamps receipts; one event with its payload erased (get_event shows it erased; verify_range still returns valid:true).
-- Reviewer script: list_tenants; search_events tenant=acme limit=5; get_event on a result; get_proof on an anchored event; verify_range tenant=acme; export_evidence tenant=globex; log_event once (adds a test event).
+Paste into the portal Test & launch step:
+- Endpoint: https://api.auditkit.dev/mcp. No credentials are issued. Connect from Claude.ai and sign in with any email you control (magic link). Every new account automatically gets read access to a shared "Sample project", seeded by `scripts/seed-reviewer.ts`. Choose "Sample project" on the consent page.
+- Seed: tenants `acme` and `globex`; about 200 events over 30 days; several anchored roots with Rekor and OpenTimestamps receipts; one event with its payload erased (get_event shows it erased; verify_range still returns valid:true).
+- Reviewer script: list_tenants; search_events tenant=acme limit=5; get_event on a result; get_proof on an anchored event; verify_range tenant=acme; export_evidence tenant=globex. Approve the write scope only to try log_event; with read-only access it returns a scope error, which is expected.
+- [OWNER: scripts/seed-reviewer.ts is not in packages/server yet (no scripts directory in the repo); confirm it exists and that the Sample project is read-only for reviewers, so one reviewer cannot alter another's view. Confirm whether log_event is reachable on the Sample project; if not, say so here.]
 
 ## Tools (as in packages/server/src/mcp.ts)
 
@@ -101,19 +109,21 @@ Note: log_event is a write with no `destructiveHint: true`; it appends only, so 
 3. Financial transactions: none. No tool moves money.
 4. AI media generation: none.
 5. Prompt injection: tool outputs are the user's own log data (actor, action, payload fields) and may contain arbitrary text they or their users wrote; we return it as JSON data and never as instructions, and the server takes no action from output content.
-6. Conversation data: we collect none. We see only tool arguments and keys' request metadata needed to serve calls.
+6. Conversation data: we collect none. We see only tool arguments and request metadata needed to serve calls.
 7. Public documentation: https://auditkit.dev/docs and the privacy and terms pages are public.
 
 ## Pre-submission checklist
 
-- [ ] Auth path settled with mcp-review@anthropic.com (key header, or OAuth built).
-- [ ] https://api.auditkit.dev/mcp live over HTTPS; POST without key returns 401.
-- [ ] Each of the seven tools run from Claude.ai as a custom connector, including log_event and a scope-denied call.
-- [ ] Dashboard health: anchor job running, /anchors shows recent Rekor and OTS entries.
-- [ ] Seeded reviewer project and `ak_test_` key created; script above passes.
-- [ ] docs, privacy, terms, support pages live with filled [OWNER] fields (legal name, jurisdiction, data location).
-- [ ] Icon, slug (permanent) chosen.
-- [ ] Review step warnings read before submitting.
+- [ ] https://api.auditkit.dev live over HTTPS: `/mcp` returns 401 with `resource_metadata`; both `/.well-known/` documents load and the `resource` value equals the MCP URL exactly.
+- [ ] Authorization server reachable from Anthropic's egress range (160.79.104.0/21); no WAF blocking discovery, register or token calls (10 s limit each).
+- [ ] `/oauth/token` accepts `application/x-www-form-urlencoded`; refresh rotation returns `invalid_grant` on a reused token.
+- [ ] Connect from Claude.ai as a custom connector: magic-link sign-in, consent page, project choice, redirect back. Repeat with a brand-new email to confirm the Sample project is attached automatically.
+- [ ] Run each of the seven tools from Claude.ai after consent, including log_event with write scope, and one scope-denied call.
+- [ ] Disconnect, then confirm the old token fails (revoke works) and reconnecting works.
+- [ ] Dashboard health: anchor job running; /anchors shows recent Rekor and OTS entries.
+- [ ] Sample project seeded and verify_range returns valid:true on both tenants.
+- [ ] docs, privacy, terms, support pages live with [OWNER] fields filled (legal name, jurisdiction, data location).
+- [ ] Icon, slug (permanent) chosen; portal warnings read before submitting.
 
 ## Positioning source notes (fetched claims only)
 

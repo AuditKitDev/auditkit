@@ -6,8 +6,10 @@ import { randomBytes } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { buildTree, proofFor, type Anchor, type AnchorReceipt, type Hex, type ProofStep } from "@auditkit/core";
+import { buildTree, proofFor, verifyProof, GENESIS, type Anchor, type AnchorReceipt, type Hex, type ProofStep } from "@auditkit/core";
 import { openProject, now, type Config } from "./db.js";
+import { ingest } from "./events.js";
+import type { Signer } from "./signing.js";
 
 const uid = (p: string) => p + "_" + randomBytes(6).toString("hex");
 
@@ -57,14 +59,22 @@ export async function tick(cfg: Config, reg: DatabaseSync, anchors: Anchor[], lo
   }
   if (rooted.length === 0) return null;
 
-  const globalTree = buildTree(rooted.map((r) => r.projectRoot));
+  // Project roots left without a global root by a crash mid-tick are picked up here.
+  for (const projectId of projectIds) {
+    const db = openProject(cfg, projectId);
+    const dangling = db.prepare("SELECT id, root_hash FROM project_root WHERE global_root_id = ''").all() as Array<{ id: string; root_hash: string }>;
+    for (const d of dangling) if (!rooted.some((r) => r.projectRootId === d.id)) rooted.push({ projectId, db, projectRootId: d.id, projectRoot: d.root_hash });
+  }
+  // Leaf 0 is the previous global root, so every tick's root commits to the whole history: a rollback forks visibly.
+  const prev = (reg.prepare("SELECT root_hash FROM global_root ORDER BY created_at DESC, rowid DESC LIMIT 1").get() as { root_hash: string } | undefined)?.root_hash ?? GENESIS;
+  const globalTree = buildTree([prev, ...rooted.map((r) => r.projectRoot)]);
   const globalRootId = uid("gr");
-  reg.prepare("INSERT INTO global_root (id, root_hash, created_at, project_roots) VALUES (?, ?, ?, ?)")
-    .run(globalRootId, globalTree.root, now(), JSON.stringify(rooted.map((r) => ({ project_id: r.projectId, root_hash: r.projectRoot }))));
-  const idx = reg.prepare("INSERT INTO project_root_index (global_root_id, project_id) VALUES (?, ?)");
+  reg.prepare("INSERT INTO global_root (id, root_hash, created_at, project_roots, prev_root_hash) VALUES (?, ?, ?, ?, ?)")
+    .run(globalRootId, globalTree.root, now(), JSON.stringify(rooted.map((r) => ({ project_id: r.projectId, root_hash: r.projectRoot }))), prev);
+  const idx = reg.prepare("INSERT OR IGNORE INTO project_root_index (global_root_id, project_id) VALUES (?, ?)");
   rooted.forEach((r, i) => {
     idx.run(globalRootId, r.projectId);
-    const path: ProofStep[] = proofFor(globalTree, i);
+    const path: ProofStep[] = proofFor(globalTree, i + 1);
     r.db.prepare("UPDATE project_root SET global_root_id = ?, path_to_global = ?, global_root_hash = ? WHERE id = ?")
       .run(globalRootId, JSON.stringify(path), globalTree.root, r.projectRootId);
   });
@@ -113,12 +123,17 @@ export async function maintain(reg: DatabaseSync, anchors: Anchor[], log: (m: st
 }
 
 /** Retention = payload retention. Headers, hashes and anchors are kept forever; payloads older than the plan's window are shredded. */
-export function applyRetention(cfg: Config, reg: DatabaseSync, retentionDaysFor: (plan: string) => number): number {
+export function applyRetention(cfg: Config, reg: DatabaseSync, retentionDaysFor: (plan: string) => number, signer?: Signer): number {
   let shredded = 0;
   for (const p of reg.prepare("SELECT id, plan FROM project").all() as Array<{ id: string; plan: string }>) {
     const cutoff = new Date(Date.now() - retentionDaysFor(p.plan) * 86_400_000).toISOString();
     const db = openProject(cfg, p.id);
+    const perTenant = db.prepare(
+      "SELECT t.external_id AS tenant, COUNT(*) AS n FROM payload p JOIN event e ON e.id = p.event_id JOIN tenant t ON t.id = e.tenant_id WHERE e.received_at < ? GROUP BY t.external_id",
+    ).all(cutoff) as Array<{ tenant: string; n: number }>;
+    if (perTenant.length === 0) continue;
     shredded += Number(db.prepare("DELETE FROM payload WHERE event_id IN (SELECT id FROM event WHERE received_at < ?)").run(cutoff).changes);
+    if (signer) ingest(db, p.id, signer, perTenant.map((t) => ({ tenant: t.tenant, actor: "system:retention", action: "payload.retention_shred", target: null, payload: { count: t.n, older_than: cutoff } })));
   }
   return shredded;
 }
@@ -131,6 +146,33 @@ export function resetProjectData(cfg: Config, projectId: string): void {
     for (const t of ["payload", "tenant_key", "viewer_token", "event", "tenant_root", "project_root", "tenant"]) db.exec(`DELETE FROM ${t}`);
     db.exec("COMMIT");
   } catch (e) { db.exec("ROLLBACK"); throw e; }
+}
+
+export interface RootCheck { roots_checked: number; roots_ok: boolean; failed?: { from_position: number; to_position: number; reason: string } }
+
+/**
+ * Server-side Merkle check for a tenant range: rebuild each tenant root from the rows, then walk the stored
+ * paths to the project root and to the global root, and compare that global root with the registry's copy.
+ * A DB admin who rewrites events and tenant_root.root_hash together is caught here (the paths no longer fit).
+ */
+export function verifyRoots(db: DatabaseSync, reg: DatabaseSync, tenantId: string, from: number, to: number): RootCheck {
+  const roots = db.prepare(
+    `SELECT tr.id, tr.from_position, tr.to_position, tr.root_hash, tr.path_to_project, pr.root_hash AS project_root, pr.path_to_global, pr.global_root_hash, pr.global_root_id
+     FROM tenant_root tr JOIN project_root pr ON pr.id = tr.project_root_id
+     WHERE tr.tenant_id = ? AND tr.to_position >= ? AND tr.from_position <= ? ORDER BY tr.from_position`,
+  ).all(tenantId, from, to) as Array<{ id: string; from_position: number; to_position: number; root_hash: string; path_to_project: string; project_root: string; path_to_global: string; global_root_hash: string; global_root_id: string }>;
+  for (const r of roots) {
+    const fail = (reason: string): RootCheck => ({ roots_checked: roots.length, roots_ok: false, failed: { from_position: r.from_position, to_position: r.to_position, reason } });
+    const leaves = db.prepare("SELECT event_hash FROM event WHERE tenant_id = ? AND position BETWEEN ? AND ? ORDER BY position").all(tenantId, r.from_position, r.to_position) as Array<{ event_hash: string }>;
+    if (leaves.length !== r.to_position - r.from_position + 1) return fail("events missing from a rooted range");
+    if (buildTree(leaves.map((l) => l.event_hash)).root !== r.root_hash) return fail("tenant root does not match its events");
+    if (!verifyProof(r.root_hash, JSON.parse(r.path_to_project) as ProofStep[], r.project_root)) return fail("tenant root is not in the project root");
+    if (r.global_root_id === "") continue; // not yet in a global root (tick in progress or crashed; re-rooted next tick)
+    if (!verifyProof(r.project_root, JSON.parse(r.path_to_global) as ProofStep[], r.global_root_hash)) return fail("project root is not in the global root");
+    const g = reg.prepare("SELECT root_hash FROM global_root WHERE id = ?").get(r.global_root_id) as { root_hash: string } | undefined;
+    if (!g || g.root_hash !== r.global_root_hash) return fail("global root does not match the registry");
+  }
+  return { roots_checked: roots.length, roots_ok: true };
 }
 
 export function anchorsFor(reg: DatabaseSync, globalRootId: string): AnchorReceipt[] {

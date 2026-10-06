@@ -1,11 +1,13 @@
 import { Hono, type Context } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { secureHeaders } from "hono/secure-headers";
 import { z } from "zod";
 import type { DatabaseSync } from "node:sqlite";
-import { openProject, type Config } from "./db.js";
+import { openProject, setProjectGuard, projectGuardFromRegistry, type Config } from "./db.js";
 import { authenticate, createKey, revokeKey, type Principal, type Scope } from "./keys.js";
 import type { Signer } from "./signing.js";
-import { ingest, search, getEvent, erase, verifyRange, exportLines, listTenants, getOrCreateTenant, ValidationError, type EventInput } from "./events.js";
-import { anchorsFor, proofForEvent } from "./anchorLoop.js";
+import { ingest, search, getEvent, erase, verifyRange, exportLines, listTenants, getOrCreateTenant, ValidationError, IdempotencyConflict, type EventInput } from "./events.js";
+import { anchorsFor, proofForEvent, verifyRoots } from "./anchorLoop.js";
 import { openapi } from "./openapi.js";
 import { mcpHandler } from "./mcp.js";
 import { planOf } from "./plans.js";
@@ -32,10 +34,16 @@ const eventSchema = z.object({
   action: z.string().min(1).max(200),
   target: z.string().max(500).nullable().optional(),
   occurred_at: z.string().optional(),
-  payload: z.unknown().optional(),
+  payload: z.unknown().optional().refine((p) => JSON.stringify(p ?? null).length <= 65_536, { message: "payload must be at most 64 KB as JSON" }),
   idempotency_key: z.string().max(200).optional(),
   client_sig: z.string().max(200).optional(),
 });
+
+/** Safe filename header: ASCII fallback plus RFC 5987 UTF-8 form. */
+export function contentDisposition(tenant: string): string {
+  const ascii = tenant.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 80) || "export";
+  return `attachment; filename="auditkit-${ascii}.jsonl"; filename*=UTF-8''auditkit-${encodeURIComponent(tenant.slice(0, 80))}.jsonl`;
+}
 
 export function needScope(c: Context<Env>, scope: Scope): Response | null {
   const p = c.get("principal");
@@ -43,18 +51,22 @@ export function needScope(c: Context<Env>, scope: Scope): Response | null {
   return c.json({ error: { code: "forbidden", message: `key lacks scope ${scope}` } }, 403);
 }
 
-/** 429 when the month's events would exceed the project's plan. */
-function overLimit(deps: Deps, c: Context<Env>, adding: number): Response | null {
-  const p = deps.reg.prepare("SELECT plan FROM project WHERE id = ?").get(c.get("principal").projectId) as { plan: string } | undefined;
+/** The month's events plus `adding` vs the project's plan. Shared by REST and MCP. */
+export function planLimitExceeded(reg: DatabaseSync, db: DatabaseSync, projectId: string, adding: number): number | null {
+  const p = reg.prepare("SELECT plan FROM project WHERE id = ?").get(projectId) as { plan: string } | undefined;
   const limit = planOf(p?.plan ?? "free").events_per_month;
-  if (monthlyUsage(c.get("db")) + adding > limit) {
-    return c.json({ error: { code: "plan_limit", message: `monthly event limit of ${limit} reached; upgrade the plan` } }, 429);
-  }
-  return null;
+  return monthlyUsage(db) + adding > limit ? limit : null;
+}
+function overLimit(deps: Deps, c: Context<Env>, adding: number): Response | null {
+  const limit = planLimitExceeded(deps.reg, c.get("db"), c.get("principal").projectId, adding);
+  return limit === null ? null : c.json({ error: { code: "plan_limit", message: `monthly event limit of ${limit} reached; upgrade the plan` } }, 429);
 }
 
 export function buildApp(deps: Deps): Hono<Env> {
   const app = new Hono<Env>();
+  setProjectGuard(projectGuardFromRegistry(deps.reg)); // only registered projects get a DB file
+  app.use("*", secureHeaders({ crossOriginEmbedderPolicy: false, crossOriginResourcePolicy: false }));
+  app.use("*", bodyLimit({ maxSize: 1_000_000, onError: (c) => c.json({ error: { code: "too_large", message: "request body must be under 1 MB" } }, 413) }));
   if (deps.web) {
     app.route("/", buildWebRoutes({ ...deps.web, cfg: deps.cfg, reg: deps.reg, signer: deps.signer }));
     app.route("/", buildOAuthRoutes(deps.reg, deps.web.siteUrl));
@@ -93,6 +105,7 @@ export function buildApp(deps: Deps): Hono<Env> {
   });
 
   app.onError((err, c) => {
+    if (err instanceof IdempotencyConflict) return c.json({ error: { code: "idempotency_conflict", message: err.message } }, 409);
     if (err instanceof ValidationError) return c.json({ error: { code: "invalid", message: err.message } }, 400);
     if (err instanceof z.ZodError) return c.json({ error: { code: "invalid", message: err.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") } }, 400);
     console.error(err);
@@ -131,7 +144,8 @@ export function buildApp(deps: Deps): Hono<Env> {
     if (q.from) query.from = q.from;
     if (q.to) query.to = q.to;
     if (q.cursor) query.cursor = q.cursor;
-    if (q.limit) query.limit = Number(q.limit);
+    const lim = z.coerce.number().int().min(1).max(500).safeParse(q.limit);
+    if (lim.success) query.limit = lim.data; // anything else falls back to the default page size
     return c.json(search(c.get("db"), query));
   });
 
@@ -153,7 +167,7 @@ export function buildApp(deps: Deps): Hono<Env> {
     const denied = needScope(c, "read");
     if (denied) return denied;
     const q = z.object({ tenant: z.string(), from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
-    return c.json(verifyRange(c.get("db"), c.get("principal").projectId, q.tenant, q.from, q.to, (id) => anchorsFor(deps.reg, id).length > 0));
+    return c.json(verifyRange(c.get("db"), c.get("principal").projectId, q.tenant, q.from, q.to, (id) => anchorsFor(deps.reg, id).length > 0, (t, a, b) => verifyRoots(c.get("db"), deps.reg, t, a, b)));
   });
 
   app.get("/v1/export", (c) => {
@@ -168,7 +182,7 @@ export function buildApp(deps: Deps): Hono<Env> {
         else ctrl.enqueue(new TextEncoder().encode(JSON.stringify(n.value) + "\n"));
       },
     });
-    return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": `attachment; filename="auditkit-${q.tenant}.jsonl"` } });
+    return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": contentDisposition(q.tenant) } });
   });
 
   app.get("/v1/tenants", (c) => {
@@ -211,8 +225,8 @@ export function buildApp(deps: Deps): Hono<Env> {
   app.post("/v1/erase/:id", (c) => {
     const denied = needScope(c, "erase");
     if (denied) return denied;
-    const ok = erase(c.get("db"), c.req.param("id"));
-    return ok ? c.json({ erased: true }) : c.json({ error: { code: "not_found", message: "no payload to erase" } }, 404);
+    const r = erase(c.get("db"), c.get("principal").projectId, deps.signer, c.req.param("id"), `key:${c.get("principal").keyId}`);
+    return r ? c.json({ erased: true, audit: r }) : c.json({ error: { code: "not_found", message: "no payload to erase" } }, 404);
   });
 
   app.post("/v1/keys", async (c) => {

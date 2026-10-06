@@ -32,7 +32,8 @@ export function openRegistry(cfg: Config): DatabaseSync {
     );
     CREATE TABLE IF NOT EXISTS global_root (
       id TEXT PRIMARY KEY, root_hash TEXT NOT NULL, created_at TEXT NOT NULL,
-      project_roots TEXT NOT NULL  -- JSON [{project_id, root_hash}] in leaf order
+      project_roots TEXT NOT NULL,  -- JSON [{project_id, root_hash}] in leaf order (leaf 0 is prev_root_hash)
+      prev_root_hash TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS project_root_index (
       global_root_id TEXT NOT NULL REFERENCES global_root(id), project_id TEXT NOT NULL, PRIMARY KEY (global_root_id, project_id)
@@ -47,6 +48,13 @@ export function openRegistry(cfg: Config): DatabaseSync {
 }
 
 const projectDbs = new Map<string, DatabaseSync>();
+/** Set at boot: only ids present in the registry may have a file created. */
+let knownProject: (id: string) => boolean = () => true;
+export function setProjectGuard(fn: (id: string) => boolean): void { knownProject = fn; }
+export function projectGuardFromRegistry(reg: DatabaseSync): (id: string) => boolean {
+  const q = reg.prepare("SELECT 1 FROM project WHERE id = ?");
+  return (id) => !!q.get(id);
+}
 /** Later tables/columns, applied after the base schema. Registered by modules to keep db.ts free of their SQL. */
 const extras: Array<(db: DatabaseSync) => void> = [];
 export function registerProjectMigration(fn: (db: DatabaseSync) => void): void { extras.push(fn); }
@@ -55,7 +63,7 @@ function migrateProjectExtras(db: DatabaseSync): void { for (const fn of extras)
 export function openProject(cfg: Config, projectId: string): DatabaseSync {
   const cached = projectDbs.get(projectId);
   if (cached) return cached;
-  if (!/^[a-z0-9_]+$/.test(projectId)) throw new Error("bad project id");
+  if (!/^[a-z0-9_]+$/.test(projectId) || !knownProject(projectId)) throw new UnknownProjectError(projectId);
   const db = open(join(cfg.dataDir, "projects", `${projectId}.db`));
   db.exec(`
     CREATE TABLE IF NOT EXISTS tenant (
@@ -67,7 +75,7 @@ export function openProject(cfg: Config, projectId: string): DatabaseSync {
       position INTEGER NOT NULL, occurred_at TEXT NOT NULL, received_at TEXT NOT NULL,
       actor TEXT NOT NULL, action TEXT NOT NULL, target TEXT,
       payload_commit TEXT NOT NULL, prev_hash TEXT NOT NULL, event_hash TEXT NOT NULL,
-      server_sig TEXT NOT NULL, client_sig TEXT, idempotency_key TEXT,
+      server_sig TEXT NOT NULL, client_sig TEXT, idempotency_key TEXT, idem_hash TEXT,
       root_id TEXT,
       UNIQUE (tenant_id, position), UNIQUE (tenant_id, idempotency_key)
     );
@@ -103,3 +111,4 @@ export function closeAll(): void {
 }
 
 export const now = (): string => new Date().toISOString();
+export class UnknownProjectError extends Error { constructor(id: string) { super(`unknown project ${id}`); } }
