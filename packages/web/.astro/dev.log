@@ -1,0 +1,11 @@
+{"message":"connected.","label":"vite","level":"info"}
+{"message":"Generated 0ms","label":"types","level":"info"}
+{"message":"connected.","label":"vite","level":"info"}
+{"message":"Re-optimizing dependencies because vite config has changed","label":"vite","level":"info"}
+{"message":" astro  v7.3.5 ready in 285 ms\n┃ Local    http://localhost:4398/\n┃ Network  use --host to expose","label":"SKIP_FORMAT","level":"info"}
+{"message":"watching for file changes...","label":null,"level":"info"}
+{"message":"A `getStaticPaths()` route pattern was matched, but no matching static path was found for requested path `/app/projects/prj_abc/keys`.\n\nPossible dynamic routes being matched: src/pages/app/projects/[id]/keys.astro.","label":"router","level":"warn"}
+{"message":"[200] (rewrite) /app/projects/prj_abc/keys 34ms","label":null,"level":"info"}
+{"message":"A `getStaticPaths()` route pattern was matched, but no matching static path was found for requested path `/app/projects/prj_abc/keys`.\n\nPossible dynamic routes being matched: src/pages/app/projects/[id]/keys.astro.","label":"router","level":"warn"}
+{"message":"[200] (rewrite) /app/projects/prj_abc/keys 3ms","label":null,"level":"info"}
+{"message":"[200] / 14ms","label":null,"level":"info"}

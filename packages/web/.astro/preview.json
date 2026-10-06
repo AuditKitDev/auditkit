@@ -1,0 +1,14 @@
+{
+	"pid": 3513147,
+	"port": 4399,
+	"url": "http://localhost:4399",
+	"urls": {
+		"local": [
+			"http://localhost:4399/"
+		],
+		"network": [],
+		"networkInterfaceNames": []
+	},
+	"background": true,
+	"startedAt": "2026-10-06T03:32:26.225Z"
+}

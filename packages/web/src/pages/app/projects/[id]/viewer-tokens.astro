@@ -1,0 +1,10 @@
+---
+// Static route: built once at /app/projects/_/viewer-tokens; the island reads the real id from the URL.
+// Dev: src/middleware.ts rewrites; prod: nginx rewrite (README.md).
+import Base from "../../../../layouts/Base.astro";
+import ViewerTokens from "../../../../islands/ViewerTokens";
+export function getStaticPaths() { return [{ params: { id: "_" } }]; }
+---
+<Base title="Viewer tokens" description="AuditKit project Viewer tokens." variant="app" noindex wide>
+  <section class="py-10"><ViewerTokens client:only="preact" /></section>
+</Base>

@@ -1,0 +1,169 @@
+---
+import Base from "../layouts/Base.astro";
+import Demo from "../islands/Demo";
+import Diagram from "../components/Diagram.astro";
+import Terminal from "../components/Terminal.astro";
+import Code from "../components/Code.astro";
+import PricingTable from "../components/PricingTable.astro";
+import Comparison from "../components/Comparison.astro";
+import Faq from "../components/Faq.astro";
+import McpTools from "../components/McpTools.astro";
+import { TAGLINE, SUBLINE, SITE_URL, REPO_URL, SUPPORT_EMAIL } from "../lib/site";
+import Controls from "../components/Controls.astro";
+import Personas from "../components/Personas.astro";
+import { TS_QUICKSTART, PY_QUICKSTART, CURL_QUICKSTART, PUBLISH_NOTE, MCP_CLAUDE_CODE, ERASE_SNIPPET } from "../lib/snippets";
+
+const faq: Array<[string, string]> = [
+  ["What does \"verify without trusting AuditKit\" mean exactly?", "The export file carries every event, its signature, the Merkle roots and the public-log receipts. <code>@auditkit/verify</code> re-hashes everything and checks the roots against Rekor's inclusion proof and the OpenTimestamps proof. What you still trust: Rekor's log key, the Bitcoin chain, and the arithmetic. Not our database, not our staff, not our uptime."],
+  ["Can a database admin at AuditKit rewrite history?", "They can change rows. They cannot make the changed rows hash to the roots already written to Rekor and stamped by OpenTimestamps, and they cannot re-sign events without the server key, which lives in the environment, not the database. See the <a href=\"/security\">threat model</a>."],
+  ["How does erasure work with an immutable log?", "The chain commits to <code>sha256(salt ∥ payload)</code>, not the payload. Erasure deletes the payload and the salt; the commitment stays, so the chain, roots and anchors still verify. The verifier reports the event as erased."],
+  ["When is an event publicly anchored?", "On the next anchor tick for your plan (daily on Free, 5 minutes on Pro, 1 minute on Business). Rekor accepts the root in seconds and is final on write. OpenTimestamps calendars stamp it immediately and the Bitcoin confirmation lands within hours; the receipt upgrades from <code>pending</code> to <code>final</code>."],
+  ["Does the server check my client signatures?", "Only against keys you register. The SDK signs with a private key we never see. Register the public key for a tenant and the server verifies every signed event against it; turn on \"require client signatures\" and it refuses unsigned events for that tenant. The offline verifier checks the same signatures from the export when you pass your public key, so the server's check is a convenience, not something you have to trust."],
+  ["Is there a free tier? Can I self-host?", "Yes and yes. Free is 10k events a month with daily anchoring. Self-host is the same code under AGPL: one container, SQLite, the same verifier."],
+  ["Is AuditKit SOC 2 compliant?", "AuditKit has no SOC 2 report today. What it gives you is log integrity you can prove to your own auditor with the verifier, which is the evidence behind log-integrity controls; it is not a compliance certification."],
+];
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "Organization", "@id": `${SITE_URL}/#org`, name: "AuditKit", url: `${SITE_URL}/`, sameAs: [REPO_URL], contactPoint: { "@type": "ContactPoint", email: SUPPORT_EMAIL, contactType: "customer support" } },
+    { "@type": "SoftwareApplication", "@id": `${SITE_URL}/#app`, name: "AuditKit", applicationCategory: "DeveloperApplication", operatingSystem: "Web", url: `${SITE_URL}/`, license: "https://www.gnu.org/licenses/agpl-3.0.html",
+      description: "Tamper-evident audit log API for B2B SaaS. Hash-chained events anchored to Sigstore Rekor and OpenTimestamps, verifiable offline.",
+      offers: [{ "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" }, { "@type": "Offer", name: "Pro", price: "49", priceCurrency: "USD", url: `${SITE_URL}/pricing` }, { "@type": "Offer", name: "Business", price: "199", priceCurrency: "USD", url: `${SITE_URL}/pricing` }],
+      publisher: { "@id": `${SITE_URL}/#org` } },
+  ],
+};
+---
+<Base title="Tamper-evident audit log API for B2B SaaS" description="Hash-chained audit logs with signed receipts, anchored to Sigstore Rekor and OpenTimestamps. Your auditor verifies the export offline without trusting AuditKit. Free tier, Pro $49/mo, AGPL self-host." jsonLd={jsonLd} wide>
+  <!-- hero -->
+  <section class="relative pt-16 pb-10 sm:pt-24">
+    <div class="pointer-events-none absolute inset-0 -z-10 bg-grid [mask-image:radial-gradient(60%_60%_at_50%_0%,#000_30%,transparent_100%)]"></div>
+    <p class="pill pill-ok">Sigstore Rekor · OpenTimestamps · offline verifier · AGPL</p>
+    <h1 class="mt-5 max-w-4xl text-4xl font-semibold leading-[1.05] sm:text-6xl">{TAGLINE}</h1>
+    <p class="mt-5 max-w-2xl text-lg text-muted">{SUBLINE}</p>
+    <div class="mt-8 flex flex-wrap gap-3">
+      <a href="/login" class="btn btn-primary">Start free · 10k events/mo</a>
+      <a href="#demo" class="btn">Try the live demo</a>
+      <a href="/docs" class="btn">Read the docs</a>
+    </div>
+    <dl class="mt-10 grid max-w-3xl grid-cols-2 gap-4 font-mono text-xs text-muted sm:grid-cols-4">
+      <div><dt class="text-faint">chain</dt><dd class="text-fg">sha256 · RFC 8785</dd></div>
+      <div><dt class="text-faint">receipts</dt><dd class="text-fg">Ed25519 signed</dd></div>
+      <div><dt class="text-faint">anchors</dt><dd class="text-fg">Rekor + OTS</dd></div>
+      <div><dt class="text-faint">verifier</dt><dd class="text-fg">npx @auditkit/verify</dd></div>
+    </dl>
+  </section>
+
+  <!-- who this is for -->
+  <section id="who" class="scroll-mt-20 py-8">
+    <Personas />
+  </section>
+
+  <!-- live demo -->
+  <section id="demo" class="scroll-mt-20 py-10">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 class="text-2xl font-semibold">Live demo. Real server, real chain.</h2>
+        <p class="mt-1 text-muted">Log an event, get a signed receipt, watch it link to the previous one, verify the chain, then watch the root land in Rekor.</p>
+      </div>
+      <p class="font-mono text-xs text-faint">throwaway project · tenant = hash of your IP · 30 req/min · reset nightly</p>
+    </div>
+    <Demo client:visible />
+  </section>
+
+  <!-- how it works -->
+  <section id="how" class="scroll-mt-20 py-12">
+    <h2 class="text-2xl font-semibold">How an event becomes evidence</h2>
+    <p class="mt-1 max-w-3xl text-muted">Every event hashes its predecessor into a per-tenant chain and comes back with a signed receipt. On each anchor tick, new events roll into a tenant Merkle root, tenant roots into a project root, project roots into one global root, and that one hash goes to two public logs AuditKit cannot edit.</p>
+    <div class="mt-6"><Diagram /></div>
+    <ol class="mt-6 grid gap-4 text-sm md:grid-cols-3">
+      <li class="card p-4"><span class="font-mono text-xs text-accent">01</span><p class="mt-1 font-medium">Chain and sign</p><p class="mt-1 text-muted"><code>event_hash = sha256(JCS(header))</code> with <code>prev_hash</code> inside the header. The receipt carries position, hashes and an Ed25519 signature; keep it and a later verify proves we never dropped or reordered what we acknowledged.</p></li>
+      <li class="card p-4"><span class="font-mono text-xs text-accent">02</span><p class="mt-1 font-medium">Root</p><p class="mt-1 text-muted">Three Merkle levels keep public-log traffic to one entry per tick while every tenant gets its own root and its own inclusion path. <code>get_proof(event_id)</code> returns the full path.</p></li>
+      <li class="card p-4"><span class="font-mono text-xs text-accent">03</span><p class="mt-1 font-medium">Anchor</p><p class="mt-1 text-muted">The global root is written to Sigstore Rekor (append-only, inclusion proof, final on write) and stamped by OpenTimestamps calendars; the Bitcoin confirmation lands within hours. Time comes from OTS; Rekor gives inclusion, not a timestamp.</p></li>
+    </ol>
+  </section>
+
+  <!-- three claims -->
+  <section id="claims" class="scroll-mt-20 py-12">
+    <h2 class="text-2xl font-semibold">Three things the alternatives do not do</h2>
+    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+      <article class="card p-5">
+        <h3 class="font-semibold">Public anchoring</h3>
+        <p class="mt-2 text-sm text-muted">Roots go to two independent public logs we cannot edit. Anyone can look up the Rekor entry; the <a href="/anchors" class="text-accent underline underline-offset-2">anchors page</a> lists every root we have published, live from the server. Anchor cadence is a plan feature: daily, 5 minutes, 1 minute. Sigstore describes Rekor as "an immutable, tamper-resistant ledger" with a free public instance at rekor.sigstore.dev.</p>
+        <p class="mt-3 font-mono text-xs text-faint">rekor hashedrekord · ots .ots proof stored per root</p>
+      </article>
+      <article class="card p-5 lg:col-span-2">
+        <h3 class="font-semibold">Offline verifier</h3>
+        <p class="mt-2 text-sm text-muted">Your auditor runs one command against an export file. It re-hashes every event, walks the chain, checks the signatures against the pinned server key, rebuilds every Merkle root and verifies the Rekor and OTS receipts. No call to AuditKit. Exit code 0 means VALID.</p>
+        <div class="mt-4"><Terminal /></div>
+      </article>
+      <article class="card p-5 lg:col-span-3">
+        <div class="grid gap-6 md:grid-cols-2">
+          <div>
+            <h3 class="font-semibold">Crypto-shredding for erasure requests</h3>
+            <p class="mt-2 text-sm text-muted">Each event's payload is stored separately under a per-event salt. The chain commits to <code>sha256(salt ∥ JCS(payload))</code>, never the payload itself. A GDPR erasure deletes payload and salt; the event row, the chain, the roots and the anchors stay exactly as valid as before, and the erasure is appended to the same chain as a <code>payload.erased</code> event, so the log records that it happened. Immutable log and right-to-erasure stop being in conflict.</p>
+            <p class="mt-3 text-sm text-muted">This is the pattern the EDPB describes in <a href="https://www.edpb.europa.eu/system/files/2025-04/edpb_guidelines_202502_blockchain_en.pdf" class="text-accent underline underline-offset-2" rel="noopener">Guidelines 02/2025</a>: "store only a salted or keyed hash of the personal data … after deletion of the secret key or salt, the hash should not be linkable to the original data". While the salt exists the hash is still personal data; erasure destroys both salt and payload.</p>
+          </div>
+          <pre class="rounded-md border border-line bg-elev p-4 text-[0.78rem] leading-relaxed"><code>{ERASE_SNIPPET}</code></pre>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- what the controls say -->
+  <section id="controls" class="scroll-mt-20 py-12">
+    <Controls />
+  </section>
+
+  <!-- quickstart -->
+  <section id="quickstart" class="scroll-mt-20 py-12">
+    <div class="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
+      <div>
+        <h2 class="text-2xl font-semibold">Five lines to your first receipt</h2>
+        <p class="mt-2 text-muted">Zero-dependency clients for TypeScript (Node 22+) and Python (3.10+, stdlib only). Both retry on 429 and 5xx with idempotency keys, so a retry replays the original receipt instead of double-logging. Pass a private key and every event is client-signed with a key we never see.</p>
+        <a href="/docs" class="btn mt-4">Full docs and API reference</a>
+      </div>
+      <Code id="qs" tabs={[{ label: "TypeScript", code: TS_QUICKSTART, note: PUBLISH_NOTE }, { label: "Python", code: PY_QUICKSTART, note: PUBLISH_NOTE }, { label: "curl", code: CURL_QUICKSTART }]} />
+    </div>
+  </section>
+
+  <!-- MCP -->
+  <section id="mcp" class="scroll-mt-20 py-12">
+    <div class="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
+      <div>
+        <h2 class="text-2xl font-semibold">Connect it to Claude</h2>
+        <p class="mt-2 text-muted">The MCP server is the REST API's own process at <code>/mcp</code>, not a wrapper. Same data, same scopes. In Claude.ai: Settings → Connectors → Add custom connector → <code>https://auditkit.dev/mcp</code> → sign in with your email → pick the project. Every tool declares a title and read-only / destructive hints so an agent can tell a search from a write. There is no erase tool over MCP, on purpose.</p>
+        <pre class="mt-4 rounded-md border border-line bg-elev p-4 text-[0.78rem] leading-relaxed"><code>{MCP_CLAUDE_CODE}</code></pre>
+        <p class="mt-2 text-xs text-faint">OAuth 2.1 sign-in for Claude.ai and Claude Code; Bearer API keys for everything else. Test keys (<code>ak_test_</code>) hit a seeded project, so you can run every tool before you log anything real.</p>
+      </div>
+      <McpTools />
+    </div>
+  </section>
+
+  <!-- pricing -->
+  <section id="pricing" class="scroll-mt-20 py-12">
+    <h2 class="text-2xl font-semibold">Pricing</h2>
+    <p class="mt-1 text-muted">One story everywhere: the same table is on the <a href="/pricing" class="text-accent underline underline-offset-2">pricing page</a>, in the dashboard, and in the server's plan table.</p>
+    <div class="mt-6"><PricingTable /></div>
+  </section>
+
+  <!-- comparison -->
+  <section id="compare" class="scroll-mt-20 py-12">
+    <h2 class="text-2xl font-semibold">Where it sits</h2>
+    <p class="mt-1 text-muted">AuditKit is the evidence layer. Identity vendors sell retention and SIEM plumbing with no integrity claim; compliance platforms collect evidence but do not give your customers a log; cloud ledgers make the claim but the proof ends at the vendor.</p>
+    <div class="mt-6"><Comparison /></div>
+  </section>
+
+  <!-- faq -->
+  <section id="faq" class="scroll-mt-20 py-12">
+    <h2 class="text-2xl font-semibold">Questions auditors ask</h2>
+    <div class="mt-6"><Faq items={faq} /></div>
+  </section>
+
+  <section class="card my-12 flex flex-wrap items-center justify-between gap-4 p-6">
+    <div>
+      <p class="text-lg font-semibold">Start logging. Verify in an hour.</p>
+      <p class="text-sm text-muted">Free tier, no card. The first project is created on your first sign-in.</p>
+    </div>
+    <a href="/login" class="btn btn-primary">Sign in with email</a>
+  </section>
+</Base>

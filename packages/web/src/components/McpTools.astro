@@ -1,0 +1,21 @@
+---
+// Mirrors packages/server/src/mcp.ts registerTool() calls: name, title, read-only annotation.
+const tools: Array<[string, string, boolean]> = [
+  ["search_events", "Search audit events", true],
+  ["get_event", "Get one audit event", true],
+  ["get_proof", "Get tamper-evidence proof for an event", true],
+  ["verify_range", "Verify chain integrity for a tenant", true],
+  ["list_tenants", "List tenants", true],
+  ["export_evidence", "Export verifier-ready evidence", true],
+  ["log_event", "Record an audit event", false],
+];
+---
+<ul class="card divide-y divide-line">
+  {tools.map(([name, title, ro]) => (
+    <li class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5">
+      <code class="text-sm text-fg">{name}</code>
+      <span class="text-sm text-muted">{title}</span>
+      <span class:list={["pill ml-auto", ro ? "pill-info" : "pill-warn"]}>{ro ? "read-only" : "writes · not destructive"}</span>
+    </li>
+  ))}
+</ul>

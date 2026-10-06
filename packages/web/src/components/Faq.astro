@@ -1,0 +1,15 @@
+---
+interface Props { items: Array<[string, string]> }
+const { items } = Astro.props;
+---
+<div class="divide-y divide-line card">
+  {items.map(([q, a]) => (
+    <details class="group px-5 py-4">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-medium">
+        {q}
+        <span class="text-faint transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+      </summary>
+      <p class="mt-2 text-sm leading-relaxed text-muted" set:html={a} />
+    </details>
+  ))}
+</div>

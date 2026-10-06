@@ -54,10 +54,11 @@ export function getOrCreateTenant(db: DatabaseSync, externalId: string): TenantR
   return { id, external_id: externalId, head_hash: GENESIS, head_position: -1 };
 }
 
-export function listTenants(db: DatabaseSync): Array<{ id: string; external_id: string; events: number; created_at: string }> {
-  return db
-    .prepare("SELECT id, external_id, head_position + 1 AS events, created_at FROM tenant ORDER BY created_at")
-    .all() as Array<{ id: string; external_id: string; events: number; created_at: string }>;
+export function listTenants(db: DatabaseSync): Array<{ id: string; external_id: string; events: number; created_at: string; require_client_sig: boolean }> {
+  return (db
+    .prepare("SELECT id, external_id, head_position + 1 AS events, created_at, require_client_sig FROM tenant ORDER BY created_at")
+    .all() as Array<{ id: string; external_id: string; events: number; created_at: string; require_client_sig: number }>)
+    .map((t) => ({ ...t, require_client_sig: !!t.require_client_sig }));
 }
 
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;

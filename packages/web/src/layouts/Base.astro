@@ -1,0 +1,61 @@
+---
+import "../styles/global.css";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { SITE_NAME, SITE_URL } from "../lib/site";
+
+interface Props {
+  title: string;
+  description: string;
+  /** Marketing pages get the full footer; app pages a slim one. */
+  variant?: "site" | "app";
+  noindex?: boolean;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  wide?: boolean;
+}
+const { title, description, variant = "site", noindex = false, jsonLd, wide = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, SITE_URL).toString();
+const fullTitle = title === SITE_NAME ? title : `${title} · ${SITE_NAME}`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {noindex && <meta name="robots" content="noindex" />}
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="theme-color" content="#0a0d12" />
+    <link rel="alternate" type="application/rss+xml" title="AuditKit blog" href="/rss.xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+    <script is:inline>
+      // Theme: explicit choice wins; otherwise the OS preference; dark when neither says light.
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          if (!t && window.matchMedia("(prefers-color-scheme: light)").matches) t = "light";
+          if (t === "light") document.documentElement.dataset.theme = "light";
+        } catch (e) {}
+      })();
+    </script>
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+  </head>
+  <body class="flex min-h-dvh flex-col">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-ink">Skip to content</a>
+    <Header variant={variant} />
+    <main id="main" class:list={["flex-1 w-full mx-auto px-4 sm:px-6", wide ? "max-w-7xl" : "max-w-6xl"]}>
+      <slot />
+    </main>
+    <Footer variant={variant} />
+  </body>
+</html>

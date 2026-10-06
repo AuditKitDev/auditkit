@@ -1,0 +1,26 @@
+---
+import Doc from "../../layouts/Doc.astro";
+---
+<Doc title="WorkOS Audit Logs alternative: AuditKit vs WorkOS" h1="WorkOS Audit Logs vs AuditKit" description="WorkOS Audit Logs is an append-only event store with SIEM streaming at $99 per million events retained plus $125 per connection; AuditKit is a hash-chained, publicly anchored log your auditor verifies offline, from $0 and $49 a month." lede="WorkOS Audit Logs is an append-only event store with SIEM streaming, priced at $99 per month per million events retained and $125 per month per SIEM connection; AuditKit is a hash-chained log anchored to Sigstore Rekor and OpenTimestamps that your auditor can verify offline, free for 10k events a month and $49 for 500k. Pick WorkOS if you already buy its SSO bundle and need Splunk streaming; pick AuditKit if the question is 'prove nobody edited this'." updated="2026-10-05">
+  <h2>Side by side</h2>
+  <table><thead><tr><th></th><th>WorkOS Audit Logs</th><th>AuditKit</th></tr></thead><tbody>
+    <tr><td>Integrity model</td><td>Append-only store. The pricing and product pages make no tamper-evidence claim. WorkOS's own blog defines tamper-evidence as "cryptographic hashing that chains each record to the ones before it".</td><td>Hash chain per tenant, Ed25519 receipt per event, Merkle roots anchored to Rekor and OpenTimestamps every interval.</td></tr>
+    <tr><td>Verify without trusting the vendor</td><td>No published verifier or proof format.</td><td><code>npx @auditkit/verify export.jsonl</code>, offline, open source.</td></tr>
+    <tr><td>Price</td><td>$99/mo per 1M events retained; $125/mo per SIEM log stream.</td><td>$0 for 10k events, $49 for 500k, $199 for 5M per month; self-host free (AGPL).</td></tr>
+    <tr><td>Retention</td><td>30 days by default.</td><td>30 days / 1 year / 3 years of payloads; hashes and anchors kept indefinitely.</td></tr>
+    <tr><td>SIEM</td><td>Streaming to SIEMs, per connection.</td><td>No streaming. JSONL export API; pull on your schedule.</td></tr>
+    <tr><td>GDPR erasure</td><td>Not described.</td><td>Crypto-shredding: payload and salt deleted, chain stays valid.</td></tr>
+    <tr><td>Agent access</td><td>Not described.</td><td>MCP server in the same process, seven tools with annotations.</td></tr>
+    <tr><td>Bundle</td><td>Part of WorkOS: SSO, directory sync, admin portal.</td><td>Only the audit log.</td></tr>
+  </tbody></table>
+  <h2>Price at three volumes</h2>
+  <table><thead><tr><th>Events / month</th><th>WorkOS (retention only, no stream)</th><th>AuditKit</th></tr></thead><tbody>
+    <tr><td>100k</td><td>$99 (1M-event block)</td><td>$49 (Pro)</td></tr>
+    <tr><td>1M</td><td>$99</td><td>$199 (Business)</td></tr>
+    <tr><td>5M</td><td>$495</td><td>$199 (Business)</td></tr>
+  </tbody></table>
+  <p>WorkOS prices retention per million events stored; the table assumes one month of retention per block. Add $125 per month per SIEM stream on WorkOS. AuditKit has no per-stream fee because it has no streaming.</p>
+  <h2>Migration</h2>
+  <p>Map WorkOS <code>action</code>, <code>actor</code>, <code>targets[0]</code> and <code>occurred_at</code> to AuditKit's <code>action</code>, <code>actor</code>, <code>target</code> and <code>occurred_at</code>; put the rest in <code>payload</code>. Use <code>POST /v1/events/bulk</code> (1000 per call, one transaction) for backfill. Historical events get positions in the order you send them; the receipt's <code>occurred_at</code> is yours.</p>
+  <p class="text-xs">Sources: workos.com/pricing and workos.com/audit-logs (fetched 2026-10-05), workos.com/docs/audit-logs/introduction, workos.com/blog/audit-logs-are-a-product-feature. See <a href="/">the comparison strip</a> for Datadog, Drata/Vanta and Postgres.</p>
+</Doc>

@@ -1,0 +1,14 @@
+---
+// Long-form page: title, one-sentence definition under the H1 (answer-first), prose body.
+import Base from "./Base.astro";
+interface Props { title: string; description: string; h1?: string; lede: string; updated?: string; noindex?: boolean; jsonLd?: Record<string, unknown>; variant?: "site" | "app" }
+const { title, description, h1 = title, lede, updated, noindex = false, jsonLd, variant = "site" } = Astro.props;
+---
+<Base title={title} description={description} noindex={noindex} variant={variant} {...(jsonLd ? { jsonLd } : {})}>
+  <article class="mx-auto max-w-3xl py-12">
+    <h1 class="text-3xl font-semibold sm:text-4xl">{h1}</h1>
+    <p class="mt-4 text-lg text-muted">{lede}</p>
+    {updated && <p class="mt-2 font-mono text-xs text-faint">Last updated {updated}</p>}
+    <div class="prose-doc mt-6"><slot /></div>
+  </article>
+</Base>

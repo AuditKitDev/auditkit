@@ -1,0 +1,7 @@
+---
+import Base from "../../layouts/Base.astro";
+import Projects from "../../islands/Projects";
+---
+<Base title="Projects" description="Your AuditKit projects." variant="app" noindex wide>
+  <section class="py-10"><Projects client:only="preact" /></section>
+</Base>

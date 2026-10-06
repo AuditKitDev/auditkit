@@ -1,0 +1,67 @@
+---
+// event → chain → tenant root → project root → global root → Rekor / OTS. Inline SVG, theme-aware via currentColor and CSS vars.
+---
+<figure class="card overflow-hidden">
+  <svg viewBox="0 0 920 300" role="img" aria-labelledby="diag-title diag-desc" class="w-full text-fg">
+    <title id="diag-title">How an event becomes publicly anchored</title>
+    <desc id="diag-desc">Each event hashes the previous one into a per-tenant chain. Chains roll into a tenant Merkle root, tenant roots into a project root, project roots into one global root, which is written to Sigstore Rekor and stamped by OpenTimestamps calendars.</desc>
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5 0 10z" fill="var(--fg-faint)" /></marker>
+      <style>
+        .box { fill: var(--bg-elev); stroke: var(--line-strong); }
+        .ev { fill: var(--surface-2); stroke: var(--line-strong); }
+        .lbl { font: 500 12px var(--font-display); fill: var(--fg); }
+        .sub { font: 10.5px var(--font-mono); fill: var(--fg-muted); }
+        .ln { stroke: var(--fg-faint); stroke-width: 1.2; fill: none; marker-end: url(#arr); }
+        .chain { stroke: var(--accent); stroke-width: 1.6; fill: none; marker-end: url(#arr); }
+        .pub { fill: var(--accent-dim); stroke: var(--accent); }
+        .pubt { font: 600 12px var(--font-display); fill: var(--accent); }
+      </style>
+    </defs>
+    <!-- events chain -->
+    <g>
+      <text x="20" y="40" class="sub">tenant "acme" chain</text>
+      <rect x="20" y="52" width="96" height="54" rx="6" class="ev" />
+      <text x="30" y="72" class="lbl">event #0</text>
+      <text x="30" y="88" class="sub">prev GENESIS</text>
+      <text x="30" y="100" class="sub">hash 3a9f…</text>
+      <rect x="150" y="52" width="96" height="54" rx="6" class="ev" />
+      <text x="160" y="72" class="lbl">event #1</text>
+      <text x="160" y="88" class="sub">prev 3a9f…</text>
+      <text x="160" y="100" class="sub">hash c21e…</text>
+      <rect x="280" y="52" width="96" height="54" rx="6" class="ev" />
+      <text x="290" y="72" class="lbl">event #2</text>
+      <text x="290" y="88" class="sub">prev c21e…</text>
+      <text x="290" y="100" class="sub">hash 8d07…</text>
+      <path d="M116 79H148" class="chain" />
+      <path d="M246 79H278" class="chain" />
+      <text x="20" y="130" class="sub">event_hash = sha256(JCS(header ∥ prev_hash)) · signed Ed25519 on ingest</text>
+    </g>
+    <!-- second tenant -->
+    <g>
+      <text x="20" y="172" class="sub">tenant "globex" chain</text>
+      <rect x="20" y="184" width="96" height="40" rx="6" class="ev" /><text x="30" y="208" class="lbl">event #0</text>
+      <rect x="150" y="184" width="96" height="40" rx="6" class="ev" /><text x="160" y="208" class="lbl">event #1</text>
+      <path d="M116 204H148" class="chain" />
+    </g>
+    <!-- tenant roots -->
+    <rect x="430" y="60" width="120" height="44" rx="6" class="box" /><text x="442" y="79" class="lbl">tenant root</text><text x="442" y="94" class="sub">merkle(acme 0..2)</text>
+    <rect x="430" y="182" width="120" height="44" rx="6" class="box" /><text x="442" y="201" class="lbl">tenant root</text><text x="442" y="216" class="sub">merkle(globex 0..1)</text>
+    <path d="M376 79 Q400 79 428 82" class="ln" />
+    <path d="M246 204 Q300 204 428 204" class="ln" />
+    <!-- project root -->
+    <rect x="600" y="120" width="120" height="44" rx="6" class="box" /><text x="612" y="139" class="lbl">project root</text><text x="612" y="154" class="sub">merkle(tenant roots)</text>
+    <path d="M550 82 Q575 82 598 136" class="ln" />
+    <path d="M550 204 Q575 204 598 148" class="ln" />
+    <!-- global root -->
+    <rect x="760" y="120" width="120" height="44" rx="6" class="box" /><text x="772" y="139" class="lbl">global root</text><text x="772" y="154" class="sub">one per tick</text>
+    <path d="M720 142H758" class="ln" />
+    <!-- public logs -->
+    <rect x="700" y="232" width="100" height="40" rx="6" class="pub" /><text x="714" y="256" class="pubt">Rekor</text>
+    <rect x="812" y="232" width="100" height="40" rx="6" class="pub" /><text x="826" y="256" class="pubt">OTS</text>
+    <path d="M800 164 Q780 200 752 230" class="ln" />
+    <path d="M840 164 Q850 200 858 230" class="ln" />
+    <text x="700" y="290" class="sub">append-only log · inclusion proof</text>
+    <text x="812" y="290" class="sub">calendar stamp → Bitcoin</text>
+  </svg>
+</figure>

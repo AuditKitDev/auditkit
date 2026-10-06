@@ -1,0 +1,17 @@
+---
+import Base from "../layouts/Base.astro";
+import Anchors from "../islands/Anchors";
+---
+<Base title="Anchors: every root published to Rekor and OpenTimestamps" description="Live transparency page. Each global root AuditKit publishes, with its Sigstore Rekor log index and OpenTimestamps status, read directly from the service. Rekor is an append-only transparency log with inclusion proofs; OTS commits to Bitcoin." wide>
+  <section class="py-12">
+    <h1 class="text-3xl font-semibold sm:text-4xl">Public anchors</h1>
+    <p class="mt-3 max-w-3xl text-lg text-muted">Every global root this service has published, live. A root is one SHA-256 over all projects' roots for one tick; it reveals nothing about events. Click a Rekor index to see the entry in Sigstore's public log, which AuditKit cannot edit.</p>
+    <div class="mt-8"><Anchors client:load /></div>
+    <div class="prose-doc mt-10 max-w-3xl">
+      <h2>How to read this page</h2>
+      <p><strong>Rekor</strong> is Sigstore's append-only transparency log, "an immutable, tamper-resistant ledger" with a free public instance at <code>rekor.sigstore.dev</code>. AuditKit writes each global root as a <code>hashedrekord</code> entry and stores the inclusion proof and checkpoint. Rekor is final on write; it proves inclusion, not time.</p>
+      <p><strong>OpenTimestamps</strong> calendars stamp the root immediately and aggregate it into a Bitcoin transaction; the Bitcoin confirmation lands within hours and the receipt upgrades from <code>pending</code> to <code>final</code>. Time comes from the Bitcoin block header, which the verifier can check with <code>--online</code>.</p>
+      <p>A root covers only tenants that logged events in that tick. Your own project's last anchor is on its dashboard; an individual event's path to its root is at <code>GET /v1/events/:id/proof</code>.</p>
+    </div>
+  </section>
+</Base>

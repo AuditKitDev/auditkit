@@ -1,0 +1,10 @@
+---
+// Static route: built once at /app/projects/_/events; the island reads the real id from the URL.
+// Dev: src/middleware.ts rewrites; prod: nginx rewrite (README.md).
+import Base from "../../../../layouts/Base.astro";
+import Events from "../../../../islands/Events";
+export function getStaticPaths() { return [{ params: { id: "_" } }]; }
+---
+<Base title="Events" description="AuditKit project Events." variant="app" noindex wide>
+  <section class="py-10"><Events client:only="preact" /></section>
+</Base>

@@ -1,0 +1,32 @@
+---
+import Base from "../layouts/Base.astro";
+import PricingTable from "../components/PricingTable.astro";
+import Faq from "../components/Faq.astro";
+const faq: Array<[string, string]> = [
+  ["What counts as an event?", "One call to <code>POST /v1/events</code>, one item in a bulk call, or one <code>log_event</code> over MCP. Idempotent replays (<code>duplicate: true</code>) do not count twice. Reads, proofs, verifies and exports are free."],
+  ["What happens at the limit?", "Writes return <code>429 plan_limit</code> until the month rolls over or you upgrade. Reads, proofs, verify and export keep working. Nothing is dropped silently."],
+  ["What does retention mean here?", "Payload retention. After the window, payloads are crypto-shredded (payload and salt deleted). Event headers, hashes, signatures, roots and anchor receipts are kept, so an old export still verifies and still shows who did what, when; only the payload body is gone."],
+  ["What is the window before an event is publicly anchored?", "Up to one anchor interval: a day on Free, 5 minutes on Pro, 1 minute on Business. In that window the event is already hash-chained and you hold a signed receipt, so later omission is provable; what is not yet there is the public-log entry."],
+  ["Why no SIEM streaming?", "Deliberate. WorkOS charges $125 per month per stream; we offer a JSONL export API on Business and the same file is what the verifier reads. Pull it into your SIEM on your schedule."],
+  ["Can I pay yearly, by invoice, or in EUR?", "Stripe Checkout, monthly, USD, card. <span class=\"font-mono\">[OWNER: confirm whether yearly/invoice billing is offered]</span>"],
+];
+---
+<Base title="Audit log pricing: free tier, Pro $49/mo, Business $199/mo" description="AuditKit pricing. Free: 10k events a month, 30-day retention, daily anchoring. Pro $49: 500k events, 1 year, 5-minute anchoring. Business $199: 5M events, 3 years, 1-minute anchoring. Self-host under AGPL for free." wide>
+  <section class="py-12">
+    <h1 class="text-3xl font-semibold sm:text-4xl">Pricing</h1>
+    <p class="mt-3 max-w-2xl text-lg text-muted">Four plans, one monthly event counter, no seats. Every plan includes signed receipts, public anchoring, the offline verifier and the MCP connector. The verifier runs with our servers off.</p>
+    <div class="mt-8"><PricingTable /></div>
+  </section>
+  <section class="py-8">
+    <h2 class="text-2xl font-semibold">What you are paying for</h2>
+    <div class="mt-4 grid gap-4 md:grid-cols-3">
+      <div class="card p-5"><p class="font-medium">Anchor cadence</p><p class="mt-1 text-sm text-muted">How often your tenants' roots are written to Rekor and OpenTimestamps. Shorter cadence means a shorter window between "acknowledged with a signed receipt" and "in a public log".</p></div>
+      <div class="card p-5"><p class="font-medium">Payload retention</p><p class="mt-1 text-sm text-muted">How long the payload body stays readable. Headers, hashes, signatures and anchors are kept regardless, so exports from years ago still verify.</p></div>
+      <div class="card p-5"><p class="font-medium">Volume</p><p class="mt-1 text-sm text-muted">Events per calendar month. Roughly 1 KB of storage per event on our side; 5M events is about 5 GB.</p></div>
+    </div>
+  </section>
+  <section class="py-8">
+    <h2 class="text-2xl font-semibold">Questions</h2>
+    <div class="mt-4"><Faq items={faq} /></div>
+  </section>
+</Base>

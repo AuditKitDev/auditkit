@@ -1,0 +1,33 @@
+---
+import { REPO_URL, SUPPORT_EMAIL, STATUS_URL } from "../lib/site";
+interface Props { variant: "site" | "app" }
+const { variant } = Astro.props;
+const cols = [
+  ["Product", [["/#demo", "Live demo"], ["/pricing", "Pricing"], ["/anchors", "Anchors"], ["/security", "Security"], ["/blog", "Blog"]]],
+  ["Developers", [["/docs", "Docs"], ["/docs#api", "API reference"], ["/docs#mcp", "MCP for Claude"], ["/docs#verify", "Offline verifier"], [REPO_URL, "Source"]]],
+  ["Company", [["/privacy", "Privacy"], ["/terms", "Terms"], ["/support", "Support"], [STATUS_URL, "Status"], [`mailto:${SUPPORT_EMAIL}`, SUPPORT_EMAIL]]],
+] as const;
+---
+<footer class="mt-16 border-t border-line">
+  {variant === "site" ? (
+    <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-4">
+      <div>
+        <p class="font-semibold">AuditKit</p>
+        <p class="mt-2 text-sm text-muted">Tamper-evident audit logs, anchored to public logs, verifiable offline.</p>
+        <p class="mt-4 font-mono text-xs text-faint">AGPL-3.0 · no fabricated social proof on this site</p>
+      </div>
+      {cols.map(([title, links]) => (
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-faint">{title}</p>
+          <ul class="mt-3 space-y-2 text-sm">
+            {links.map(([href, label]) => <li><a href={href} class="text-muted hover:text-fg">{label}</a></li>)}
+          </ul>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div class="mx-auto flex max-w-7xl flex-wrap gap-4 px-4 py-6 text-sm text-muted sm:px-6">
+      <a href="/docs" class="hover:text-fg">Docs</a><a href="/anchors" class="hover:text-fg">Anchors</a><a href="/support" class="hover:text-fg">Support</a><a href="/privacy" class="hover:text-fg">Privacy</a><a href="/terms" class="hover:text-fg">Terms</a>
+    </div>
+  )}
+</footer>

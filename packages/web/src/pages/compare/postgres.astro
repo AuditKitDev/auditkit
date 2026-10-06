@@ -1,0 +1,29 @@
+---
+import Doc from "../../layouts/Doc.astro";
+---
+<Doc title="Immutable audit log in Postgres: pgaudit, triggers, and what a DBA can still do" h1="Postgres audit tables, cloud ledgers and open source vs AuditKit" description="An append-only Postgres table with REVOKE and triggers stops the app from editing history; it does not stop a superuser, a restore from backup or a dropped partition. Comparison with pgaudit, immudb, Retraced, Azure Confidential Ledger, Google Cloud Audit Logs and the retired Amazon QLDB." lede="An append-only table with REVOKE UPDATE, DELETE and a trigger stops the application from editing history; it does not stop a superuser, a restore from backup, or a dropped partition. Immutability inside one database is a permission, not a proof. Below: each technique, the role that defeats it, and what adding a hash chain plus an external anchor changes." updated="2026-10-05">
+  <h2>What each Postgres technique buys</h2>
+  <table><thead><tr><th>Technique</th><th>Stops</th><th>Defeated by</th></tr></thead><tbody>
+    <tr><td><code>REVOKE UPDATE, DELETE</code> on the audit table</td><td>The application role</td><td>Any superuser, the owner role, <code>SET ROLE</code></td></tr>
+    <tr><td>Trigger that raises on UPDATE/DELETE</td><td>Casual edits</td><td><code>ALTER TABLE … DISABLE TRIGGER</code>, <code>session_replication_role = replica</code></td></tr>
+    <tr><td>pgaudit (statement logging)</td><td>Nothing; it records</td><td>Editing or rotating the log files it writes; it audits the database, it is not an immutable store</td></tr>
+    <tr><td>Hash chain column (<code>prev_hash</code>)</td><td>Silent single-row edits</td><td>Recomputing the chain from the edited row forward; nobody outside can tell</td></tr>
+    <tr><td>Backups</td><td>Loss</td><td>Restoring an older backup erases the tail and nobody can prove it existed</td></tr>
+  </tbody></table>
+  <p>The practitioner consensus on Hacker News: "If you want immutable logs, you log to an external log server. Anything else seems security theater to me." The missing piece in every row above is a copy of the state that the DBA cannot reach. That is what anchoring a Merkle root to Rekor and OpenTimestamps adds: the root is outside the database, outside the backup, outside the vendor.</p>
+
+  <h2>Cloud ledgers and open source</h2>
+  <table><thead><tr><th></th><th>Integrity claim</th><th>Proof verifiable outside the vendor?</th><th>Status</th></tr></thead><tbody>
+    <tr><td>Amazon QLDB</td><td>Cryptographically verifiable journal</td><td>Was AWS-bound</td><td>Retired 31 July 2025 (AWS shutdown list)</td></tr>
+    <tr><td>Azure Confidential Ledger</td><td>"no one — not even Microsoft — is 'above' the ledger"; Merkle receipts</td><td>Receipts verify against Microsoft's enclave attestation; Azure-only</td><td>Live</td></tr>
+    <tr><td>Google Cloud Audit Logs</td><td>"Log entries written by Cloud Audit Logs are immutable."</td><td>No proof format; Google's word; <code>_Required</code> bucket 400 days, not configurable</td><td>Live; logs Google's platform, not your app</td></tr>
+    <tr><td>immudb (open source, Apache 2.0)</td><td>"Data can only be added, never changed or deleted, and every read can be answered with a cryptographic proof."</td><td>Client-verified, but the root of trust is the immudb server you run</td><td>Live</td></tr>
+    <tr><td>Retraced (open source)</td><td>Hosted/self-hosted audit log API with viewer</td><td>No external anchoring described</td><td>Live: repository active, pushed August 2026, about 450 stars</td></tr>
+    <tr><td>Pangea Secure Audit Log</td><td>Merkle trees; roots published to Arweave hourly or every 10k events</td><td>Yes (Arweave)</td><td>Product URLs now redirect to CrowdStrike Falcon AIDR; future unclear</td></tr>
+    <tr><td>AuditKit</td><td>Hash chain, signed receipts, Merkle roots in Rekor and OpenTimestamps</td><td>Yes: offline verifier, pinned public key, AGPL self-host</td><td>Live</td></tr>
+  </tbody></table>
+
+  <h2>Build vs buy</h2>
+  <p>Build if you need an audit table for your own debugging. Buy, or self-host this, if a customer's security questionnaire asks how you prevent tampering, because that answer needs signing, anchoring, a verifier and a retention story, and Velt's estimate for even a basic build is "6-12 weeks": "Rolling your own means building append-only storage, hash chains, query interfaces, and compliance-ready exports before you've logged a single event that matters." The hybrid: keep your Postgres table for queries, and send each row to AuditKit for the receipt and the anchor.</p>
+  <p class="text-xs">Sources: AWS service shutdown list, learn.microsoft.com Confidential Ledger overview, docs.cloud.google.com/logging/docs/audit, immudb.io, GitHub API for retracedhq/retraced, pangea.cloud/docs/audit/about-tamperproofing, velt.dev, Hacker News item 44602532 (all fetched 2026-10-05/06).</p>
+</Doc>

@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /viewer
+
+User-agent: GPTBot
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: Claude-User
+Allow: /
+User-agent: Claude-SearchBot
+Allow: /
+
+Sitemap: https://auditkit.dev/sitemap-index.xml

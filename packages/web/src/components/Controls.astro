@@ -1,0 +1,26 @@
+---
+// Control text, verbatim, with the page it was fetched from (docs/research/buyer-need.md §1). "Supports", never "compliant".
+const controls = [
+  { name: "PCI DSS v4 · 10.3.2", quote: "Audit log files are protected to prevent modifications by individuals.", also: "10.3.4: change-detection mechanisms on audit logs so that existing log data can't be changed without generating alerts. 10.5.1: retain at least 12 months.", href: "https://learn.microsoft.com/en-us/entra/standards/pci-requirement-10", how: "Any modification changes a hash that no longer matches a root already in Rekor. Business retention is 3 years." },
+  { name: "NIST SP 800-53 r5 · AU-9(3)", quote: "Implement cryptographic mechanisms to protect the integrity of audit information and audit tools.", also: "Guidance names signed hash functions using asymmetric cryptography with a distributable public key. AU-9(2): store records on a physically different system.", href: "https://github.com/usnistgov/oscal-content/blob/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json", how: "Ed25519 receipts, public key at /.well-known/auditkit.json, roots stored in logs we do not operate." },
+  { name: "HIPAA · 45 CFR 164.312(c)(2)", quote: "Implement electronic mechanisms to corroborate that electronic protected health information has not been altered or destroyed in an unauthorized manner.", also: "(b) Audit controls: record and examine activity in systems that contain ePHI.", href: "https://www.law.cornell.edu/cfr/text/45/164.312", how: "The verifier is the corroboration mechanism for the log itself; erasure is crypto-shredding, so the record of access survives the data." },
+  { name: "ISO/IEC 27001:2022 · A.8.15", quote: "Logs that record activities, exceptions, faults and other relevant events should be produced, stored, protected and analysed.", also: "Implementation guidance: administrators who manage systems cannot modify or delete the logs those systems generate.", href: "https://hightable.io/how-to-implement-iso-27001-annex-a-8-15", how: "Our own administrators cannot either: see the threat model." },
+  { name: "DORA RTS 2024/1774 · Art. 12(2)(d)", quote: "measures to protect logging systems and log information against tampering, deletion, and unauthorised access", also: "NIS2 Implementing Reg. 2024/2690 Annex 3.2: maintain and back up logs for a predefined period and protect them from unauthorised access or changes.", href: "https://www.springlex.eu/en/packages/dora/rts-rmf-regulation/article-12/", how: "Tamper detection by construction; export and self-host for the backup clause." },
+];
+---
+<h2 class="text-2xl font-semibold">What the controls actually say</h2>
+<p class="mt-1 max-w-3xl text-muted">AuditKit supports these controls. It is not a certification and we do not say "compliant". The quotes are verbatim from the linked text; the right column is what the product does about each.</p>
+<ul class="mt-6 grid gap-4 lg:grid-cols-2">
+  {controls.map((c) => (
+    <li class="card p-5">
+      <p class="font-mono text-xs text-accent">{c.name}</p>
+      <blockquote class="mt-2 text-sm"><p>"{c.quote}"</p><p class="mt-1 text-xs text-faint">{c.also} <a href={c.href} rel="noopener" class="underline">source</a></p></blockquote>
+      <p class="mt-3 border-t border-line pt-3 text-sm text-muted"><span class="text-fg">AuditKit:</span> {c.how}</p>
+    </li>
+  ))}
+  <li class="card p-5">
+    <p class="font-mono text-xs text-accent">SOC 2 · CC7.2</p>
+    <blockquote class="mt-2 text-sm"><p>"The entity monitors system components and the operation of those components for anomalies that are indicative of malicious acts, natural disasters, and errors …; anomalies are analyzed to determine whether they represent security events."</p><p class="mt-1 text-xs text-faint"><a href="https://www.cyberday.ai/requirement/soc-2-cc7-2-monitoring-of-system-components-for-anomalies" rel="noopener" class="underline">source</a></p></blockquote>
+    <p class="mt-3 border-t border-line pt-3 text-sm text-muted"><span class="text-fg">AuditKit:</span> supports CC7.2-style log-integrity evidence: the export plus the verifier's report is one artifact an auditor can re-run.</p>
+  </li>
+</ul>

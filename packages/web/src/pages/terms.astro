@@ -1,0 +1,37 @@
+---
+import Doc from "../layouts/Doc.astro";
+import { LEGAL_NAME, LEGAL_JURISDICTION, SUPPORT_EMAIL, LAST_UPDATED } from "../lib/site";
+---
+<Doc title="Terms of service" description="Terms for using AuditKit: the service, plans and limits, what we promise about integrity and what we do not, your data, acceptable use, termination, liability." lede="Plain terms for a small, specific product. Read the integrity section: it says exactly what the service does and does not guarantee." updated={LAST_UPDATED}>
+  <p>These terms are between you and {LEGAL_NAME} ("AuditKit", "we"). By creating an account or sending a request with an API key you accept them.</p>
+
+  <h2>The service</h2>
+  <p>AuditKit accepts events through a REST API and an MCP endpoint, hash-chains them per tenant, signs receipts, builds Merkle roots, publishes those roots to Sigstore Rekor and OpenTimestamps, and lets you search, export and verify. The self-hosted edition is licensed separately under AGPL-3.0 and is not covered by these terms beyond the license.</p>
+
+  <h2>Plans, limits, billing</h2>
+  <p>Plans are described on the <a href="/pricing">pricing page</a> and enforced by the server: a monthly event limit (writes past it return <code>429</code>), a payload retention window, and an anchor interval. Paid plans are billed monthly through Stripe Checkout; you can cancel any time through the billing portal and the plan continues to the end of the paid month. Prices may change with 30 days' notice by email. <code>[OWNER: refund policy]</code></p>
+
+  <h2>What we promise about integrity, and what we do not</h2>
+  <ul>
+    <li>We promise that an acknowledged event (one you hold a signed receipt for) will appear in exports at the acknowledged position with the acknowledged hash, or verification will fail and show it.</li>
+    <li>We promise to publish roots to Rekor and OpenTimestamps on your plan's interval, on a best-effort basis; both are third-party public services and may be unavailable. The <a href="/anchors">anchors page</a> and <code>anchored_through</code> show the real state.</li>
+    <li>We do not promise that data cannot be deleted. We promise that deletion of anchored data is detectable. Keep receipts and exports if that distinction matters to you.</li>
+    <li>We do not promise any certification. AuditKit supports log-integrity controls; it is not SOC 2, HIPAA, PCI or ISO certified and we make no such claim.</li>
+    <li>We publish a service-level target, not a contractual SLA. <code>[OWNER: define uptime target or an SLA for Business]</code></li>
+  </ul>
+
+  <h2>Your data</h2>
+  <p>You own the events you send and can export them at any time in a verifier-ready file. You are responsible for what you put in them, including any personal data, and for having the right to log it. The <a href="/privacy">privacy policy</a> describes storage and retention. Root hashes published to public logs are permanent by design.</p>
+
+  <h2>Acceptable use</h2>
+  <p>Do not use the service to store secrets or credentials in payloads, to attack or probe other tenants, to exceed rate limits deliberately, or for anything unlawful. The public demo is for trying the product. We may suspend an account that threatens the service for other customers and will tell you why.</p>
+
+  <h2>Termination</h2>
+  <p>You can delete your account at any time; your project files are deleted and anchored roots remain in the public logs as hashes. We may terminate for breach of these terms with notice, and will give you 30 days to export. If we shut the service down we will give 90 days' notice; the verifier works without us.</p>
+
+  <h2>Liability</h2>
+  <p>The service is provided as is. To the extent permitted by law, our total liability for any claim is limited to the fees you paid in the 12 months before the claim, and we are not liable for indirect or consequential loss. Nothing here limits liability that cannot be limited by law.</p>
+
+  <h2>Law</h2>
+  <p>These terms are governed by the law of {LEGAL_JURISDICTION}. Questions: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
+</Doc>

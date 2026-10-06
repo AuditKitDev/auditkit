@@ -1,0 +1,31 @@
+---
+// Output format of packages/verify/src/cli.ts printHuman(): "<mark> <name padded 11> <summary>", details indented, blank line, verdict.
+// Values are example values; the line shapes match the verifier's format strings (see docs/claims.md).
+interface Props { title?: string }
+const { title = "auditkit-verify" } = Astro.props;
+const lines: Array<[string, string]> = [
+  ["cmd", "$ npx @auditkit/verify acme-2026-10.jsonl --pin MCowBQYDK2VwAyEA…"],
+  ["ok", "ok   manifest    version 1, tenant ten_01j9k4, positions 0..1283, exported 2026-10-05T09:12:44.102Z"],
+  ["ok", "ok   chain       1284 events, prev GENESIS → head 9f3c1a…e1a7"],
+  ["ok", "ok   signatures  1284 server signatures verify (pinned key)"],
+  ["ok", "ok   payloads    1281 payload commitments verify, 3 erased"],
+  ["q", "?    client_sigs 1284 client signatures present, no client keys given"],
+  ["ok", "ok   roots       4 of 4 roots rebuilt and chained to their global root"],
+  ["ok", "ok   anchors     8 of 8 anchor receipts verify"],
+  ["d", "     rekor 184201337/24296fb2… for 0..311: verified"],
+  ["d", "     ots alice.btc.calendar.opentimestamps.org for 0..311: verified at 2026-10-04T18:41:08.000Z"],
+  ["d", "     …"],
+  ["ok", "ok   coverage    anchored: 0..1283"],
+  ["", ""],
+  ["verdict", "VALID"],
+];
+const cls: Record<string, string> = { cmd: "text-fg", ok: "text-fg", q: "text-warn", d: "text-muted", verdict: "font-semibold text-accent", "": "" };
+---
+<figure class="card overflow-hidden">
+  <figcaption class="flex items-center gap-2 border-b border-line px-3 py-2 font-mono text-xs text-muted">
+    <span class="inline-block h-2.5 w-2.5 rounded-full bg-line-strong"></span><span class="inline-block h-2.5 w-2.5 rounded-full bg-line-strong"></span><span class="inline-block h-2.5 w-2.5 rounded-full bg-line-strong"></span>
+    <span class="ml-2">{title}</span>
+    <span class="ml-auto">example output · exit 0</span>
+  </figcaption>
+  <pre class="px-4 py-3 text-[0.78rem] leading-[1.55]"><code>{lines.map(([k, l]) => <span class={cls[k]}>{l}{"\n"}</span>)}</code></pre>
+</figure>

@@ -1,0 +1,21 @@
+---
+// Markdown posts in src/pages/blog/*.md use this layout. Answer-first: the lede is the one-paragraph answer under the H1.
+import Base from "./Base.astro";
+import { SITE_URL } from "../lib/site";
+interface Props { frontmatter: { title: string; description: string; lede: string; date: string; updated?: string; tags?: string[] }; url?: string }
+const { frontmatter: f } = Astro.props;
+const url = new URL(Astro.url.pathname, SITE_URL).toString();
+const jsonLd = {
+  "@context": "https://schema.org", "@type": "BlogPosting", headline: f.title, description: f.description, datePublished: f.date, dateModified: f.updated ?? f.date,
+  author: { "@type": "Organization", name: "AuditKit", url: SITE_URL }, publisher: { "@id": `${SITE_URL}/#org` }, mainEntityOfPage: url, url,
+};
+---
+<Base title={f.title} description={f.description} jsonLd={jsonLd}>
+  <article class="mx-auto max-w-3xl py-12">
+    <p class="font-mono text-xs text-faint"><a href="/blog" class="hover:text-fg">Blog</a> · <time datetime={f.date}>{f.date}</time>{f.updated && f.updated !== f.date && <> · updated <time datetime={f.updated}>{f.updated}</time></>}</p>
+    <h1 class="mt-2 text-3xl font-semibold sm:text-4xl">{f.title}</h1>
+    <p class="mt-4 text-lg text-muted">{f.lede}</p>
+    <div class="prose-doc mt-6"><slot /></div>
+    <footer class="mt-10 border-t border-line pt-4 text-sm text-muted">Written by the people who built AuditKit. Every product claim above is true of the code in the public repository on the date shown; the <a href="/security" class="text-accent underline">threat model</a> says what the service does not promise.</footer>
+  </article>
+</Base>

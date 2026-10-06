@@ -1,0 +1,95 @@
+---
+import Base from "../layouts/Base.astro";
+import Code from "../components/Code.astro";
+import McpTools from "../components/McpTools.astro";
+import Terminal from "../components/Terminal.astro";
+import { openapi } from "../../../server/src/openapi.ts";
+import { TS_QUICKSTART, PY_QUICKSTART, CURL_QUICKSTART, PUBLISH_NOTE, MCP_CLAUDE_CODE, MCP_JSON, VERIFY_CMDS } from "../lib/snippets";
+import { API_URL } from "../lib/site";
+
+type Op = { operationId?: string; summary?: string; security?: unknown[]; parameters?: Array<{ name: string; in: string; required?: boolean; schema?: { type?: string | readonly string[]; format?: string; maximum?: number } }>; requestBody?: unknown; responses?: Record<string, { description?: string }> };
+const paths = Object.entries(openapi.paths as Record<string, Record<string, Op>>).flatMap(([path, ops]) => Object.entries(ops).map(([method, op]) => ({ path, method: method.toUpperCase(), op })));
+const schema = (s: { type?: string | readonly string[]; format?: string } | undefined) => !s ? "" : `${Array.isArray(s.type) ? s.type.join(" | ") : s.type ?? ""}${s.format ? ` (${s.format})` : ""}`;
+type PropSchema = { type?: string | readonly string[]; description?: string; example?: string; format?: string };
+const eventProps = Object.entries(openapi.components.schemas.Event.properties as Record<string, PropSchema>);
+const required = (openapi.components.schemas.Event as { required: readonly string[] }).required;
+const receiptProps = Object.keys((openapi.components.schemas.Receipt as { properties: Record<string, unknown> }).properties);
+const toc = [["#quickstart", "Quickstart"], ["#auth", "Authentication"], ["#receipts", "Receipts"], ["#api", "API reference"], ["#export", "Export and verify"], ["#erase", "Erasure"], ["#signing", "Client signing"], ["#mcp", "MCP for Claude"], ["#connect", "Connect from Claude"], ["#viewer", "Viewer tokens"], ["#selfhost", "Self-host"]];
+---
+<Base title="Audit log API docs: quickstart, REST reference, verifier, MCP" description="AuditKit developer docs. TypeScript and Python SDK quickstart, REST API reference generated from the OpenAPI spec, offline verifier usage, MCP connector setup for Claude, viewer tokens and self-hosting." wide>
+  <div class="grid gap-10 py-12 lg:grid-cols-[14rem_1fr]">
+    <nav aria-label="On this page" class="lg:sticky lg:top-20 lg:h-fit">
+      <p class="text-xs font-semibold uppercase tracking-wider text-faint">Docs</p>
+      <ul class="mt-2 space-y-1 text-sm">{toc.map(([h, l]) => <li><a href={h} class="text-muted hover:text-fg">{l}</a></li>)}</ul>
+      <p class="mt-6 text-xs font-semibold uppercase tracking-wider text-faint">Machine-readable</p>
+      <ul class="mt-2 space-y-1 text-sm">
+        <li><a href="/openapi.json" class="text-muted hover:text-fg">openapi.json</a></li>
+        <li><a href="/.well-known/auditkit.json" class="text-muted hover:text-fg">.well-known/auditkit.json</a></li>
+        <li><a href="/llms.txt" class="text-muted hover:text-fg">llms.txt</a></li>
+      </ul>
+    </nav>
+    <article class="prose-doc min-w-0">
+      <h1 class="text-3xl font-semibold sm:text-4xl">Documentation</h1>
+      <p class="text-lg">AuditKit is a REST API (<code>{API_URL}</code>) with an MCP server in the same process. You send events; you get back signed receipts; the service chains, roots and anchors them; anyone can verify an export offline.</p>
+
+      <h2 id="quickstart">Quickstart</h2>
+      <p>Create a project by <a href="/login">signing in</a>, create a <code>test</code> key with <code>read</code> and <code>write</code> scopes, then:</p>
+      <Code id="docs-qs" tabs={[{ label: "TypeScript", code: TS_QUICKSTART, note: PUBLISH_NOTE }, { label: "Python", code: PY_QUICKSTART, note: PUBLISH_NOTE }, { label: "curl", code: CURL_QUICKSTART }]} />
+      <p>Both SDKs are zero-dependency (Node 22+ with global <code>fetch</code>; Python 3.10+ stdlib). Methods: <code>log</code>, <code>logBulk</code>/<code>log_bulk</code>, <code>search</code>, <code>get</code>, <code>proof</code>, <code>verify</code>, <code>export</code> (async iterable / iterator of NDJSON lines), <code>tenants</code>, <code>erase</code>. Retries: 3 attempts with exponential backoff on 429, 5xx and network errors; <code>log</code> always sends an idempotency key, so a retry replays the original receipt (<code>duplicate: true</code>) and never double-logs. <code>erase</code> is never retried. Failures throw <code>AuditKitError {"{"} status, code, message {"}"}</code>.</p>
+
+      <h2 id="auth">Authentication</h2>
+      <p>Bearer API keys: <code>ak_live_…</code> for your project, <code>ak_test_…</code> for the seeded demo project. Scopes: <code>read</code> (search, get, proof, verify, export, tenants), <code>write</code> (events), <code>erase</code>, <code>admin</code> (keys; implies all). We store a SHA-256 hash of the key and its prefix; the key is shown once. Errors are <code>{"{"} error: {"{"} code, message {"}"} {"}"}</code> with 4xx/5xx; over the monthly limit, writes return <code>429 plan_limit</code>.</p>
+
+      <h2 id="receipts">Receipts</h2>
+      <p>Every accepted event returns <code>{receiptProps.join(", ")}</code>. <code>event_hash = sha256(JCS(header))</code> where the header is <code>{"{"}id, project_id, tenant_id, position, occurred_at, actor, action, target, payload_commit, prev_hash{"}"}</code> canonicalised per RFC 8785; <code>payload_commit = sha256(salt ∥ JCS(payload))</code>; <code>server_sig</code> is an Ed25519 signature over the raw hash bytes with the key published at <code>/.well-known/auditkit.json</code>. Keep receipts (the TS SDK has <code>keepReceipts</code>): a later verify shows the service never dropped or reordered an event after acknowledging it.</p>
+
+      <h2 id="api">API reference</h2>
+      <p>Generated at build time from the server's OpenAPI document; the live copy is at <a href="/openapi.json">/openapi.json</a>. All <code>/v1</code> routes need a Bearer key.</p>
+      <h3>Event (request body)</h3>
+      <table><thead><tr><th>field</th><th>type</th><th>notes</th></tr></thead><tbody>
+        {eventProps.map(([k, v]) => <tr><td><code>{k}</code>{required.includes(k) && <span class="text-danger"> *</span>}</td><td>{schema(v) || "any JSON"}</td><td>{v.description ?? ""}{v.example ? <> e.g. <code>{v.example}</code></> : null}</td></tr>)}
+      </tbody></table>
+      <h3>Endpoints</h3>
+      <table><thead><tr><th>method</th><th>path</th><th>summary</th><th>query / params</th><th>responses</th></tr></thead><tbody>
+        {paths.map(({ path, method, op }) => (
+          <tr>
+            <td><code>{method}</code></td>
+            <td><code>{path}</code></td>
+            <td>{op.summary ?? op.operationId}</td>
+            <td>{(op.parameters ?? []).map((p) => <span class="mr-2 inline-block"><code>{p.name}</code>{p.required ? "*" : ""}<span class="text-faint"> {schema(p.schema)}{p.schema?.maximum ? ` ≤${p.schema.maximum}` : ""}</span></span>)}</td>
+            <td>{Object.entries(op.responses ?? {}).map(([code, r]) => <span class="mr-2 inline-block"><code>{code}</code> <span class="text-faint">{r.description}</span></span>)}</td>
+          </tr>
+        ))}
+      </tbody></table>
+      <p>Search semantics: <code>action</code> accepts a trailing <code>*</code> (prefix match); <code>from</code> inclusive, <code>to</code> exclusive, ISO 8601; results newest first, <code>limit</code> ≤ 500, <code>next_cursor</code> is the last event id. <code>GET /v1/events/:id/proof</code> returns <code>{"{"}anchored: false{"}"}</code> for events newer than the last anchor tick, otherwise the Merkle path to the tenant root, project root and global root plus the Rekor and OTS receipts.</p>
+
+      <h2 id="export">Export and verify offline</h2>
+      <p>An export is NDJSON: a <code>manifest</code> line (server, tenant, position range, server public key, export time), every event in position order, then the <code>root</code> lines with their anchor receipts. The requested range is widened to whole root batches so every root can be rebuilt. The verifier needs nothing else.</p>
+      <pre><code>{VERIFY_CMDS}</code></pre>
+      <p>Checks, in order: manifest, chain, signatures, payloads, client_sigs, roots, anchors, coverage. Exit codes: <code>0</code> VALID, <code>2</code> VALID_UNANCHORED (chain and signatures hold but no root has a verified anchor yet), <code>1</code> INVALID with the first failing check and position. <code>--pin</code> takes the server key as base64 SPKI; without it the key from the manifest is used and the report says so. <code>--online</code> re-fetches the Rekor entry and the Bitcoin block header for a live cross-check; without it the receipts are verified from the proof bytes in the file.</p>
+      <Terminal />
+
+      <h2 id="erase">Erasure (crypto-shredding)</h2>
+      <p><code>POST /v1/erase/:id</code> with an <code>erase</code>-scoped key deletes the payload row (payload and salt). The event row, its <code>payload_commit</code>, the chain, roots and anchors are untouched, so everything still verifies; the event reads back with <code>payload: null, erased: true</code> and the verifier reports it as erased. The response is <code>{"{"} erased: true, audit: Receipt {"}"}</code>: the erasure is appended to the same tenant chain as a <code>payload.erased</code> event (target = the erased id), so the log records who erased what and when. There is no erase tool over MCP. Plan retention applies the same operation automatically to payloads older than the window.</p>
+
+      <h2 id="signing">Client-side signing</h2>
+      <p>Pass an Ed25519 private key (<code>clientKey</code> in TS, <code>client_key</code> in Python) and every event carries <code>client_sig = base64(Ed25519.sign(sha256(JCS({"{"}tenant, actor, action, target, occurred_at{"}"}))))</code> over the raw 32 digest bytes; <code>target</code> is <code>null</code> when absent, <code>tenant</code> is your external tenant id. Register the tenant's public key (dashboard → Tenants → Signing keys, or <code>POST /v1/tenants/:tenant/keys</code>) and the server verifies every signed event on ingest; set <code>require_client_sig</code> on the tenant and it refuses unsigned events. Signatures travel in the export and the verifier checks them again when you pass your public keys (<code>clientKeys</code>, keyed by tenant). Dual-signed events mean neither party can forge the other's entries. The payload is not covered by <code>client_sig</code>; the chain covers it through <code>payload_commit</code>.</p>
+
+      <h2 id="mcp">MCP for Claude</h2>
+      <p>Streamable HTTP at <code>https://auditkit.dev/mcp</code>, stateless, same process as the REST API. Two ways in: OAuth 2.1 (the server is its own authorization server, discovery at <code>/.well-known/oauth-authorization-server</code>, dynamic client registration at <code>/oauth/register</code>, PKCE; sign in with your email, pick a project, consent at <code>/oauth/authorize</code>, token from <code>/oauth/token</code>) or a Bearer API key for clients that read a JSON config.</p>
+      <Code id="docs-mcp" tabs={[{ label: "Claude Code", code: MCP_CLAUDE_CODE }, { label: "mcp.json", code: MCP_JSON }]} />
+      <div class="not-prose mt-4"><McpTools /></div>
+      <p>Each tool declares <code>title</code>, <code>readOnlyHint</code>, <code>destructiveHint</code>, <code>idempotentHint</code> and <code>openWorldHint</code>. <code>export_evidence</code> truncates at 2000 lines over MCP; use REST for full files. Try: "who changed billing settings last week, and is the chain for tenant acme intact?"</p>
+
+      <h2 id="connect">Connect from Claude</h2>
+      <p>Claude.ai: <strong>Settings → Connectors → Add custom connector</strong>, URL <code>https://auditkit.dev/mcp</code>, then sign in with your email (magic link), pick the project, done. The access token Claude receives is scoped to that project; revoke it from the project at any time.</p>
+      <p>Claude Code: <code>claude mcp add --transport http auditkit https://auditkit.dev/mcp</code>; the same browser sign-in opens on first use. MCP clients that cannot do OAuth: use an <code>ak_test_</code> or <code>ak_live_</code> key as a Bearer header (JSON tab above).</p>
+
+      <h2 id="viewer">Viewer tokens</h2>
+      <p>From the dashboard, create a read-only token scoped to one tenant with a TTL (default 7 days, max 90). The link <code>/viewer?token=vt_…</code> renders that tenant's events with proofs, a verify button and an export link; add <code>&embed=1</code> to drop the site chrome for an iframe. The same token works as <code>Authorization: Bearer vt_…</code> against <code>/api/viewer/me</code>, <code>/api/viewer/events</code>, <code>/api/viewer/events/:id</code>, <code>/api/viewer/events/:id/proof</code>, <code>/api/viewer/verify</code> and <code>/api/viewer/export</code>. A <code>tenant</code> query parameter is ignored: the token decides.</p>
+
+      <h2 id="selfhost">Self-host</h2>
+      <p>One Node 22+ process (Hono), SQLite in WAL mode, one database file per project, an in-process anchor timer. Backups are file copies. Environment: the Ed25519 private key (never in the database), the anchor interval, optional Stripe and email keys. The same <code>@auditkit/verify</code> verifies exports from your instance; pass <code>--pin</code> with your key. Source under AGPL-3.0: <a href="/">repository link in the footer</a>.</p>
+    </article>
+  </div>
+</Base>

@@ -1,0 +1,49 @@
+---
+import Logo from "./Logo.astro";
+import { REPO_URL } from "../lib/site";
+interface Props { variant: "site" | "app" }
+const { variant } = Astro.props;
+const path = Astro.url.pathname;
+const nav = variant === "app"
+  ? [["/app", "Projects"], ["/docs", "Docs"], ["/anchors", "Anchors"]]
+  : [["/docs", "Docs"], ["/pricing", "Pricing"], ["/anchors", "Anchors"], ["/security", "Security"], ["/blog", "Blog"]];
+const active = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
+---
+<header class="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur">
+  <div class="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
+    <a href="/" class="flex items-center gap-2 font-semibold tracking-tight" aria-label="AuditKit home">
+      <Logo />
+      <span>AuditKit</span>
+    </a>
+    <nav aria-label="Primary" class="ml-4 hidden items-center gap-1 md:flex">
+      {nav.map(([href, label]) => (
+        <a href={href} aria-current={active(href!) ? "page" : undefined} class:list={["rounded px-2.5 py-1.5 text-sm text-muted hover:text-fg", active(href!) && "text-fg bg-surface-2"]}>{label}</a>
+      ))}
+    </nav>
+    <div class="ml-auto flex items-center gap-2">
+      <button id="theme-toggle" type="button" class="btn btn-sm" aria-label="Toggle light or dark theme" title="Toggle theme">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v2m0 14v2M5.6 5.6l1.4 1.4m10 10 1.4 1.4M3 12h2m14 0h2M5.6 18.4 7 17m10-10 1.4-1.4" /><circle cx="12" cy="12" r="4" /></svg>
+      </button>
+      {variant === "app"
+        ? <button id="logout" type="button" class="btn btn-sm">Sign out</button>
+        : <><a href={REPO_URL} class="btn btn-sm hidden sm:inline-flex" rel="noopener">Source</a><a href="/login" class="btn btn-sm btn-primary">Sign in</a></>}
+      <details class="relative md:hidden">
+        <summary class="btn btn-sm list-none cursor-pointer" aria-label="Menu">Menu</summary>
+        <div class="card absolute right-0 mt-2 flex w-44 flex-col p-1">
+          {nav.map(([href, label]) => <a href={href} class="rounded px-3 py-2 text-sm hover:bg-surface-2">{label}</a>)}
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+<script>
+  document.getElementById("theme-toggle")?.addEventListener("click", () => {
+    const light = document.documentElement.dataset.theme !== "light";
+    if (light) document.documentElement.dataset.theme = "light"; else delete document.documentElement.dataset.theme;
+    try { localStorage.setItem("theme", light ? "light" : "dark"); } catch { /* storage blocked */ }
+  });
+  document.getElementById("logout")?.addEventListener("click", async () => {
+    await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
+    location.href = "/login";
+  });
+</script>

@@ -1,0 +1,40 @@
+---
+import Doc from "../layouts/Doc.astro";
+import { LEGAL_NAME, DATA_LOCATION, SUPPORT_EMAIL, LAST_UPDATED } from "../lib/site";
+---
+<Doc title="Privacy policy" description="What AuditKit stores (events you send, hashed payload commitments, salts, API key hashes, login emails), what it publishes (root hashes only), retention per plan, and where data lives." lede="This policy says what we store, what we publish, for how long, and where. It is specific to this product; where a decision has not been made yet it says so." updated={LAST_UPDATED}>
+  <p><strong>Who we are.</strong> {LEGAL_NAME}, operating AuditKit at auditkit.dev and api.auditkit.dev ("we"). Contact: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. For data you send through the API, you are the controller and we are the processor; for your account, we are the controller.</p>
+
+  <h2>What we store</h2>
+  <table><thead><tr><th>Data</th><th>Why</th><th>How long</th></tr></thead><tbody>
+    <tr><td>Your login email, account id, creation time</td><td>To sign you in (magic link) and to know which projects are yours</td><td>Until you delete the account</td></tr>
+    <tr><td>Magic-link tokens</td><td>Passwordless sign-in</td><td>15 minutes or first use</td></tr>
+    <tr><td>Session cookie <code>ak_session</code> (httpOnly, SameSite=Lax)</td><td>Keep you signed in to the dashboard</td><td>Until sign-out or expiry; no other cookies, no analytics cookies</td></tr>
+    <tr><td>API key hash (SHA-256) and prefix, scopes, mode, creation and revocation times</td><td>Authenticate API calls; we never store the key itself</td><td>Until revoked, then as a revoked record</td></tr>
+    <tr><td>Events you send: tenant id, actor, action, target, time, position, hashes, server signature, your optional client signature</td><td>The product: a chained, signed, anchored log</td><td>Indefinitely while the project exists; headers and hashes are kept past the retention window so old exports still verify</td></tr>
+    <tr><td>Event payloads (any JSON you send) and a per-event random salt</td><td>Readable detail; the salt makes the commitment unlinkable once deleted</td><td>Plan retention window (30 days, 1 year, 3 years), or until you erase the event, whichever is first</td></tr>
+    <tr><td>Merkle roots, Rekor and OpenTimestamps receipts</td><td>Public anchoring</td><td>Indefinitely</td></tr>
+    <tr><td>Viewer tokens: tenant, expiry, hash of the token</td><td>Read-only sharing with auditors</td><td>Until expiry or revocation</td></tr>
+    <tr><td>Stripe customer and subscription ids</td><td>Billing</td><td>While the subscription exists; card data never touches our servers</td></tr>
+    <tr><td>Server logs: IP address, request path, status, timing</td><td>Operations and abuse prevention (the public demo is rate-limited per IP)</td><td><code>[OWNER: fill, e.g. 30 days]</code></td></tr>
+  </tbody></table>
+  <p>The public demo on the homepage keys a throwaway tenant to a hash of your IP address; the demo project is reset nightly.</p>
+
+  <h2>What we publish</h2>
+  <p>Root hashes only. Every anchor interval we write one SHA-256 global root to Sigstore Rekor and OpenTimestamps, and list it on <a href="/anchors">/anchors</a>. A root is a hash of hashes; it does not reveal event contents, counts per tenant, actor names or project names. Public entries in Rekor and Bitcoin cannot be deleted by us or anyone; this is the point of the product, and it is why only hashes go there.</p>
+
+  <h2>Personal data in events, and erasure</h2>
+  <p>You decide what goes in <code>actor</code>, <code>target</code> and <code>payload</code>. If you put personal data there, the GDPR right to erasure is met by crypto-shredding: <code>POST /v1/erase/:id</code> deletes the payload and its salt and leaves the hash commitment, so the chain still verifies. This follows the pattern the EDPB describes in Guidelines 02/2025: "after deletion of the secret key or salt, the hash should not be linkable to the original data". Note the EDPB's caveat that while the salt exists the hash is still personal data; after erasure it is not. <code>actor</code> and <code>target</code> are header fields and are not erasable without breaking the chain, so use opaque identifiers (user ids, not emails) if your subjects may ask for erasure.</p>
+
+  <h2>Where data lives</h2>
+  <p>{DATA_LOCATION}. One SQLite database file per project on a server we rent; backups are file copies on the same provider. Sub-processors: Stripe (billing), the email provider for magic links <code>[OWNER: name it]</code>, the hosting provider <code>[OWNER: name it]</code>, Sigstore Rekor and OpenTimestamps calendar servers (receive root hashes only).</p>
+
+  <h2>Who can see your data</h2>
+  <p>You and the members of your project; anyone you give a viewer token; an operator of this service with database access, within the limits described in the <a href="/security">threat model</a>. We do not sell data, run advertising, or use your events for anything but serving them back to you.</p>
+
+  <h2>Your rights</h2>
+  <p>Access, export (the export API gives you everything in a verifiable file), correction of account details, erasure of your account and projects (file delete), and complaint to your supervisory authority. Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>; we answer within 30 days.</p>
+
+  <h2>Changes</h2>
+  <p>We will update the date at the top and, for material changes, email account holders.</p>
+</Doc>

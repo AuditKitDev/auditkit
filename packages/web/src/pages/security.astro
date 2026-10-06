@@ -1,0 +1,55 @@
+---
+import Doc from "../layouts/Doc.astro";
+import { SECURITY_EMAIL } from "../lib/site";
+---
+<Doc title="How to make audit logs immutable: AuditKit's threat model" h1="Security and threat model" description="What a database administrator at AuditKit can and cannot do, how the signing key is handled, the anchoring policy, and why local immutability is a permission, not a proof. Hash chain, Ed25519 receipts, Merkle roots, Rekor and OpenTimestamps." lede="An audit log is made immutable by making every change detectable by someone who does not trust the operator: hash-chain the events, sign the receipts, batch roots into a Merkle tree, and publish the roots somewhere the operator cannot edit. This page says exactly who can do what to your data in AuditKit." updated="2026-10-05">
+  <h2>Why this matters</h2>
+  <p>Logs get edited by the people who run the systems. Ubiquiti's senior developer "altered the company's log retention histories and changed session file names to hide his activity and make it look like a coworker was sneaking around on the network" and was sentenced to six years (<a href="https://www.theregister.com/2023/05/12/exubiquiti_developer_jailed/" rel="noopener">The Register, 2023</a>). CISA's advisory on Volt Typhoon describes the actor "selectively clearing Windows Event Logs, system logs, and other technical artifacts" and recommends that organisations "store logs in a central system" (<a href="https://www.cisa.gov/news-events/cybersecurity-advisories/aa24-038a" rel="noopener">AA24-038A</a>). WorkOS puts the engineering view plainly: "If an attacker with database access can quietly edit the evidence, the log is worse than useless — it's a false sense of security" (<a href="https://workos.com/blog/audit-logs-are-a-product-feature" rel="noopener">WorkOS blog</a>). Practitioners on Hacker News say the same about local immutability: "If you want immutable logs, you log to an external log server. Anything else seems security theater to me."</p>
+  <p>So the question for any hosted log, including this one, is: what can an insider with database access do, and would you find out?</p>
+
+  <h2>What a database administrator at AuditKit can do</h2>
+  <ul>
+    <li><strong>Read</strong> every event and payload that has not been erased. Payloads are stored as JSON, not encrypted at rest by the application. Do not log secrets; log that they were used. <code>[OWNER: state disk encryption on the VPS]</code></li>
+    <li><strong>Delete</strong> rows, files or the whole database. This is detectable: a tenant's exported events no longer reach the roots in Rekor, and receipts you hold have positions that no longer exist.</li>
+    <li><strong>Modify</strong> rows. Any change to a header field changes <code>event_hash</code>, which breaks <code>prev_hash</code> of the next event, the tenant root, the project root and the global root already in Rekor and OpenTimestamps. The verifier reports the first failing position.</li>
+    <li><strong>Stop anchoring</strong> or <strong>stop the service</strong>. Visible on <a href="/anchors">/anchors</a> and in <code>anchored_through</code> on every verify. Receipts already issued still verify against the pinned key.</li>
+  </ul>
+  <h2>What a database administrator cannot do</h2>
+  <ul>
+    <li><strong>Rewrite history that has been anchored</strong>, because the global root is in two public logs we do not operate and the verifier checks the rebuilt root against them.</li>
+    <li><strong>Forge a receipt</strong>, because the Ed25519 private key is loaded from the environment of the server process and is not in any database; the public key is published at <code>/.well-known/auditkit.json</code> and pinned in the verifier package.</li>
+    <li><strong>Forge your client signatures</strong>, if you sign events with a key we never see. Register the public key per tenant and the server verifies each signed event on ingest and, with the policy set, refuses unsigned ones; the signature travels in the export and the verifier checks it again with your public key, so you do not have to trust the server's check.</li>
+    <li><strong>Recover an erased payload</strong>, because erasure deletes both the payload and its per-event salt; the remaining commitment is <code>sha256(salt ∥ payload)</code> with the salt gone.</li>
+    <li><strong>Erase silently</strong>, because every erasure (and every retention shred) is appended to the tenant's chain as a <code>payload.erased</code> or <code>payload.retention_shred</code> event, signed and anchored like any other.</li>
+    <li><strong>Silently drop or reorder an acknowledged event</strong>, because your receipt carries the position and hash the server signed; a later export that lacks it, or has something else at that position, fails verification.</li>
+  </ul>
+  <p>The honest residual: between ingest and the next anchor tick (daily, 5 minutes or 1 minute by plan) an insider could delete a tenant's newest events and the public logs would not yet show them. Your receipts would. If that window matters, keep receipts, or sign client-side, or both.</p>
+
+  <h2>Hashing and signing</h2>
+  <ul>
+    <li>Canonical JSON per RFC 8785 (JCS) at every level.</li>
+    <li><code>event_hash = sha256(JCS({"{"}id, project_id, tenant_id, position, occurred_at, actor, action, target, payload_commit, prev_hash{"}"}))</code>; <code>prev_hash</code> of position 0 is 64 zero hex digits.</li>
+    <li><code>payload_commit = sha256(salt ∥ JCS(payload))</code>, 16-byte random salt per event.</li>
+    <li>Merkle leaves are <code>sha256(0x00 ∥ event_hash)</code>, nodes <code>sha256(0x01 ∥ left ∥ right)</code>; an odd node carries up unchanged (RFC 6962), never duplicated. Three levels: tenant root, project root, global root.</li>
+    <li>Server signatures: Ed25519 over the raw 32 bytes of <code>event_hash</code>. Key rotation: a new key is published under a new hostname entry in the verifier's pinned list; old entries are never edited. <code>[OWNER: production key is not yet generated; PINNED_KEYS in packages/verify is empty until it is]</code></li>
+  </ul>
+
+  <h2>Anchoring policy</h2>
+  <ul>
+    <li>Every interval, for each tenant with new events: build the tenant root, then the project root, then one global root per tick. One Rekor entry per tick keeps public-log traffic polite.</li>
+    <li>Rekor: <code>hashedrekord</code> entry; we store the entry, inclusion proof and checkpoint. Final on write. Rekor does not give a trustworthy timestamp; we do not claim one.</li>
+    <li>OpenTimestamps: submitted to public calendars; the <code>.ots</code> proof is stored and upgraded when the Bitcoin attestation lands, within hours. Time comes from the block header.</li>
+    <li>Retries with backoff; status <code>pending | anchored | failed</code> is visible per root on <a href="/anchors">/anchors</a>.</li>
+  </ul>
+
+  <h2>Keys, sessions, tenancy</h2>
+  <ul>
+    <li>API keys: random, shown once, stored as SHA-256 hash plus prefix; scopes <code>read</code>, <code>write</code>, <code>erase</code>, <code>admin</code>; revocation is immediate.</li>
+    <li>Dashboard sessions: passwordless magic link, single-use, 15-minute expiry, httpOnly cookie, SameSite=Lax, Secure in production. No passwords are stored.</li>
+    <li>Isolation: one SQLite file per project; tenants are rows within it, with separate chains and roots. Viewer tokens are read-only and scoped to one tenant.</li>
+    <li>MCP: same process and scopes as REST; Claude connects through OAuth 2.1 (PKCE, dynamic client registration, project-scoped tokens issued by this server) or an API key; no erase tool is exposed to agents.</li>
+  </ul>
+
+  <h2>Disclosure</h2>
+  <p>Report vulnerabilities to <a href={`mailto:${SECURITY_EMAIL}`}>{SECURITY_EMAIL}</a>. We acknowledge within 3 business days and publish fixes with credit if you want it. <code>[OWNER: confirm mailbox and response time]</code></p>
+</Doc>

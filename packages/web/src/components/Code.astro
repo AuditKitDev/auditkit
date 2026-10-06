@@ -1,0 +1,31 @@
+---
+// Static code block. Optional CSS-only tabs (radio inputs), no JS.
+interface Props { tabs: Array<{ label: string; code: string; lang?: string; note?: string }>; id: string }
+const { tabs, id } = Astro.props;
+---
+<div class="card overflow-hidden code-tabs">
+  <div class="flex items-center gap-1 border-b border-line px-2 pt-2" role="tablist">
+    {tabs.map((t, i) => (
+      <>
+        <input type="radio" name={`tabs-${id}`} id={`${id}-${i}`} checked={i === 0} class="peer sr-only" />
+        <label for={`${id}-${i}`} class="cursor-pointer rounded-t px-3 py-1.5 font-mono text-xs text-muted hover:text-fg peer-checked:text-fg">{t.label}</label>
+      </>
+    ))}
+  </div>
+  {tabs.map((t, i) => (
+    <div class="tab-panel" data-i={i}>
+      <pre class="px-4 py-3 text-[0.8rem] leading-[1.55]"><code>{t.code}</code></pre>
+      {t.note && <p class="border-t border-line px-4 py-2 text-xs text-muted">{t.note}</p>}
+    </div>
+  ))}
+</div>
+<style>
+  .code-tabs .tab-panel { display: none; }
+  /* Pane i shows when radio i is checked. Radios are siblings of the panels' parent, so walk by position. */
+  .code-tabs:has(input:nth-of-type(1):checked) .tab-panel[data-i="0"],
+  .code-tabs:has(input:nth-of-type(2):checked) .tab-panel[data-i="1"],
+  .code-tabs:has(input:nth-of-type(3):checked) .tab-panel[data-i="2"] { display: block; }
+  .code-tabs label { border-bottom: 2px solid transparent; }
+  .code-tabs input:checked + label { border-bottom-color: var(--accent); color: var(--fg); }
+  .code-tabs input:focus-visible + label { outline: 2px solid var(--ring); outline-offset: 2px; }
+</style>

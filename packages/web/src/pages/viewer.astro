@@ -1,0 +1,42 @@
+---
+// Public, token-authenticated read-only view of one tenant's log. ?embed=1 hides site chrome for iframes.
+import "../styles/global.css";
+import Viewer from "../islands/Viewer";
+import Logo from "../components/Logo.astro";
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Audit log viewer · AuditKit</title>
+    <meta name="description" content="Read-only, verifiable view of one tenant's audit log." />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+    <script is:inline>
+      (function () {
+        try {
+          var q = new URLSearchParams(location.search);
+          var t = q.get("theme") || localStorage.getItem("theme");
+          if (!t && window.matchMedia("(prefers-color-scheme: light)").matches) t = "light";
+          if (t === "light") document.documentElement.dataset.theme = "light";
+          if (q.get("embed") === "1") document.documentElement.dataset.embed = "1";
+        } catch (e) {}
+      })();
+    </script>
+    <style>[data-embed="1"] .chrome { display: none; }</style>
+  </head>
+  <body class="min-h-dvh">
+    <header class="chrome border-b border-line">
+      <div class="mx-auto flex h-12 max-w-7xl items-center gap-2 px-4 text-sm sm:px-6">
+        <Logo class="h-5 w-5" /><span class="font-semibold">AuditKit</span><span class="text-faint">· viewer</span>
+        <a href="/docs#verify" class="ml-auto text-muted hover:text-fg">How to verify</a>
+      </div>
+    </header>
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6"><Viewer client:only="preact" /></main>
+    <footer class="chrome mx-auto max-w-7xl px-4 py-6 text-xs text-faint sm:px-6">Tamper-evident audit log by AuditKit · roots anchored to Sigstore Rekor and OpenTimestamps · <a href="/" class="underline">auditkit.dev</a></footer>
+  </body>
+</html>
