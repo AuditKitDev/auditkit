@@ -6,9 +6,9 @@ const audit = new AuditKit({ apiKey: process.env.AUDITKIT_KEY!, baseUrl: process
 const receipt = await audit.log({ tenant: "acme", actor: "u_1", action: "invoice.delete", target: "inv_42" });
 console.log(receipt.position, receipt.event_hash, receipt.server_sig);`;
 
-export const PY_QUICKSTART = `# Until auditkit is on PyPI: pip install <clone>/packages/sdk-python  (Python 3.10+)
+export const PY_QUICKSTART = `# Until auditkit-sdk is on PyPI: pip install <clone>/packages/sdk-python  (Python 3.10+)
 import os
-from auditkit import AuditKit
+from auditkit_sdk import AuditKit
 audit = AuditKit(api_key=os.environ["AUDITKIT_KEY"], base_url=os.environ.get("AUDITKIT_URL", "https://api.auditkit.dev"))
 receipt = audit.log("acme", "u_1", "invoice.delete", target="inv_42")
 print(receipt["position"], receipt["event_hash"], receipt["server_sig"])`;
@@ -18,7 +18,7 @@ export const CURL_QUICKSTART = `curl -X POST https://api.auditkit.dev/v1/events 
   -d '{"tenant":"acme","actor":"u_1","action":"invoice.delete","target":"inv_42"}'
 # → {"id":"01J…","position":0,"event_hash":"…","prev_hash":"000…","server_sig":"…"}`;
 
-export const PUBLISH_NOTE = "Both SDKs are in the repo and tested; the npm and PyPI packages publish with v2.0.0. Until then install from the clone as the first line shows. Set AUDITKIT_URL to your own instance when self-hosting.";
+export const PUBLISH_NOTE = "Both SDKs are in the repo and tested; the npm and PyPI packages (auditkit-sdk) publish with v2.0.0. Until then install from the clone as the first line shows. Set AUDITKIT_URL to your own instance when self-hosting.";
 export const VERIFY_CMD_REPO = "node packages/verify/dist/cli.js";
 export const VERIFY_CLI_NOTE = `Until the package is published, run it from the repo: ${VERIFY_CMD_REPO} <file>. The npx form is the eventual command.`;
 

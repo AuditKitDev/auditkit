@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "auditkit"
+name = "auditkit-sdk"
 version = "2.0.0a0"
 description = "Python client for the AuditKit tamper-evident audit log API"
 readme = "README.md"
@@ -12,8 +12,8 @@ license = { text = "AGPL-3.0-only" }
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/auditkit/auditkit"
-Repository = "https://github.com/auditkit/auditkit"
+Homepage = "https://github.com/AuditKitDev/auditkit"
+Repository = "https://github.com/AuditKitDev/auditkit"
 
 [project.optional-dependencies]
 sign = ["cryptography>=41"]
@@ -23,7 +23,7 @@ test = ["pytest>=7", "cryptography>=41"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-auditkit = ["py.typed"]
+auditkit_sdk = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,9 +1,9 @@
-# auditkit (Python)
+# auditkit-sdk (Python)
 
-Stdlib-only client for the AuditKit API (Python 3.10+). Client signing needs `pip install auditkit[sign]`.
+Stdlib-only client for the AuditKit API (Python 3.10+). Client signing needs `pip install "auditkit-sdk[sign]"`.
 
 ```python
-from auditkit import AuditKit
+from auditkit_sdk import AuditKit
 
 audit = AuditKit(api_key="ak_live_...")
 receipt = audit.log("acme", "u_1", "invoice.delete", target="inv_42")

@@ -1,7 +1,7 @@
 from pathlib import Path
 import hashlib
 import pytest
-from auditkit import canonicalize, client_signable
+from auditkit_sdk import canonicalize, client_signable
 
 OBJ = {
     "b": [1, 2.5, 1e21, 1e-7, 123456789012345680000.0, -0.0, 0.1, 100, 1.5e300, 5e-324],

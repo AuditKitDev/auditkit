@@ -7,7 +7,7 @@ import pytest
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from auditkit import AuditKit, AuditKitError, client_signable, verify_client_sig, verify_receipt
+from auditkit_sdk import AuditKit, AuditKitError, client_signable, verify_client_sig, verify_receipt
 
 
 @pytest.fixture

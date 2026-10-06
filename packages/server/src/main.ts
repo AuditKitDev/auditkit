@@ -12,7 +12,7 @@ import { createProject, createKey } from "./keys.js";
 import { migrateAuth, makeMailer, setSandboxProject } from "./auth.js";
 import { migrateBilling, billingFromEnv } from "./billing.js";
 import { migrateOAuth } from "./oauth.js";
-import { ensureSelfProject, makeSelfAudit } from "./selfAudit.js";
+import { ensureSelfProject, makeSelfAudit, SELF_PROJECT } from "./selfAudit.js";
 import { planOf } from "./plans.js";
 
 const cfg: Config = { dataDir: process.env.AUDITKIT_DATA ?? "./data", publicHost: process.env.AUDITKIT_PUBLIC_HOST ?? "localhost" };
@@ -63,7 +63,7 @@ const app = buildApp({
 });
 
 // Dev convenience: first boot with no user projects creates one and prints its admin key.
-if ((reg.prepare("SELECT COUNT(*) AS n FROM project WHERE id != ?").get(DEMO) as { n: number }).n === 0) {
+if ((reg.prepare("SELECT COUNT(*) AS n FROM project WHERE id NOT IN (?, ?)").get(DEMO, SELF_PROJECT) as { n: number }).n === 0) {
   const { id } = createProject(reg, "dev");
   const { key } = createKey(reg, id, "test", ["admin", "read", "write", "erase"]);
   const path = join(cfg.dataDir, "first-admin-key.txt");
