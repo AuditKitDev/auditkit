@@ -89,6 +89,7 @@ describe("OtsAnchor.verify", () => {
     const a = new OtsAnchor({ getBlockHeader: async (h) => (h === 358391 ? block358391 : Promise.reject(new Error("no"))) });
     expect(await a.verify(helloRoot, helloReceipt)).toEqual({
       ok: true,
+      level: "final",
       stage: "bitcoin",
       block_height: 358391,
       attested_at: "2015-05-28T15:41:18.000Z",
