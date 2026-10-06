@@ -50,6 +50,9 @@ import { SECURITY_EMAIL } from "../lib/site";
     <li>MCP: same process and scopes as REST; Claude connects through OAuth 2.1 (PKCE, dynamic client registration, project-scoped tokens issued by this server) or an API key; no erase tool is exposed to agents.</li>
   </ul>
 
+  <h2>We audit ourselves</h2>
+  <p>AuditKit's own platform events go into a hash-chained, anchored system project that anyone can read, verify and export without an account: <a href="/audit">/audit</a>.</p>
+
   <h2>Disclosure</h2>
   <p>Report vulnerabilities to <a href={`mailto:${SECURITY_EMAIL}`}>{SECURITY_EMAIL}</a>. We acknowledge within 3 business days and publish fixes with credit if you want it. <code>[OWNER: confirm mailbox and response time]</code></p>
 </Doc>

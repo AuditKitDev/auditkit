@@ -77,6 +77,7 @@ Every product claim on packages/web traces to code in this workspace or to a cit
 | EDPB Guidelines 02/2025 quotes on salted hash and salt deletion; "hash is personal data while salt exists" | /, /privacy, blog erasure | buyer-need.md §6 |
 | ICO: erased data may remain in backups until overwritten | blog erasure | buyer-need.md §6 |
 | JSON-LD: Organization + SoftwareApplication only, no FAQPage/HowTo; BlogPosting on posts; llms.txt; robots allows OAI/Claude bots; sitemap; canonical/OG | Base.astro, index.astro, BlogPost.astro, llms.txt.ts, robots.txt | seo-geo-aeo.md §3, §8, §9, §10 |
+| AuditKit logs its own platform events (signup/login/logout, project, API key, viewer token, tenant key/policy, OAuth, erase, billing, demo reset, retention, start) to a hash-chained, anchored system project; only hashed handles (`u:` + 16 hex), no emails, no payload PII; public read-only events, proof, verify and NDJSON export | /audit, /security, footer | `packages/server/src/selfAudit.ts` (`emailHandle`, `buildSelfAuditRoutes`); `packages/server/src/web.test.ts` "self-audit" (actions present, no `@example.com` in output, handle format, verify valid, export manifest) |
 
 ## Not claimed, on purpose
 

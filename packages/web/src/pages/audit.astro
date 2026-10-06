@@ -1,0 +1,13 @@
+---
+import Base from "../layouts/Base.astro";
+import SelfAudit from "../islands/SelfAudit";
+---
+<Base title="We audit ourselves: AuditKit's own audit trail" description="AuditKit logs its own platform events to a hash-chained, publicly anchored audit log that anyone can read, verify and export without an account." wide>
+  <section class="py-12">
+    <h1 class="text-3xl font-semibold sm:text-4xl">We audit ourselves</h1>
+    <p class="mt-3 max-w-3xl text-lg text-muted">AuditKit writes its own platform events (sign-ups, log-ins and log-outs, project, API key, viewer token and tenant key changes, tenant policy changes, OAuth consent and denial, customer erasure, billing events, demo resets, retention runs and service starts) to a system project that is hash-chained and anchored like any customer's. People appear only as hashed handles such as <code>u:3f9a…</code>; we never log email addresses, and payloads carry ids and hashes, not personal data. We do not log your customers' events here, your event payloads, or anything inside your projects.</p>
+    <p class="mt-3 max-w-3xl text-muted">Why this matters: if we don't trust our own product with our own trail, you shouldn't either.</p>
+    <div class="mt-8"><SelfAudit client:load /></div>
+    <p class="mt-8 max-w-3xl text-sm text-muted">Read-only and public: <code>GET /public/self/events</code>, <code>/public/self/events/:id/proof</code>, <code>/public/self/verify</code>, <code>/public/self/export</code>. How the chain and anchors work is on <a href="/security">/security</a> and <a href="/anchors">/anchors</a>.</p>
+  </section>
+</Base>

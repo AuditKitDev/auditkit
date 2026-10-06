@@ -112,6 +112,12 @@ export const api = {
     anchors: (limit = 20) => get<{ anchors: PublicAnchor[] }>(`/public/anchors?limit=${limit}`),
     stats: () => get<PublicStats>("/public/stats"),
   },
+  self: {
+    events: (q: Record<string, string | number | undefined | null>) => get<{ events: EventRecord[]; next_cursor: string | null }>(`/public/self/events${qs(q)}`),
+    proof: (id: string) => get<Proof>(`/public/self/events/${encodeURIComponent(id)}/proof`),
+    verify: () => get<Verdict>("/public/self/verify"),
+    exportUrl: "/public/self/export",
+  },
 };
 
 /** Resolve the session or send the visitor to /login. Returns null while redirecting. */

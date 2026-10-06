@@ -3,7 +3,7 @@ import { REPO_URL, SUPPORT_EMAIL, STATUS_URL } from "../lib/site";
 interface Props { variant: "site" | "app" }
 const { variant } = Astro.props;
 const cols = [
-  ["Product", [["/#demo", "Live demo"], ["/pricing", "Pricing"], ["/anchors", "Anchors"], ["/security", "Security"], ["/blog", "Blog"]]],
+  ["Product", [["/#demo", "Live demo"], ["/pricing", "Pricing"], ["/anchors", "Anchors"], ["/security", "Security"], ["/audit", "We audit ourselves"], ["/blog", "Blog"]]],
   ["Developers", [["/docs", "Docs"], ["/docs#api", "API reference"], ["/docs#mcp", "MCP for Claude"], ["/docs#verify", "Offline verifier"], [REPO_URL, "Source"]]],
   ["Company", [["/privacy", "Privacy"], ["/terms", "Terms"], ["/support", "Support"], [STATUS_URL, "Status"], [`mailto:${SUPPORT_EMAIL}`, SUPPORT_EMAIL]]],
 ] as const;
@@ -27,7 +27,7 @@ const cols = [
     </div>
   ) : (
     <div class="mx-auto flex max-w-7xl flex-wrap gap-4 px-4 py-6 text-sm text-muted sm:px-6">
-      <a href="/docs" class="hover:text-fg">Docs</a><a href="/anchors" class="hover:text-fg">Anchors</a><a href="/support" class="hover:text-fg">Support</a><a href="/privacy" class="hover:text-fg">Privacy</a><a href="/terms" class="hover:text-fg">Terms</a>
+      <a href="/docs" class="hover:text-fg">Docs</a><a href="/anchors" class="hover:text-fg">Anchors</a><a href="/audit" class="hover:text-fg">We audit ourselves</a><a href="/support" class="hover:text-fg">Support</a><a href="/privacy" class="hover:text-fg">Privacy</a><a href="/terms" class="hover:text-fg">Terms</a>
     </div>
   )}
 </footer>

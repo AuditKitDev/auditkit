@@ -196,6 +196,7 @@ const demo = newProject("demo", "system");
 const seedUser = { id: "usr_seed", email: "owner@example.com", created_at: new Date(Date.now() - 86_400_000 * 40).toISOString() };
 users.set(seedUser.id, seedUser);
 const sample = newProject("example.com", seedUser.id, "pro");
+const platform = newProject("AuditKit platform (self-audit)", "system", "business");
 {
   const actors = ["u_17", "u_42", "svc_billing", "u_9", "admin@example.com"];
   const actions = ["invoice.delete", "invoice.create", "user.login", "user.role.change", "export.download", "api_key.create", "settings.update", "payment.refund"];
@@ -210,6 +211,10 @@ const sample = newProject("example.com", seedUser.id, "pro");
   sample.keys.push({ id: "key_" + randomBytes(4).toString("hex"), prefix: seedKey.slice(0, 12), mode: "live", scopes: ["read", "write", "erase", "admin"], created_at: sample.created_at, revoked_at: null, hash: sha(seedKey) });
   console.log(`seeded project ${sample.id}; API key for /v1 and /mcp: ${seedKey}`);
   sample.keys.push({ id: "key_" + randomBytes(4).toString("hex"), prefix: "ak_test_c0de", mode: "test", scopes: ["read", "write", "erase", "admin"], created_at: sample.created_at, revoked_at: new Date().toISOString(), hash: "x" });
+  // self-audit: system project, no members; actors are hashed handles, never emails
+  const hh = (e) => "u:" + sha(e).slice(0, 16);
+  const platformEvents = [["platform.start", "system", null], ["user.signup", hh("a@example.com"), null], ["user.login", hh("a@example.com"), null], ["project.create", hh("a@example.com"), "prj_demo01"], ["api_key.create", hh("a@example.com"), "key_01"], ["viewer_token.create", hh("a@example.com"), "vtk_01"], ["tenant_policy.set", hh("a@example.com"), "acme"], ["billing.event", "stripe", "checkout.session.completed"], ["api_key.revoke", hh("a@example.com"), "key_01"], ["retention.run", "system", null], ["user.logout", hh("a@example.com"), null]];
+  platformEvents.forEach(([action, actor, target], i) => ingest(platform, { tenant: "platform", actor, action, target, occurred_at: new Date(Date.now() - (platformEvents.length - i) * 3_600_000).toISOString(), payload: { handle_only: true } }));
   tick(); // anchor the seed data once so proofs exist
 }
 
@@ -482,6 +487,17 @@ const server = createServer(async (req, res) => {
   if (m("GET", /^\/public\/stats$/)) {
     const ev = [...projects.values()].reduce((n, p) => n + p.events.length, 0);
     return json(res, 200, { events_total: Math.round(ev / 10) * 10, roots_total: globalRoots.length, anchors_final: globalRoots.reduce((n, g) => n + g.anchors.filter((a) => a.status === "final").length, 0), projects: projects.size }, { "cache-control": "public, max-age=60" });
+  }
+
+  // self-audit: public, read-only, tenant "platform" of the system project
+  if (path.startsWith("/public/self/") && req.method === "GET") {
+    const pc = { "cache-control": "public, max-age=15" };
+    if (m("GET", /^\/public\/self\/events$/)) { const q = new URLSearchParams(url.searchParams); q.set("tenant", "platform"); return json(res, 200, search(platform, q), pc); }
+    if ((r = m("GET", /^\/public\/self\/events\/([^/]+)\/proof$/))) { const e = platform.byId.get(r[1]); return e ? json(res, 200, proof(platform, r[1])) : err(res, 404, "not_found", "no such event"); }
+    if ((r = m("GET", /^\/public\/self\/events\/([^/]+)$/))) { const e = platform.byId.get(r[1]); return e ? json(res, 200, record(e)) : err(res, 404, "not_found", "no such event"); }
+    if (m("GET", /^\/public\/self\/verify$/)) return json(res, 200, verify(platform, "platform", 0), pc);
+    if (m("GET", /^\/public\/self\/export$/)) { res.writeHead(200, { "content-type": "application/x-ndjson", "content-disposition": 'attachment; filename="auditkit-platform.ndjson"' }); return res.end(exportLines(platform, "platform", intQ(url, "from") ?? 0, intQ(url, "to")).map((l) => JSON.stringify(l)).join("\n") + "\n"); }
+    return err(res, 404, "not_found", "unknown self-audit route");
   }
 
   // demo: 30 req/min per IP, 2 KB payloads, 200 events per visitor (web-api.md "Limits")
