@@ -9,7 +9,8 @@
     "test": "vitest run",
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "seed": "node scripts/seed-reviewer.mjs"
+    "seed": "node scripts/seed-reviewer.mjs",
+    "smoke:prod": "node scripts/smoke-prod.mjs"
   },
   "dependencies": {
     "@auditkit/core": "workspace:*",
@@ -35,5 +36,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/AuditKitDev/auditkit.git"
+  },
+  "devDependencies": {
+    "@auditkit/sdk": "workspace:*",
+    "@auditkit/verify": "workspace:*"
   }
 }

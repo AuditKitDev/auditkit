@@ -68,6 +68,13 @@ importers:
       zod:
         specifier: ^3.25.0
         version: 3.25.76
+    devDependencies:
+      '@auditkit/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+      '@auditkit/verify':
+        specifier: workspace:*
+        version: link:../verify
 
   packages/verify:
     dependencies:
