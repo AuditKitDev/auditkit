@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "dev.auditkit/auditkit",
+  "title": "AuditKit",
+  "description": "Tamper-evident audit log: search events, get proofs, verify chains, export verifier-ready evidence.",
+  "websiteUrl": "https://auditkit.dev/docs#mcp",
+  "repository": {
+    "url": "https://github.com/AuditKitDev/auditkit",
+    "source": "github",
+    "id": "1177303765",
+    "subfolder": "packages/server"
+  },
+  "version": "2.0.0-alpha.0",
+  "icons": [
+    {
+      "src": "https://auditkit.dev/icon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": ["any"]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://auditkit.dev/mcp"
+    }
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "dev.auditkit": {
+        "auth": "OAuth 2.1 (authorization code + PKCE S256, dynamic client registration); discovery at https://auditkit.dev/.well-known/oauth-authorization-server and /.well-known/oauth-protected-resource; Bearer API key (ak_live_/ak_test_) also accepted",
+        "license": "AGPL-3.0-only",
+        "tools": ["search_events", "get_event", "get_proof", "verify_range", "list_tenants", "export_evidence", "log_event"],
+        "writes": "log_event only; no erase tool over MCP"
+      }
+    }
+  }
+}

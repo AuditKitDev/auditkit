@@ -228,7 +228,9 @@ export class OtsAnchor implements Anchor {
     return {
       ok: true,
       level: "pending",
-      reason: "calendar attestation only; Bitcoin confirmation not yet in the receipt",
+      reason: bitcoin.length > 0
+        ? `Bitcoin attestation present (block ${bitcoin[0]!.height}); the hash path to it verifies, but confirming the block needs a header source: run --online or pass getBlockHeader`
+        : "calendar attestation only; Bitcoin confirmation not yet in the receipt",
       stage: "calendar",
       attested_at: receipt.anchored_at,
       calendars,
