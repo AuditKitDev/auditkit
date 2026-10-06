@@ -9,7 +9,7 @@
     "test": "vitest run",
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "seed": "tsx scripts/seed-reviewer.ts"
+    "seed": "node scripts/seed-reviewer.mjs"
   },
   "dependencies": {
     "@auditkit/core": "workspace:*",

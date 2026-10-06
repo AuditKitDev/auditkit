@@ -1,13 +1,13 @@
 // Seed a realistic project for directory reviewers (or a demo): two tenants, ~200 events over 30 days,
 // one erased payload, one anchored batch. Prints a read+write test key once.
-// Usage: AUDITKIT_DATA=./data npx tsx scripts/seed-reviewer.ts [--anchor]   (--anchor runs a real Rekor+OTS tick)
-import { openRegistry, openProject } from "../src/db.js";
-import { loadSigner, loadAnchorKey } from "../src/signing.js";
-import { createProject, createKey } from "../src/keys.js";
-import { ingest, erase, search } from "../src/events.js";
-import { tick } from "../src/anchorLoop.js";
-import { migrateAuth } from "../src/auth.js";
-import { migrateBilling } from "../src/billing.js";
+// Usage: AUDITKIT_DATA=./data node scripts/seed-reviewer.mjs [--anchor]   (--anchor runs a real Rekor+OTS tick). Runs against dist/, so it works inside the production image.
+import { openRegistry, openProject } from "../dist/db.js";
+import { loadSigner, loadAnchorKey } from "../dist/signing.js";
+import { createProject, createKey } from "../dist/keys.js";
+import { ingest, erase, search } from "../dist/events.js";
+import { tick } from "../dist/anchorLoop.js";
+import { migrateAuth } from "../dist/auth.js";
+import { migrateBilling } from "../dist/billing.js";
 import { RekorAnchor } from "@auditkit/anchor-rekor";
 import { OtsAnchor } from "@auditkit/anchor-ots";
 
