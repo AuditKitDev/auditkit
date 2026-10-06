@@ -89,12 +89,13 @@ let sandboxProjectId: string | undefined = process.env.AUDITKIT_SANDBOX_PROJECT;
 export function setSandboxProject(id: string | undefined): void { sandboxProjectId = id; }
 
 /** Consumes the token; creates the user (and a first project) on first login. Returns the session token to set. */
-export function redeemMagicLink(reg: DatabaseSync, token: string): { session: string; next: string } | null {
+export function redeemMagicLink(reg: DatabaseSync, token: string): { session: string; next: string; created: boolean } | null {
   const row = reg.prepare("SELECT email, next, expires_at, used_at FROM login_token WHERE token_hash = ?").get(sha256Hex(token)) as
     | { email: string; next: string; expires_at: string; used_at: string | null } | undefined;
   if (!row || row.used_at || row.expires_at < now()) return null;
   reg.prepare("UPDATE login_token SET used_at = ? WHERE token_hash = ?").run(now(), sha256Hex(token));
   let user = reg.prepare("SELECT id, email, created_at FROM user WHERE email = ?").get(row.email) as User | undefined;
+  const created = !user;
   if (!user) {
     user = { id: "u_" + randomBytes(8).toString("hex"), email: row.email, created_at: now() };
     reg.prepare("INSERT INTO user (id, email, created_at) VALUES (?, ?, ?)").run(user.id, user.email, user.created_at);
@@ -107,7 +108,7 @@ export function redeemMagicLink(reg: DatabaseSync, token: string): { session: st
   const session = randomBytes(32).toString("base64url");
   reg.prepare("INSERT INTO session (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
     .run(sha256Hex(session), user.id, new Date(Date.now() + SESSION_TTL_MS).toISOString(), now());
-  return { session, next: row.next };
+  return { session, next: row.next, created };
 }
 
 export function userFromSession(reg: DatabaseSync, session: string | undefined): User | null {

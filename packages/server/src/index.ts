@@ -12,3 +12,4 @@ export { applyRetention } from "./anchorLoop.js";
 export { addTenantKey, listTenantKeys, revokeTenantKey, setRequireClientSig } from "./tenantKeys.js";
 export { resetProjectData } from "./anchorLoop.js";
 export { migrateOAuth, buildOAuthRoutes, principalFromAccessToken } from "./oauth.js";
+export { ensureSelfProject, makeSelfAudit, noSelfAudit, emailHandle, SELF_PROJECT, SELF_TENANT, type SelfAudit } from "./selfAudit.js";

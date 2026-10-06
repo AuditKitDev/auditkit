@@ -10,6 +10,7 @@ import { sha256Hex } from "@auditkit/core";
 import { now } from "./db.js";
 import { userFromSession, readSessionCookie, membership, userProjects } from "./auth.js";
 import type { Principal, Scope } from "./keys.js";
+import { emailHandle, noSelfAudit, type SelfAudit } from "./selfAudit.js";
 
 const CODE_TTL_MS = 10 * 60 * 1000;
 const ACCESS_TTL_MS = 60 * 60 * 1000;
@@ -58,7 +59,7 @@ function issueTokens(reg: DatabaseSync, clientId: string, userId: string, projec
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 
-export function buildOAuthRoutes(reg: DatabaseSync, siteUrl: string): Hono {
+export function buildOAuthRoutes(reg: DatabaseSync, siteUrl: string, self: SelfAudit = noSelfAudit): Hono {
   const app = new Hono();
   const oauthErr = (c: Context, status: 400 | 401, error: string, description: string) => c.json({ error, error_description: description }, status);
 
@@ -133,7 +134,7 @@ export function buildOAuthRoutes(reg: DatabaseSync, siteUrl: string): Hono {
     if (!client || !(JSON.parse(client.redirect_uris) as string[]).includes(q.redirect_uri)) return c.text("unknown client", 400);
     const redirect = new URL(q.redirect_uri);
     if (q.state) redirect.searchParams.set("state", q.state);
-    if (form.decision !== "allow") { redirect.searchParams.set("error", "access_denied"); return c.redirect(redirect.toString(), 302); }
+    if (form.decision !== "allow") { self.log("oauth.deny", emailHandle(user.email), null, { client_id: q.client_id }); redirect.searchParams.set("error", "access_denied"); return c.redirect(redirect.toString(), 302); }
     const projectId = form.project_id ?? "";
     const role = membership(reg, user.id, projectId);
     if (!role) return c.text("no access to that project", 403);
@@ -143,6 +144,7 @@ export function buildOAuthRoutes(reg: DatabaseSync, siteUrl: string): Hono {
     reg.prepare("INSERT INTO oauth_code (code_hash, client_id, user_id, project_id, scopes, code_challenge, redirect_uri, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
       .run(sha256Hex(code), q.client_id, user.id, projectId, scopes.join(","), q.code_challenge, q.redirect_uri, new Date(Date.now() + CODE_TTL_MS).toISOString());
     redirect.searchParams.set("code", code);
+    self.log("oauth.consent", emailHandle(user.email), projectId, { client_id: q.client_id, scopes });
     return c.redirect(redirect.toString(), 302);
   });
 

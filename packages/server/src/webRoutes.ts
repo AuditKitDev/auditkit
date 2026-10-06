@@ -16,6 +16,7 @@ import { planOf } from "./plans.js";
 import { ndjsonResponse } from "./app.js";
 import { createViewerToken, listViewerTokens, revokeViewerToken } from "./viewer.js";
 import { addTenantKey, listTenantKeys, revokeTenantKey, setRequireClientSig } from "./tenantKeys.js";
+import { emailHandle, noSelfAudit, type SelfAudit } from "./selfAudit.js";
 import { checkoutUrl, portalUrl, verifyStripeSignature, applyStripeEvent, BillingNotConfigured, type BillingConfig } from "./billing.js";
 
 export interface WebDeps {
@@ -25,6 +26,7 @@ export interface WebDeps {
   mailer: Mailer;
   billing: BillingConfig;
   anchorPublicKey?: string | undefined;
+  self?: SelfAudit;
   siteUrl: string;
   secureCookies: boolean;
   demoProjectId: string;
@@ -41,7 +43,8 @@ export function monthlyUsage(db: DatabaseSync): number {
   return (db.prepare("SELECT COUNT(*) AS n FROM event WHERE received_at >= ?").get(start.toISOString()) as { n: number }).n;
 }
 
-export function buildWebRoutes(d: WebDeps): Hono<Env> {
+export function buildWebRoutes(deps: WebDeps): Hono<Env> {
+  const d = { ...deps, self: deps.self ?? noSelfAudit };
   const app = new Hono<Env>();
   const loginLimit = rateLimiter(5, 10 * 60 * 1000);
   const demoLimit = rateLimiter(30, 60 * 1000);
@@ -67,8 +70,10 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
   app.post("/auth/callback", async (c) => {
     const form = Object.fromEntries((await c.req.formData()).entries()) as Record<string, string>;
     const r = redeemMagicLink(d.reg, form.token ?? "");
-    if (!r) return c.redirect("/login?error=expired", 302);
+    if (!r) { d.self.log("user.login.failed", "anon", null, { reason: "expired_or_used" }); return c.redirect("/login?error=expired", 302); }
     setSessionCookie(c, r.session, d.secureCookies);
+    const u = userFromSession(d.reg, r.session);
+    if (u) d.self.log(r.created ? "user.signup" : "user.login", emailHandle(u.email), u.id);
     return c.redirect(r.next, 302);
   });
   app.get("/auth/me", (c) => {
@@ -76,6 +81,8 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
     return u ? c.json({ user: u }) : err(c, 401, "unauthorized", "not signed in");
   });
   app.post("/auth/logout", (c) => {
+    const u = userFromSession(d.reg, readSessionCookie(c));
+    if (u) d.self.log("user.logout", emailHandle(u.email), u.id);
     destroySession(d.reg, readSessionCookie(c));
     clearSessionCookie(c);
     return c.body(null, 204);
@@ -124,6 +131,7 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
     const body = z.object({ name: z.string().min(1).max(100) }).parse(await c.req.json());
     const { id } = createProject(d.reg, body.name);
     d.reg.prepare("INSERT INTO membership (user_id, project_id, role, created_at) VALUES (?, ?, 'owner', ?)").run(c.get("user").id, id, now());
+    d.self.log("project.create", emailHandle(c.get("user").email), id);
     return c.json({ id, name: body.name, plan: "free" }, 201);
   });
   app.get("/api/app/projects/:id/keys", (c) => {
@@ -132,31 +140,43 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
   });
   app.post("/api/app/projects/:id/keys", async (c) => {
     const body = z.object({ mode: z.enum(["live", "test"]), scopes: z.array(z.enum(["read", "write", "erase", "admin"])).min(1) }).parse(await c.req.json());
-    return c.json(createKey(d.reg, c.get("projectId"), body.mode, body.scopes as Scope[]), 201);
+    const made = createKey(d.reg, c.get("projectId"), body.mode, body.scopes as Scope[]);
+    d.self.log("api_key.create", emailHandle(c.get("user").email), made.id, { project_id: c.get("projectId"), mode: body.mode, scopes: body.scopes });
+    return c.json(made, 201);
   });
-  app.delete("/api/app/projects/:id/keys/:keyId", (c) =>
-    revokeKey(d.reg, c.get("projectId"), c.req.param("keyId")) ? c.json({ revoked: true }) : err(c, 404, "not_found", "no such key"),
-  );
+  app.delete("/api/app/projects/:id/keys/:keyId", (c) => {
+    const ok = revokeKey(d.reg, c.get("projectId"), c.req.param("keyId"));
+    if (ok) d.self.log("api_key.revoke", emailHandle(c.get("user").email), c.req.param("keyId"), { project_id: c.get("projectId") });
+    return ok ? c.json({ revoked: true }) : err(c, 404, "not_found", "no such key");
+  });
   app.get("/api/app/projects/:id/viewer-tokens", (c) => c.json({ tokens: listViewerTokens(c.get("db")) }));
   app.post("/api/app/projects/:id/viewer-tokens", async (c) => {
     const body = z.object({ tenant: z.string().min(1).max(200), ttl_hours: z.number().int().min(1).max(24 * 90).optional() }).parse(await c.req.json());
     const t = createViewerToken(c.get("db"), c.get("projectId"), body.tenant, body.ttl_hours ?? 24 * 7);
+    d.self.log("viewer_token.create", emailHandle(c.get("user").email), t.id, { project_id: c.get("projectId"), ttl_hours: body.ttl_hours ?? 24 * 7 });
     return c.json({ ...t, url: `${d.siteUrl}/viewer?token=${t.token}` }, 201);
   });
-  app.delete("/api/app/projects/:id/viewer-tokens/:tokenId", (c) =>
-    revokeViewerToken(c.get("db"), c.req.param("tokenId")) ? c.json({ revoked: true }) : err(c, 404, "not_found", "no such token"),
-  );
+  app.delete("/api/app/projects/:id/viewer-tokens/:tokenId", (c) => {
+    const ok = revokeViewerToken(c.get("db"), c.req.param("tokenId"));
+    if (ok) d.self.log("viewer_token.revoke", emailHandle(c.get("user").email), c.req.param("tokenId"), { project_id: c.get("projectId") });
+    return ok ? c.json({ revoked: true }) : err(c, 404, "not_found", "no such token");
+  });
   app.get("/api/app/projects/:id/tenants/:tenant/keys", (c) => c.json({ keys: listTenantKeys(c.get("db"), c.req.param("tenant")) }));
   app.post("/api/app/projects/:id/tenants/:tenant/keys", async (c) => {
     const body = z.object({ public_key: z.string().min(40).max(200) }).parse(await c.req.json());
-    return c.json(addTenantKey(c.get("db"), c.req.param("tenant"), body.public_key), 201);
+    const made = addTenantKey(c.get("db"), c.req.param("tenant"), body.public_key);
+    d.self.log("tenant_key.add", emailHandle(c.get("user").email), made.id, { project_id: c.get("projectId") });
+    return c.json(made, 201);
   });
-  app.delete("/api/app/projects/:id/tenants/:tenant/keys/:keyId", (c) =>
-    revokeTenantKey(c.get("db"), c.req.param("keyId")) ? c.json({ revoked: true }) : err(c, 404, "not_found", "no such key"),
-  );
+  app.delete("/api/app/projects/:id/tenants/:tenant/keys/:keyId", (c) => {
+    const ok = revokeTenantKey(c.get("db"), c.req.param("keyId"));
+    if (ok) d.self.log("tenant_key.revoke", emailHandle(c.get("user").email), c.req.param("keyId"), { project_id: c.get("projectId") });
+    return ok ? c.json({ revoked: true }) : err(c, 404, "not_found", "no such key");
+  });
   app.post("/api/app/projects/:id/tenants/:tenant/policy", async (c) => {
     const body = z.object({ require_client_sig: z.boolean() }).parse(await c.req.json());
     setRequireClientSig(c.get("db"), c.req.param("tenant"), body.require_client_sig);
+    d.self.log("tenant_policy.set", emailHandle(c.get("user").email), null, { project_id: c.get("projectId"), require_client_sig: body.require_client_sig });
     return c.json({ ok: true });
   });
   app.get("/api/app/projects/:id/tenants", (c) => c.json({ tenants: listTenants(c.get("db")) }));
@@ -209,7 +229,10 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
     if (!d.billing.webhookSecret) return err(c, 501, "billing_not_configured", "STRIPE_WEBHOOK_SECRET");
     const payload = await c.req.text();
     if (!verifyStripeSignature(d.billing.webhookSecret, c.req.header("stripe-signature"), payload)) return err(c, 400, "bad_signature", "invalid Stripe signature");
-    applyStripeEvent(d.billing, d.reg, JSON.parse(payload));
+    const ev = JSON.parse(payload) as { id: string; type: string; data: { object: { metadata?: { project_id?: string }; client_reference_id?: string } } };
+    applyStripeEvent(d.billing, d.reg, ev);
+    const pid = ev.data.object.metadata?.project_id ?? ev.data.object.client_reference_id;
+    if (pid) d.self.log("billing.event", "stripe", pid, { type: ev.type, stripe_event: ev.id, plan: (d.reg.prepare("SELECT plan FROM project WHERE id = ?").get(pid) as { plan: string } | undefined)?.plan });
     return c.json({ received: true });
   });
 

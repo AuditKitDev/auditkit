@@ -12,6 +12,7 @@ import { createProject, createKey } from "./keys.js";
 import { migrateAuth, makeMailer, setSandboxProject } from "./auth.js";
 import { migrateBilling, billingFromEnv } from "./billing.js";
 import { migrateOAuth } from "./oauth.js";
+import { ensureSelfProject, makeSelfAudit } from "./selfAudit.js";
 import { planOf } from "./plans.js";
 
 const cfg: Config = { dataDir: process.env.AUDITKIT_DATA ?? "./data", publicHost: process.env.AUDITKIT_PUBLIC_HOST ?? "localhost" };
@@ -42,6 +43,9 @@ if (!reg.prepare("SELECT 1 FROM project WHERE id = ?").get(DEMO)) {
 openProject(cfg, DEMO);
 
 setSandboxProject(process.env.AUDITKIT_SANDBOX_PROJECT);
+ensureSelfProject(reg, cfg);
+const self = makeSelfAudit(cfg, signer);
+self.log("platform.start", "system", null, { anchors: anchors.map((a) => a.kind), interval_seconds: interval, version: "2.0.0-alpha.0" });
 if (siteUrl.startsWith("https://") && !process.env.RESEND_API_KEY) {
   if (process.env.AUDITKIT_ALLOW_MAIL_STUB === "1") {
     console.warn("[auditkit] WARNING: no RESEND_API_KEY; sign-in links are written to this log (AUDITKIT_ALLOW_MAIL_STUB=1). Not for public use.");
@@ -54,6 +58,7 @@ const app = buildApp({
   cfg, reg, signer,
   anchorPolicy: { kinds: anchors.map((a) => a.kind), interval_seconds: interval },
   anchorPublicKey,
+  self,
   web: { mailer: makeMailer(), billing: billingFromEnv(siteUrl), siteUrl, secureCookies: siteUrl.startsWith("https://"), demoProjectId: DEMO, proxyTrust: (process.env.AUDITKIT_PROXY_TRUST as "x-real-ip" | "x-forwarded-for" | "none" | undefined) ?? "none" },
 });
 
@@ -82,12 +87,12 @@ let lastDemoReset = "";
 setInterval(() => {
   const d = new Date();
   const day = d.toISOString().slice(0, 10);
-  if (d.getUTCHours() === 3 && lastDemoReset !== day) { lastDemoReset = day; resetProjectData(cfg, DEMO); console.log("[demo] reset"); }
+  if (d.getUTCHours() === 3 && lastDemoReset !== day) { lastDemoReset = day; resetProjectData(cfg, DEMO); self.log("demo.reset", "system", DEMO); console.log("[demo] reset"); }
 }, 10 * 60 * 1000).unref();
 
 setInterval(() => {
   const n = applyRetention(cfg, reg, (plan) => planOf(plan).retention_days, signer);
-  if (n) console.log(`[retention] shredded ${n} payloads`);
+  if (n) { self.log("retention.run", "system", null, { shredded: n }); console.log(`[retention] shredded ${n} payloads`); }
 }, 6 * 3600 * 1000).unref();
 
 serve({ fetch: app.fetch, port }, () =>

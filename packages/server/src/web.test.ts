@@ -9,6 +9,7 @@ import { buildApp } from "./app.js";
 import { migrateAuth, setSandboxProject, type Mailer } from "./auth.js";
 import { migrateBilling, applyStripeEvent, type BillingConfig } from "./billing.js";
 import { tick } from "./anchorLoop.js";
+import { ensureSelfProject, makeSelfAudit, SELF_TENANT } from "./selfAudit.js";
 import type { Anchor } from "@auditkit/core";
 
 let cfg: Config;
@@ -34,7 +35,8 @@ beforeAll(() => {
   reg = openRegistry(cfg);
   migrateAuth(reg); migrateBilling(reg);
   reg.prepare("INSERT INTO project (id, name, plan, created_at) VALUES ('demo', 'demo', 'business', '2026-01-01T00:00:00Z')").run();
-  app = buildApp({ cfg, reg, signer: loadSigner(cfg.dataDir), anchorPolicy: { kinds: ["rekor"], interval_seconds: 1 }, web: { mailer, billing, siteUrl: "http://site", secureCookies: false, demoProjectId: "demo", proxyTrust: "x-forwarded-for" } });
+  ensureSelfProject(reg, cfg);
+  app = buildApp({ cfg, reg, signer: loadSigner(cfg.dataDir), anchorPolicy: { kinds: ["rekor"], interval_seconds: 1 }, self: makeSelfAudit(cfg, loadSigner(cfg.dataDir)), web: { mailer, billing, siteUrl: "http://site", secureCookies: false, demoProjectId: "demo", proxyTrust: "x-forwarded-for" } });
 });
 afterAll(() => { closeAll(); rmSync(cfg.dataDir, { recursive: true, force: true }); });
 
@@ -208,6 +210,22 @@ describe("viewer tokens", () => {
     expect((await req(`/api/app/projects/${projectId}/viewer-tokens/${t.id}`, { method: "DELETE" })).status).toBe(200);
     expect((await app.request(`/api/viewer/events?token=${t.token}`)).status).toBe(401);
     expect((await app.request(`/v1/events`, { headers: { authorization: `Bearer ${t.token}` } })).status).toBe(401); // viewer tokens are not API keys
+  });
+});
+
+describe("self-audit", () => {
+  it("platform actions land in the public, verifiable platform chain without PII", async () => {
+    const { events } = await (await app.request("/public/self/events?limit=200")).json();
+    const actions = events.map((e: { action: string }) => e.action);
+    for (const a of ["user.signup", "project.create", "api_key.create", "api_key.revoke", "viewer_token.create", "viewer_token.revoke", "tenant_key.add"]) expect(actions).toContain(a);
+    expect(events.every((e: { tenant: string }) => e.tenant === SELF_TENANT)).toBe(true);
+    expect(JSON.stringify(events)).not.toMatch(/@example\.com/); // emails never stored, only handles
+    expect(events.find((e: { action: string }) => e.action === "user.signup").actor).toMatch(/^u:[0-9a-f]{16}$/);
+    expect((await (await app.request("/public/self/verify")).json()).valid).toBe(true);
+    const ex = await app.request("/public/self/export");
+    expect(ex.status).toBe(200);
+    expect((await ex.text()).split("\n")[0]).toContain('"type":"manifest"');
+    expect((await app.request("/public/self/events/nope")).status).toBe(404);
   });
 });
 

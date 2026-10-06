@@ -16,6 +16,7 @@ import { buildViewerRoutes } from "./viewer.js";
 import { rateLimiter } from "./auth.js";
 import { addTenantKey, listTenantKeys, revokeTenantKey, setRequireClientSig } from "./tenantKeys.js";
 import { buildOAuthRoutes, principalFromAccessToken, wwwAuthenticate } from "./oauth.js";
+import { buildSelfAuditRoutes, noSelfAudit, type SelfAudit } from "./selfAudit.js";
 
 export interface Deps {
   cfg: Config;
@@ -24,6 +25,8 @@ export interface Deps {
   anchorPolicy: { kinds: string[]; interval_seconds: number };
   /** base64 P-256 SPKI used to sign Rekor entries; published so verifiers bind Rekor receipts to this server. */
   anchorPublicKey?: string;
+  /** Platform self-audit sink; defaults to a no-op (tests). */
+  self?: SelfAudit;
   /** Site-facing routes (/auth, /app, /demo, /public, /webhooks). Omitted in pure-API tests. */
   web?: Omit<WebDeps, "cfg" | "reg" | "signer">;
 }
@@ -84,10 +87,12 @@ export function buildApp(deps: Deps): Hono<Env> {
   setProjectGuard(projectGuardFromRegistry(deps.reg)); // only registered projects get a DB file
   app.use("*", secureHeaders({ crossOriginEmbedderPolicy: false, crossOriginResourcePolicy: false }));
   app.use("*", bodyLimit({ maxSize: 1_000_000, onError: (c) => c.json({ error: { code: "too_large", message: "request body must be under 1 MB" } }, 413) }));
+  const self = deps.self ?? noSelfAudit;
   if (deps.web) {
-    app.route("/", buildWebRoutes({ ...deps.web, cfg: deps.cfg, reg: deps.reg, signer: deps.signer, anchorPublicKey: deps.anchorPublicKey }));
-    app.route("/", buildOAuthRoutes(deps.reg, deps.web.siteUrl));
+    app.route("/", buildWebRoutes({ ...deps.web, cfg: deps.cfg, reg: deps.reg, signer: deps.signer, anchorPublicKey: deps.anchorPublicKey, self }));
+    app.route("/", buildOAuthRoutes(deps.reg, deps.web.siteUrl, self));
   }
+  if (deps.self) app.route("/", buildSelfAuditRoutes(deps.cfg, deps.reg, deps.signer, deps.anchorPublicKey));
   const bearer = (c: Context<Env>): Principal | null => {
     const auth = c.req.header("authorization");
     const token = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined;
@@ -216,18 +221,23 @@ export function buildApp(deps: Deps): Hono<Env> {
     const denied = needScope(c, "write");
     if (denied) return denied;
     const body = z.object({ public_key: z.string().min(40).max(200) }).parse(await c.req.json());
-    return c.json(addTenantKey(c.get("db"), c.req.param("tenant"), body.public_key), 201);
+    const made = addTenantKey(c.get("db"), c.req.param("tenant"), body.public_key);
+    self.log("tenant_key.add", `key:${c.get("principal").keyId}`, made.id, { project_id: c.get("principal").projectId });
+    return c.json(made, 201);
   });
   app.delete("/v1/tenants/:tenant/keys/:keyId", (c) => {
     const denied = needScope(c, "write");
     if (denied) return denied;
-    return revokeTenantKey(c.get("db"), c.req.param("keyId")) ? c.json({ revoked: true }) : c.json({ error: { code: "not_found", message: "no such key" } }, 404);
+    const ok = revokeTenantKey(c.get("db"), c.req.param("keyId"));
+    if (ok) self.log("tenant_key.revoke", `key:${c.get("principal").keyId}`, c.req.param("keyId"), { project_id: c.get("principal").projectId });
+    return ok ? c.json({ revoked: true }) : c.json({ error: { code: "not_found", message: "no such key" } }, 404);
   });
   app.post("/v1/tenants/:tenant/policy", async (c) => {
     const denied = needScope(c, "admin");
     if (denied) return denied;
     const body = z.object({ require_client_sig: z.boolean() }).parse(await c.req.json());
     setRequireClientSig(c.get("db"), c.req.param("tenant"), body.require_client_sig);
+    self.log("tenant_policy.set", `key:${c.get("principal").keyId}`, null, { project_id: c.get("principal").projectId, require_client_sig: body.require_client_sig });
     return c.json({ ok: true });
   });
 
@@ -235,6 +245,7 @@ export function buildApp(deps: Deps): Hono<Env> {
     const denied = needScope(c, "erase");
     if (denied) return denied;
     const r = erase(c.get("db"), c.get("principal").projectId, deps.signer, c.req.param("id"), `key:${c.get("principal").keyId}`);
+    if (r) self.log("customer.erase", `key:${c.get("principal").keyId}`, c.req.param("id"), { project_id: c.get("principal").projectId });
     return r ? c.json({ erased: true, audit: r }) : c.json({ error: { code: "not_found", message: "no payload to erase" } }, 404);
   });
 
@@ -242,12 +253,16 @@ export function buildApp(deps: Deps): Hono<Env> {
     const denied = needScope(c, "admin");
     if (denied) return denied;
     const body = z.object({ mode: z.enum(["live", "test"]), scopes: z.array(z.enum(["read", "write", "erase", "admin"])).min(1) }).parse(await c.req.json());
-    return c.json(createKey(deps.reg, c.get("principal").projectId, body.mode, body.scopes), 201);
+    const made = createKey(deps.reg, c.get("principal").projectId, body.mode, body.scopes);
+    self.log("api_key.create", `key:${c.get("principal").keyId}`, made.id, { project_id: c.get("principal").projectId, mode: body.mode, scopes: body.scopes });
+    return c.json(made, 201);
   });
   app.delete("/v1/keys/:id", (c) => {
     const denied = needScope(c, "admin");
     if (denied) return denied;
-    return revokeKey(deps.reg, c.get("principal").projectId, c.req.param("id")) ? c.json({ revoked: true }) : c.json({ error: { code: "not_found", message: "no such key" } }, 404);
+    const ok = revokeKey(deps.reg, c.get("principal").projectId, c.req.param("id"));
+    if (ok) self.log("api_key.revoke", `key:${c.get("principal").keyId}`, c.req.param("id"), { project_id: c.get("principal").projectId });
+    return ok ? c.json({ revoked: true }) : c.json({ error: { code: "not_found", message: "no such key" } }, 404);
   });
 
   app.all("/mcp", (c) => mcpHandler(c, deps));
