@@ -7,10 +7,17 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import type { DatabaseSync } from "node:sqlite";
 import { planLimitExceeded, type Deps } from "./app.js";
 import type { Principal } from "./keys.js";
-import { ingest, search, getEvent, verifyRange, exportLines, listTenants } from "./events.js";
+import { ingest, search, getEvent, verifyRange, exportLines, listTenants, ValidationError } from "./events.js";
 import { anchorsFor, proofForEvent, verifyRoots } from "./anchorLoop.js";
 
 const text = (v: unknown) => ({ content: [{ type: "text" as const, text: typeof v === "string" ? v : JSON.stringify(v, null, 2) }] });
+/** Tool handlers surface validation problems as a clear message instead of an empty result. */
+const guarded = <A>(fn: (a: A) => Promise<ReturnType<typeof text>> | ReturnType<typeof text>) => async (a: A) => {
+  try { return await fn(a); } catch (e) {
+    if (e instanceof ValidationError) return { ...text({ error: "invalid_input", message: e.message }), isError: true };
+    throw e;
+  }
+};
 const RO = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 
 export function buildMcp(deps: Deps, principal: Principal, db: DatabaseSync): McpServer {
@@ -29,13 +36,13 @@ export function buildMcp(deps: Deps, principal: Principal, db: DatabaseSync): Mc
       },
       annotations: RO,
     },
-    async (args) => {
+    guarded(async (args) => {
       if (!can("read")) return text({ error: "key lacks read scope" });
       const q: Parameters<typeof search>[1] = {};
       for (const k of ["tenant", "actor", "action", "from", "to", "cursor"] as const) if (args[k]) q[k] = args[k];
       if (args.limit) q.limit = args.limit;
       return text(search(db, q));
-    },
+    }),
   );
 
   server.registerTool(
@@ -102,13 +109,13 @@ export function buildMcp(deps: Deps, principal: Principal, db: DatabaseSync): Mc
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    async (args) => {
+    guarded(async (args) => {
       if (!can("write")) return text({ error: "key lacks write scope" });
       const limit = planLimitExceeded(deps.reg, db, principal.projectId, 1);
       if (limit !== null) return text({ error: "plan_limit", message: `monthly event limit of ${limit} reached; upgrade the plan` });
       const [r] = ingest(db, principal.projectId, deps.signer, [{ ...args, target: args.target ?? null }]);
       return text(r);
-    },
+    }),
   );
 
   return server;

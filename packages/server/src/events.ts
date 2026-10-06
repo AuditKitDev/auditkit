@@ -181,6 +181,9 @@ export interface Query {
 }
 
 export function search(db: DatabaseSync, q: Query): { events: EventRecord[]; next_cursor: string | null } {
+  for (const k of ["from", "to"] as const) {
+    if (q[k] !== undefined && !ISO.test(q[k]!)) throw new ValidationError(`${k} must be ISO 8601, e.g. 2026-10-01T00:00:00Z`);
+  }
   const where: string[] = [];
   const args: Array<string | number> = [];
   if (q.tenant) { where.push("t.external_id = ?"); args.push(q.tenant); }
