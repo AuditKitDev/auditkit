@@ -1,0 +1,12 @@
+# Runs next to the existing containers on the VPS. Touches nothing else: own name, own volume, loopback-only port.
+services:
+  auditkit:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    container_name: auditkit
+    restart: unless-stopped
+    env_file: .env
+    ports: ["127.0.0.1:3001:3001"]
+    volumes: ["auditkit-data:/data"]
+    logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
+volumes:
+  auditkit-data: {}
