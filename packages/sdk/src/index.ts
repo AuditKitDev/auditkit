@@ -1,7 +1,7 @@
 // @auditkit/sdk: depends only on @auditkit/core; global fetch and node:crypto.
-import { randomUUID, sign, verify, type KeyObject } from "node:crypto";
+import { createPublicKey, randomUUID, sign, verify, type KeyObject } from "node:crypto";
 
-import { clientSignable as coreClientSignable, type ExportLine, type Hex } from "@auditkit/core";
+import { clientSignable as coreClientSignable, eventHash, type ExportLine, type Hex } from "@auditkit/core";
 
 export type { ExportLine, Hex };
 
@@ -15,7 +15,20 @@ export interface EventInput {
   idempotencyKey?: string;
 }
 export interface Receipt {
-  id: string; tenant: string; position: number; event_hash: Hex; prev_hash: Hex; server_sig: string; duplicate?: boolean;
+  id: string; tenant: string; tenant_id: string; project_id: string; position: number; occurred_at: string; payload_commit: Hex;
+  event_hash: Hex; prev_hash: Hex; server_sig: string; duplicate?: boolean;
+}
+export interface TenantKey { id: string; public_key: string; created_at: string; revoked_at: string | null }
+const toSpki = (k: KeyObject | string): string => (typeof k === "string" ? k : k.export({ format: "der", type: "spki" }).toString("base64"));
+
+/**
+ * Offline receipt check: recompute event_hash from the receipt plus the action/actor/target you logged,
+ * then check server_sig (Ed25519 over the raw hash bytes) against the server's public key (KeyObject or base64 SPKI).
+ */
+export function verifyReceipt(r: Receipt, serverPublicKey: KeyObject | string, e: { actor: string; action: string; target?: string | null }): boolean {
+  const key = typeof serverPublicKey === "string" ? createPublicKey({ key: Buffer.from(serverPublicKey, "base64"), format: "der", type: "spki" }) : serverPublicKey;
+  const h = eventHash({ id: r.id, project_id: r.project_id, tenant_id: r.tenant_id, position: r.position, occurred_at: r.occurred_at, actor: e.actor, action: e.action, target: e.target ?? null, payload_commit: r.payload_commit, prev_hash: r.prev_hash });
+  return h === r.event_hash && verify(null, Buffer.from(h, "hex"), key, Buffer.from(r.server_sig, "base64"));
 }
 export interface EventRecord {
   id: string; tenant: string; position: number; occurred_at: string; actor: string; action: string; target: string | null;
@@ -141,8 +154,23 @@ export class AuditKit {
     return (await this.#json<{ tenants: never[] }>("/v1/tenants")).tenants;
   }
   /** Not retried: a retry after a lost success would 404. */
-  erase(id: string): Promise<{ erased: boolean }> {
+  erase(id: string): Promise<{ erased: true; audit: Receipt }> {
     return this.#json(`/v1/erase/${encodeURIComponent(id)}`, { method: "POST", retry: false });
+  }
+
+  /** Register an Ed25519 public key (KeyObject or base64 DER SPKI). Needed before sending client_sig. */
+  registerTenantKey(tenant: string, publicKey: KeyObject | string): Promise<{ id: string }> {
+    return this.#json(`/v1/tenants/${encodeURIComponent(tenant)}/keys`, { method: "POST", body: { public_key: toSpki(publicKey) }, retry: false });
+  }
+  async listTenantKeys(tenant: string): Promise<TenantKey[]> {
+    return (await this.#json<{ keys: TenantKey[] }>(`/v1/tenants/${encodeURIComponent(tenant)}/keys`)).keys;
+  }
+  revokeTenantKey(tenant: string, keyId: string): Promise<{ revoked: boolean }> {
+    return this.#json(`/v1/tenants/${encodeURIComponent(tenant)}/keys/${encodeURIComponent(keyId)}`, { method: "DELETE", retry: false });
+  }
+  /** Admin scope. With requireClientSig, unsigned events for the tenant are refused. */
+  setTenantPolicy(tenant: string, policy: { requireClientSig: boolean }): Promise<{ ok: boolean }> {
+    return this.#json(`/v1/tenants/${encodeURIComponent(tenant)}/policy`, { method: "POST", body: { require_client_sig: policy.requireClientSig }, retry: false });
   }
 
   /** Streams the NDJSON export, one parsed line at a time. */

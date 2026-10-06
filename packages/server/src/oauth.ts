@@ -76,9 +76,10 @@ export function buildOAuthRoutes(reg: DatabaseSync, siteUrl: string): Hono {
       scopes_supported: SCOPES,
     }),
   );
-  app.get("/.well-known/oauth-protected-resource", (c) =>
-    c.json({ resource: `${siteUrl}/mcp`, authorization_servers: [siteUrl], scopes_supported: SCOPES, bearer_methods_supported: ["header"] }),
-  );
+  // RFC 9728: clients may probe the root form or the path-suffixed form for resource https://host/mcp.
+  const prm = (c: Context) => c.json({ resource: `${siteUrl}/mcp`, authorization_servers: [siteUrl], scopes_supported: SCOPES, bearer_methods_supported: ["header"] });
+  app.get("/.well-known/oauth-protected-resource", prm);
+  app.get("/.well-known/oauth-protected-resource/mcp", prm);
 
   app.post("/oauth/register", async (c) => {
     const body = z.object({

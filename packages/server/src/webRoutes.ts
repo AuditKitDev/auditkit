@@ -50,7 +50,7 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
   // ---- auth
   app.post("/auth/magic", async (c) => {
     if (!loginLimit(ip(c))) return err(c, 429, "rate_limited", "too many sign-in requests; try again in a few minutes");
-    const body = z.object({ email: z.string().max(254), next: z.string().max(200).optional() }).parse(await c.req.json());
+    const body = z.object({ email: z.string().max(254), next: z.string().max(4096).optional() }).parse(await c.req.json());
     await requestMagicLink(d.reg, d.mailer, d.siteUrl, body.email, body.next);
     return c.json({ sent: true }, 202);
   });

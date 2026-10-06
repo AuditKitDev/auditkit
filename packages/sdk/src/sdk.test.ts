@@ -4,11 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generateKeyPairSync } from "node:crypto";
 import { openRegistry, closeAll, loadSigner, createProject, createKey, buildApp, type Config } from "@auditkit/server";
-import { AuditKit, AuditKitError, clientSignable, verifyClientSig, type Receipt } from "./index.js";
+import { AuditKit, AuditKitError, clientSignable, verifyClientSig, verifyReceipt, type Receipt } from "./index.js";
 
 let cfg: Config;
 let app: ReturnType<typeof buildApp>;
 let key: string;
+let serverPub: string;
 let calls: number;
 let failNext: number;
 const viaApp = ((url: string | URL | Request, init?: RequestInit) => {
@@ -24,7 +25,9 @@ beforeAll(() => {
   const reg = openRegistry(cfg);
   const projectId = createProject(reg, "t").id;
   key = createKey(reg, projectId, "test", ["admin"]).key;
-  app = buildApp({ cfg, reg, signer: loadSigner(cfg.dataDir), anchorPolicy: { kinds: [], interval_seconds: 60 } });
+  const signer = loadSigner(cfg.dataDir);
+  serverPub = signer.publicKeySpkiB64;
+  app = buildApp({ cfg, reg, signer, anchorPolicy: { kinds: [], interval_seconds: 60 } });
 });
 afterAll(() => { closeAll(); rmSync(cfg.dataDir, { recursive: true, force: true }); });
 
@@ -54,7 +57,10 @@ describe("sdk", () => {
     expect(lines[0]!.type).toBe("manifest");
     expect(lines.filter((l) => l.type === "event")).toHaveLength(4);
 
-    expect(await a.erase(r1.id)).toEqual({ erased: true });
+    const er = await a.erase(r1.id);
+    expect(er.erased).toBe(true);
+    expect(er.audit.tenant).toBe("acme");
+    expect((await a.get(er.audit.id)).action).toBe("payload.erased");
     expect((await a.get(r1.id)).erased).toBe(true);
   });
 
@@ -88,6 +94,11 @@ describe("sdk", () => {
   it("client-signed event round-trips and clientSignable matches what was signed", async () => {
     const { publicKey, privateKey } = generateKeyPairSync("ed25519");
     const a = kit({ clientKey: privateKey });
+    await expect(a.log({ tenant: "signed", actor: "u", action: "x" })).rejects.toMatchObject({ status: 400 });
+    const { id: keyId } = await a.registerTenantKey("signed", publicKey);
+    expect((await a.listTenantKeys("signed")).map((k) => k.id)).toContain(keyId);
+    await a.setTenantPolicy("signed", { requireClientSig: true });
+    await expect(kit().log({ tenant: "signed", actor: "u", action: "unsigned" })).rejects.toMatchObject({ status: 400 });
     const r = await a.log({ tenant: "signed", actor: "u", action: "role.grant", target: "u2", payload: { role: "admin" } });
     const ev = await a.get(r.id);
     const lines = [];
@@ -100,5 +111,9 @@ describe("sdk", () => {
     expect(verifyClientSig(publicKey, { ...input, actor: "evil" }, sig)).toBe(false);
     expect(clientSignable(input)).toMatch(/^[0-9a-f]{64}$/);
     expect(clientSignable({ ...input, target: undefined })).toBe(clientSignable({ ...input, target: null }));
+    expect(verifyReceipt(r, serverPub, { actor: "u", action: "role.grant", target: "u2" })).toBe(true);
+    expect(verifyReceipt(r, serverPub, { actor: "evil", action: "role.grant", target: "u2" })).toBe(false);
+    await a.revokeTenantKey("signed", keyId);
+    expect((await a.listTenantKeys("signed"))[0]!.revoked_at).toBeTypeOf("string");
   });
 });

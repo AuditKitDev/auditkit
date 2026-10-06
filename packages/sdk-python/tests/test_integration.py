@@ -4,6 +4,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from auditkit import AuditKit, AuditKitError, client_signable
@@ -38,7 +39,9 @@ def test_full_flow(server, kit):
     lines = list(ak.export("acme"))
     assert lines and all("type" in l for l in lines)
     assert any(t["external_id"] == "acme" and t["events"] == 4 for t in ak.tenants())
-    assert ak.erase(r["id"]) == {"erased": True}
+    er = ak.erase(r["id"])
+    assert er["erased"] is True and er["audit"]["tenant"] == "acme"
+    assert ak.get(er["audit"]["id"])["action"] == "payload.erased"
     assert ak.get(r["id"])["erased"] is True
 
 
@@ -56,6 +59,15 @@ def test_client_sig_roundtrip(server):
     key = Ed25519PrivateKey.generate()
     got = []
     ak = AuditKit(server["key"], base_url=server["url"], client_key=key, keep_receipts=got.append)
+    with pytest.raises(AuditKitError) as e:
+        ak.log("signed", "u", "x.unregistered")
+    assert e.value.status == 400
+    spki = key.public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
+    kid = ak.register_tenant_key("signed", spki)["id"]
+    assert kid in [k["id"] for k in ak.list_tenant_keys("signed")]
+    ak.set_tenant_policy("signed", True)
+    with pytest.raises(AuditKitError):
+        AuditKit(server["key"], base_url=server["url"]).log("signed", "u", "unsigned")
     ak.log("signed", "u", "x.y", target="t1", occurred_at="2026-01-02T03:04:05.000Z")
     ak.log("signed", "u", "x.z")
     assert ak.verify("signed")["valid"]
@@ -69,6 +81,8 @@ def test_client_sig_roundtrip(server):
             pub.verify(base64.b64decode(ev["client_sig"]), bytes.fromhex(client_signable("signed", ev["actor"], ev["action"], ev.get("target"), ev["occurred_at"])))
             found += 1
     assert found == 2, sigs
+    ak.revoke_tenant_key("signed", kid)
+    assert ak.list_tenant_keys("signed")[0]["revoked_at"]
 
 
 def test_retry_on_5xx():

@@ -1,4 +1,4 @@
-import os, re, socket, subprocess, tempfile, time
+import os, socket, subprocess, tempfile, time
 from pathlib import Path
 import pytest
 
@@ -13,21 +13,24 @@ def server():
     tmp = tempfile.mkdtemp()
     env = {**os.environ, "AUDITKIT_DATA": tmp, "PORT": str(port), "AUDITKIT_ANCHORS": "none"}
     p = subprocess.Popen(["node", str(ROOT / "packages/server/dist/main.js")], env=env, cwd=ROOT,
-                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    key = None
-    out = ""
+                         stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    keyfile = Path(tmp) / "first-admin-key.txt"
+    deadline = time.time() + 30
+    while time.time() < deadline and not (keyfile.exists() and keyfile.read_text().strip()):
+        if p.poll() is not None:
+            raise RuntimeError("server exited")
+        time.sleep(0.1)
+    if not keyfile.exists():
+        p.kill()
+        raise RuntimeError("server did not write first-admin-key.txt")
+    key = keyfile.read_text().strip()
     deadline = time.time() + 30
     while time.time() < deadline:
-        line = p.stdout.readline()
-        out += line
-        m = re.search(r"admin key \(shown once\): (\S+)", line)
-        if m:
-            key = m.group(1)
-        if "listening" in line:
+        try:
+            socket.create_connection(("127.0.0.1", port), 0.2).close()
             break
-    if not key:
-        p.kill()
-        raise RuntimeError("server did not start: " + out)
+        except OSError:
+            time.sleep(0.1)
     yield {"url": f"http://127.0.0.1:{port}", "key": key}
     p.terminate()
     p.wait(10)

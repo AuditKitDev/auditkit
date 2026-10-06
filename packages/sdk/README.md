@@ -11,7 +11,7 @@ console.log(receipt.position, receipt.event_hash);
 for await (const line of audit.export({ tenant: "acme" })) console.log(line.type); // verify offline with @auditkit/verify
 ```
 
-Methods: `log`, `logBulk`, `search`, `get`, `proof`, `verify`, `export` (async iterable of NDJSON lines), `tenants`, `erase`.
+Methods: `log`, `logBulk`, `search`, `get`, `proof`, `verify`, `export` (async iterable of NDJSON lines), `tenants`, `erase` (returns `{ erased: true, audit }`; the erasure is logged as a `payload.erased` event), `registerTenantKey(tenant, keyObjectOrSpkiBase64)`, `listTenantKeys`, `revokeTenantKey(tenant, keyId)`, `setTenantPolicy(tenant, { requireClientSig })` (admin scope).
 Options: `baseUrl`, `clientKey`, `keepReceipts(receipt)`, `fetch`, `maxAttempts` (3), `retryDelayMs` (200, doubled per retry).
 Failures throw `AuditKitError { status, code, message }`.
 
@@ -21,7 +21,7 @@ Up to 3 attempts with exponential backoff on 429, 5xx and network errors. Reads 
 
 ## Client signatures
 
-Pass `clientKey` (an Ed25519 private `KeyObject`) and every event is signed. The server does not check `client_sig`; it stores it and puts it in the export, and the verifier checks it.
+Pass `clientKey` (an Ed25519 private `KeyObject`) and every event is signed. Register the matching public key first with `registerTenantKey`; the server verifies `client_sig` on ingest and rejects events signed without a registered key (400). `setTenantPolicy(tenant, { requireClientSig: true })` also rejects unsigned events.
 
 The server picks the salt, id and position, so the client cannot sign `event_hash`. It signs the fields it controls:
 
@@ -35,3 +35,7 @@ client_sig = base64( Ed25519.sign(digest) )                                  // 
 - `payload` is not covered by `client_sig` (it is covered by the chain through `payload_commit`).
 
 The signed message is defined by `clientSignable` in `@auditkit/core`. The SDK's `clientSignable({ tenant, actor, action, target?, occurredAt })` adapts it (camelCase input) and returns the digest as hex, and `verifyClientSig(publicKey, input, sig)` checks a signature. Import both from `@auditkit/sdk` in verifiers so they use identical bytes.
+
+## Receipts
+
+Receipts carry `tenant_id`, `project_id`, `occurred_at` and `payload_commit`. `verifyReceipt(receipt, serverPublicKey, { actor, action, target? })` recomputes `event_hash` offline and checks `server_sig` against the server's public key (`KeyObject` or base64 SPKI, published at `/.well-known/auditkit.json`).

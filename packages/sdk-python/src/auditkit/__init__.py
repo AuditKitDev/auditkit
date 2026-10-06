@@ -140,6 +140,21 @@ class AuditKit:
     def tenants(self) -> list:
         return self._json("/v1/tenants")["tenants"]
 
+    def register_tenant_key(self, tenant: str, public_key) -> dict:
+        """public_key: DER SPKI bytes, or a base64 str of them. Needed before sending client_sig."""
+        pk = b64encode(public_key).decode() if isinstance(public_key, (bytes, bytearray)) else public_key
+        return self._json(f"/v1/tenants/{urllib.parse.quote(tenant, safe='')}/keys", method="POST", body={"public_key": pk}, retry=False)
+
+    def list_tenant_keys(self, tenant: str) -> list:
+        return self._json(f"/v1/tenants/{urllib.parse.quote(tenant, safe='')}/keys")["keys"]
+
+    def revoke_tenant_key(self, tenant: str, key_id: str) -> dict:
+        return self._json(f"/v1/tenants/{urllib.parse.quote(tenant, safe='')}/keys/{urllib.parse.quote(key_id, safe='')}", method="DELETE", retry=False)
+
+    def set_tenant_policy(self, tenant: str, require_client_sig: bool) -> dict:
+        """Admin scope. When true, unsigned events for the tenant are refused."""
+        return self._json(f"/v1/tenants/{urllib.parse.quote(tenant, safe='')}/policy", method="POST", body={"require_client_sig": require_client_sig}, retry=False)
+
     def erase(self, id: str) -> dict:
-        """Not retried."""
+        """Returns {"erased": True, "audit": receipt}. Not retried."""
         return self._json(f"/v1/erase/{urllib.parse.quote(id, safe='')}", method="POST", retry=False)
