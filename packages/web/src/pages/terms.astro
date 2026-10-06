@@ -9,7 +9,7 @@ import { LEGAL_NAME, LEGAL_JURISDICTION, SUPPORT_EMAIL, LAST_UPDATED } from "../
   <p>AuditKit accepts events through a REST API and an MCP endpoint, hash-chains them per tenant, signs receipts, builds Merkle roots, publishes those roots to Sigstore Rekor and OpenTimestamps, and lets you search, export and verify. The self-hosted edition is licensed separately under AGPL-3.0 and is not covered by these terms beyond the license.</p>
 
   <h2>Plans, limits, billing</h2>
-  <p>Plans are described on the <a href="/pricing">pricing page</a> and enforced by the server: a monthly event limit (writes past it return <code>429</code>), a payload retention window, and an anchor interval. Paid plans are billed monthly through Stripe Checkout; you can cancel any time through the billing portal and the plan continues to the end of the paid month. Prices may change with 30 days' notice by email. <code>[OWNER: refund policy]</code></p>
+  <p>Plans are described on the <a href="/pricing">pricing page</a> and enforced by the server: a monthly event limit (writes past it return <code>429</code>), a payload retention window, and an anchor interval. Paid plans are billed monthly through Stripe Checkout; you can cancel any time through the billing portal and the plan continues to the end of the paid month. Prices may change with 30 days' notice by email. <code>[OWNER: confirm 30 days' notice; refund policy]</code></p>
 
   <h2>What we promise about integrity, and what we do not</h2>
   <ul>
@@ -27,7 +27,7 @@ import { LEGAL_NAME, LEGAL_JURISDICTION, SUPPORT_EMAIL, LAST_UPDATED } from "../
   <p>Do not use the service to store secrets or credentials in payloads, to attack or probe other tenants, to exceed rate limits deliberately, or for anything unlawful. The public demo is for trying the product. We may suspend an account that threatens the service for other customers and will tell you why.</p>
 
   <h2>Termination</h2>
-  <p>You can delete your account at any time; your project files are deleted and anchored roots remain in the public logs as hashes. We may terminate for breach of these terms with notice, and will give you 30 days to export. If we shut the service down we will give 90 days' notice; the verifier works without us.</p>
+  <p>You can delete your account at any time; your project files are deleted and anchored roots remain in the public logs as hashes. We may terminate for breach of these terms with notice, and will give you 30 days to export. If we shut the service down we will give 90 days' notice; the verifier works without us. <code>[OWNER: confirm the 30-day export and 90-day shutdown notice]</code></p>
 
   <h2>Liability</h2>
   <p>The service is provided as is. To the extent permitted by law, our total liability for any claim is limited to the fees you paid in the 12 months before the claim, and we are not liable for indirect or consequential loss. Nothing here limits liability that cannot be limited by law.</p>

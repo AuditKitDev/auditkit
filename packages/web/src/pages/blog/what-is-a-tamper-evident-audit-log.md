@@ -30,6 +30,9 @@ Delete everything, and you will know. Read everything that is not erased. Edit e
 ## How to verify one yourself
 
 ```
+# until @auditkit/verify is published, from the repo (pnpm install && pnpm -r build):
+node packages/verify/dist/cli.js export.jsonl --pin <server public key>
+# eventual command:
 npx @auditkit/verify export.jsonl --pin <server public key>
 ```
 

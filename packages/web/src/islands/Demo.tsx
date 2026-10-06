@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { api, HttpError, short, type EventRecord, type Proof, type Receipt, type Verdict } from "../lib/api";
+import { api, HttpError, rekorRef, short, type EventRecord, type Proof, type Receipt, type Verdict } from "../lib/api";
 
 interface Block { id: string; position: number; actor: string; action: string; target: string | null; event_hash: string; prev_hash: string; server_sig?: string; occurred_at?: string }
 
@@ -10,7 +10,7 @@ const anchorLine = (p: Proof | undefined): { text: string; level: "none" | "part
   const ots = p.anchors.find((a) => a.kind === "ots");
   if (!rekor && !ots) return { text: "in a Merkle root · anchors pending", level: "part" };
   const parts: string[] = [];
-  if (rekor) parts.push(`anchored to Rekor #${rekor.ref.split("/")[0]}`);
+  if (rekor) parts.push(`anchored: ${rekorRef(rekor.ref).label}`);
   if (ots) parts.push(ots.status === "final" ? "OpenTimestamps confirmed in Bitcoin" : "OpenTimestamps pending");
   return { text: parts.join(" · "), level: rekor ? "full" : "part" };
 };
@@ -169,7 +169,7 @@ function Detail({ block, proof }: { block: Block; proof: Proof | undefined }) {
           <dt class="text-faint">tenant_root</dt><dd class="hash">{proof.tenant_root}</dd>
           <dt class="text-faint">global_root</dt><dd class="hash">{proof.global_root}</dd>
           <dt class="text-faint">merkle path</dt><dd class="text-muted">{proof.path_to_tenant_root.length + proof.path_to_project_root.length + proof.path_to_global_root.length} steps to the global root</dd>
-          {proof.anchors.map((a) => <><dt class="text-faint">{a.kind}</dt><dd class="hash">{a.ref} <span class="text-muted">({a.status})</span></dd></>)}
+          {proof.anchors.map((a) => <><dt class="text-faint">{a.kind}</dt><dd class="hash">{a.kind === "rekor" ? rekorRef(a.ref).label : a.ref} <span class="text-muted">({a.status})</span>{a.kind === "rekor" && rekorRef(a.ref).url && <> <a class="text-accent underline" href={rekorRef(a.ref).url!} target="_blank" rel="noopener">open</a></>}</dd></>)}
         </>}
       </dl>
       <p class="mt-3 text-xs text-faint">Receipts are signed with the server's Ed25519 key, published at <code>/.well-known/auditkit.json</code>. The demo tenant is keyed to your IP hash and reset nightly.</p>

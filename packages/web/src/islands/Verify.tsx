@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import { api, type Project, type Tenant, type Verdict } from "../lib/api";
+import { VERIFY_CMD_REPO } from "../lib/snippets";
 import { ProjectFrame } from "./app";
 import { ErrorBox, Loading, VerdictView } from "./ui";
 
@@ -48,7 +49,7 @@ function Body({ p }: { p: Project }) {
         {verdict ? <div class="card p-5"><VerdictView v={verdict} /></div> : <div class="card p-5 text-sm text-muted">Pick a tenant and run verify. The result shows the head hash, how far the chain is covered by a Merkle root (rooted) and how far those roots are publicly anchored (anchored).</div>}
         <div class="card p-5 text-sm">
           <p class="font-medium">Verify offline</p>
-          <pre class="mt-2 rounded border border-line bg-bg p-3 text-xs">{`npx @auditkit/verify auditkit-${p.id}-${tenant || "<tenant>"}.jsonl --pin <server public key>\n# server key: GET /.well-known/auditkit.json`}</pre>
+          <pre class="mt-2 rounded border border-line bg-bg p-3 text-xs">{`# until @auditkit/verify is published, from the repo (pnpm install && pnpm -r build):\n${VERIFY_CMD_REPO} auditkit-${p.id}-${tenant || "<tenant>"}.jsonl --pin <server public key>\n# eventual command: npx @auditkit/verify <file> --pin <server public key>\n# server key: GET /.well-known/auditkit.json`}</pre>
           <p class="mt-2 text-xs text-faint">Exit 0 VALID, 2 VALID_UNANCHORED (chain and signatures hold, no anchors yet), 1 INVALID.</p>
         </div>
       </div>

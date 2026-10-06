@@ -13,7 +13,8 @@ All JSON. Errors: `{ error: { code, message } }` with 4xx/5xx. Session is an htt
 | Method | Path | Body / query | Returns |
 |---|---|---|---|
 | POST | `/auth/magic` | `{ email, next? }` | `202 { sent: true }` always (no account enumeration). Dev with no RESEND_API_KEY: link is printed to the server log. |
-| GET | `/auth/callback` | `?token=…` | `302` to `next` (default `/app`) with the cookie set; `302 /login?error=expired` otherwise. Token single-use, 15 min. |
+| GET | `/auth/callback` | `?token=…` | `200` HTML page that auto-POSTs the token (mail-scanner safe); nothing is redeemed on GET. |
+| POST | `/auth/callback` | form `token` | `302` to `next` (default `/app`; must match `SAFE_NEXT`, one leading slash) with the cookie set; `302 /login?error=expired` otherwise. Token single-use, 15 min. |
 | GET | `/auth/me` | | `200 { user: { id, email, created_at } }` or `401` |
 | POST | `/auth/logout` | | `204` |
 

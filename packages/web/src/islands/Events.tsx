@@ -9,5 +9,5 @@ export default function Events() {
 function Body({ p }: { p: Project }) {
   const [tenants, setTenants] = useState<string[] | undefined>(undefined);
   useEffect(() => { api.projects.tenants(p.id).then((r) => setTenants(r.tenants.map((t) => t.external_id))).catch(() => setTenants(undefined)); }, [p.id]);
-  return <EventTable fetchPage={(q) => api.projects.events(p.id, q)} fetchProof={(id) => api.projects.proof(p.id, id)} {...(tenants ? { tenants } : {})} />;
+  return <EventTable fetchPage={(q) => api.projects.events(p.id, q)} fetchProof={(id) => api.projects.proof(p.id, id)} fetchVerify={(t) => api.projects.verify(p.id, t)} {...(tenants ? { tenants } : {})} />;
 }

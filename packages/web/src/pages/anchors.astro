@@ -5,7 +5,7 @@ import Anchors from "../islands/Anchors";
 <Base title="Anchors: every root published to Rekor and OpenTimestamps" description="Live transparency page. Each global root AuditKit publishes, with its Sigstore Rekor log index and OpenTimestamps status, read directly from the service. Rekor is an append-only transparency log with inclusion proofs; OTS commits to Bitcoin." wide>
   <section class="py-12">
     <h1 class="text-3xl font-semibold sm:text-4xl">Public anchors</h1>
-    <p class="mt-3 max-w-3xl text-lg text-muted">Every global root this service has published, live. A root is one SHA-256 over all projects' roots for one tick; it reveals nothing about events. Click a Rekor index to see the entry in Sigstore's public log, which AuditKit cannot edit.</p>
+    <p class="mt-3 max-w-3xl text-lg text-muted">Every global root this service has published, live. A root is one SHA-256 over all projects' roots for one tick; it reveals nothing about events. Each row names the Rekor log and entry index; entries on <code>rekor.sigstore.dev</code> link to Sigstore's search page, and sharded logs (<code>log2025-1</code> and later) have no public search page, so the entry is shown as text and the inclusion proof in the export is what the verifier checks.</p>
     <div class="mt-8"><Anchors client:load /></div>
     <div class="prose-doc mt-10 max-w-3xl">
       <h2>How to read this page</h2>

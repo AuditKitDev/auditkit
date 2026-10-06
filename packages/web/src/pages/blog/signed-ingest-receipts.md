@@ -9,7 +9,7 @@ tags: [design]
 
 ## Format
 
-`server_sig` is an Ed25519 signature over the raw 32 bytes of `event_hash`, made with a private key loaded from the server process's environment and never stored in a database. The public key is published at `/.well-known/auditkit.json` and pinned in the verifier package, so a receipt can be checked by anyone with the key and the event header.
+`server_sig` is an Ed25519 signature over the raw 32 bytes of `event_hash`, made with a private key loaded from the server process's environment and never stored in a database. The public key is published at `/.well-known/auditkit.json` and passed to the verifier with `--pin`, so a receipt can be checked by anyone with the key and the event header.
 
 ## Why a receipt matters before anchoring
 

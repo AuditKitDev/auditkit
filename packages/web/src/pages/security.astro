@@ -12,12 +12,12 @@ import { SECURITY_EMAIL } from "../lib/site";
     <li><strong>Read</strong> every event and payload that has not been erased. Payloads are stored as JSON, not encrypted at rest by the application. Do not log secrets; log that they were used. <code>[OWNER: state disk encryption on the VPS]</code></li>
     <li><strong>Delete</strong> rows, files or the whole database. This is detectable: a tenant's exported events no longer reach the roots in Rekor, and receipts you hold have positions that no longer exist.</li>
     <li><strong>Modify</strong> rows. Any change to a header field changes <code>event_hash</code>, which breaks <code>prev_hash</code> of the next event, the tenant root, the project root and the global root already in Rekor and OpenTimestamps. The verifier reports the first failing position.</li>
-    <li><strong>Stop anchoring</strong> or <strong>stop the service</strong>. Visible on <a href="/anchors">/anchors</a> and in <code>anchored_through</code> on every verify. Receipts already issued still verify against the pinned key.</li>
+    <li><strong>Stop anchoring</strong> or <strong>stop the service</strong>. Visible on <a href="/anchors">/anchors</a> and in <code>anchored_through</code> on every verify. Receipts already issued still verify against the published key.</li>
   </ul>
   <h2>What a database administrator cannot do</h2>
   <ul>
     <li><strong>Rewrite history that has been anchored</strong>, because the global root is in two public logs we do not operate and the verifier checks the rebuilt root against them.</li>
-    <li><strong>Forge a receipt</strong>, because the Ed25519 private key is loaded from the environment of the server process and is not in any database; the public key is published at <code>/.well-known/auditkit.json</code> and pinned in the verifier package.</li>
+    <li><strong>Forge a receipt</strong>, because the Ed25519 private key is loaded from the environment of the server process and is not in any database; the public key is published at <code>/.well-known/auditkit.json</code> and you pass it to the verifier with <code>--pin</code>.</li>
     <li><strong>Forge your client signatures</strong>, if you sign events with a key we never see. Register the public key per tenant and the server verifies each signed event on ingest and, with the policy set, refuses unsigned ones; the signature travels in the export and the verifier checks it again with your public key, so you do not have to trust the server's check.</li>
     <li><strong>Recover an erased payload</strong>, because erasure deletes both the payload and its per-event salt; the remaining commitment is <code>sha256(salt ∥ payload)</code> with the salt gone.</li>
     <li><strong>Erase silently</strong>, because every erasure (and every retention shred) is appended to the tenant's chain as a <code>payload.erased</code> or <code>payload.retention_shred</code> event, signed and anchored like any other.</li>
@@ -39,7 +39,7 @@ import { SECURITY_EMAIL } from "../lib/site";
     <li>Every interval, for each tenant with new events: build the tenant root, then the project root, then one global root per tick. One Rekor entry per tick keeps public-log traffic polite.</li>
     <li>Rekor: <code>hashedrekord</code> entry; we store the entry, inclusion proof and checkpoint. Final on write. Rekor does not give a trustworthy timestamp; we do not claim one.</li>
     <li>OpenTimestamps: submitted to public calendars; the <code>.ots</code> proof is stored and upgraded when the Bitcoin attestation lands, within hours. Time comes from the block header.</li>
-    <li>Retries with backoff; status <code>pending | anchored | failed</code> is visible per root on <a href="/anchors">/anchors</a>.</li>
+    <li>Retries with backoff. Each receipt's status, <code>pending | final</code>, is visible per root on <a href="/anchors">/anchors</a>; a root with no receipt yet is still being anchored.</li>
   </ul>
 
   <h2>Keys, sessions, tenancy</h2>

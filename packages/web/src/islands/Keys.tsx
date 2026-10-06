@@ -43,7 +43,7 @@ function Body({ p }: { p: Project }) {
               </label>
             ))}
           </div>
-          <p class="mt-2 text-xs text-faint">Test keys hit a seeded demo project; live keys hit this one.</p>
+          <p class="mt-2 text-xs text-faint">Both hit this project; the prefix is a label for your own routing.</p>
         </fieldset>
         <fieldset class="mt-4">
           <legend class="text-xs uppercase tracking-wider text-faint">Scopes</legend>

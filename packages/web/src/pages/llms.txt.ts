@@ -3,7 +3,7 @@ import { SITE_URL, API_URL } from "../lib/site";
 
 export const GET: APIRoute = () => new Response(`# AuditKit
 
-> Hosted tamper-evident audit log for B2B SaaS. Events are hash-chained per tenant, acknowledged with Ed25519-signed receipts, batched into Merkle roots, and anchored to Sigstore Rekor and OpenTimestamps. Anyone can verify an export offline with \`npx @auditkit/verify\` without trusting AuditKit. Open source (AGPL); Free tier, Pro $49/mo, Business $199/mo.
+> Hosted tamper-evident audit log for B2B SaaS. Events are hash-chained per tenant, acknowledged with Ed25519-signed receipts, batched into Merkle roots, and anchored to Sigstore Rekor and OpenTimestamps. Anyone can verify an export offline with \`@auditkit/verify\` without trusting AuditKit (until it is published to npm, run \`node packages/verify/dist/cli.js <file>\` from the repository; \`npx @auditkit/verify\` is the eventual command). Open source (AGPL); Free tier, Pro $49/mo, Business $199/mo.
 
 AuditKit is a REST API plus an MCP server in the same process. GDPR erasure uses crypto-shredding (per-event salt deleted with the payload) so the chain stays valid after a payload is deleted. The server stores customer client signatures and the verifier checks them; the verifier trusts Rekor's log key and Bitcoin, not AuditKit.
 

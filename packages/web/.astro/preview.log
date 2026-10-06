@@ -1,1 +1,41 @@
-{"message":" astro  v7.3.5 ready in 24 ms\n┃ Local    http://localhost:4399/\n┃ Network  use --host to expose","label":"SKIP_FORMAT","level":"info"}
+{"message":" astro  v7.3.5 ready in 21 ms\n┃ Local    http://localhost:4399/\n┃ Network  use --host to expose","label":"SKIP_FORMAT","level":"info"}
+12:03:28 AM [vite] http proxy error: /auth/me
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+12:03:29 AM [vite] http proxy error: /public/anchors?limit=50
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+12:03:29 AM [vite] http proxy error: /public/stats
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+12:03:31 AM [vite] http proxy error: /auth/me
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+12:03:31 AM [vite] http proxy error: /auth/me
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+12:04:10 AM [vite] http proxy error: /auth/me
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+12:04:11 AM [vite] http proxy error: /public/anchors?limit=50
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+12:04:11 AM [vite] http proxy error: /public/stats
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+12:04:13 AM [vite] http proxy error: /auth/me
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)
+12:04:13 AM [vite] http proxy error: /auth/me
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1430:18)
+    at afterConnectMultiple (node:net:2099:7)

@@ -19,7 +19,9 @@ export interface Tenant { id: string; external_id: string; events: number; creat
 export interface TenantKey { id: string; public_key: string; created_at: string; revoked_at: string | null }
 export interface EventRecord {
   id: string; tenant: string; position: number; occurred_at: string; actor: string; action: string; target: string | null;
-  payload: unknown; erased: boolean; event_hash: string; prev_hash: string; anchored: boolean;
+  payload: unknown; erased: boolean; event_hash: string; prev_hash: string;
+  /** True when the event is in a Merkle root ("rooted"). Whether that root has a verified public anchor is `anchored_through` on /verify. */
+  anchored: boolean;
 }
 export interface Receipt { id: string; tenant: string; position: number; event_hash: string; prev_hash: string; server_sig: string; duplicate: boolean }
 export interface ProofStep { hash: string; side: "left" | "right" }
@@ -137,4 +139,16 @@ export function projectIdFromUrl(): string | null {
 export const short = (hex: string, n = 8) => (hex.length > n * 2 + 1 ? `${hex.slice(0, n)}…${hex.slice(-n)}` : hex);
 export const fmtDate = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 export const fmtNum = (n: number) => n.toLocaleString();
-export const rekorUrl = (ref: string) => { const idx = ref.split("/")[0]; return /^\d+$/.test(idx ?? "") ? `https://search.sigstore.dev/?logIndex=${idx}` : "https://search.sigstore.dev/"; };
+/**
+ * Rekor receipt refs come in two shapes (packages/anchor-rekor/src/rekor.ts):
+ * v1 `"<logIndex>/<entryId>"` (rekor.sigstore.dev, searchable by index) and v2 `"<origin>/<logIndex>"`
+ * (sharded logs such as log2025-1.rekor.sigstore.dev, which have no public search page; the receipt carries no entry URL).
+ */
+export interface RekorRef { index: string; shard: string | null; label: string; url: string | null }
+export function rekorRef(ref: string): RekorRef {
+  const v1 = ref.match(/^(\d+)\/[0-9a-f]+$/i);
+  if (v1) return { index: v1[1]!, shard: null, label: `Rekor entry ${v1[1]}`, url: `https://search.sigstore.dev/?logIndex=${v1[1]}` };
+  const v2 = ref.match(/^([^/]+)\/(\d+)$/);
+  if (v2) { const shard = v2[1]!.split(".")[0]!; return { index: v2[2]!, shard, label: `Rekor entry ${v2[2]} on ${shard}`, url: null }; }
+  return { index: ref, shard: null, label: `Rekor ${ref}`, url: null };
+}

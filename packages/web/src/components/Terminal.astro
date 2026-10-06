@@ -4,7 +4,8 @@
 interface Props { title?: string }
 const { title = "auditkit-verify" } = Astro.props;
 const lines: Array<[string, string]> = [
-  ["cmd", "$ npx @auditkit/verify acme-2026-10.jsonl --pin MCowBQYDK2VwAyEA…"],
+  ["d", "# until @auditkit/verify is published, run it from the repo; later: npx @auditkit/verify …"],
+  ["cmd", "$ node packages/verify/dist/cli.js acme-2026-10.jsonl --pin MCowBQYDK2VwAyEA…"],
   ["ok", "ok   manifest    version 1, tenant ten_01j9k4, positions 0..1283, exported 2026-10-05T09:12:44.102Z"],
   ["ok", "ok   chain       1284 events, prev GENESIS → head 9f3c1a…e1a7"],
   ["ok", "ok   signatures  1284 server signatures verify (pinned key)"],
@@ -21,7 +22,7 @@ const lines: Array<[string, string]> = [
 ];
 const cls: Record<string, string> = { cmd: "text-fg", ok: "text-fg", q: "text-warn", d: "text-muted", verdict: "font-semibold text-accent", "": "" };
 ---
-<figure class="card overflow-hidden">
+<figure class="card min-w-0 overflow-hidden">
   <figcaption class="flex items-center gap-2 border-b border-line px-3 py-2 font-mono text-xs text-muted">
     <span class="inline-block h-2.5 w-2.5 rounded-full bg-line-strong"></span><span class="inline-block h-2.5 w-2.5 rounded-full bg-line-strong"></span><span class="inline-block h-2.5 w-2.5 rounded-full bg-line-strong"></span>
     <span class="ml-2">{title}</span>

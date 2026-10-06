@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { fmtDate, type EventRecord, type Proof } from "../lib/api";
+import { fmtDate, type EventRecord, type Proof, type Verdict } from "../lib/api";
 import { ErrorBox, Hash, Loading, ProofView } from "./ui";
 
 type Query = Record<string, string | number | undefined | null>;
@@ -9,9 +9,11 @@ interface Props {
   tenants?: string[];
   /** Hide the tenant filter (viewer tokens are tenant-scoped). */
   fixedTenant?: boolean;
+  /** Server-side verify for one tenant; drives the "rooted through / anchored through" header. */
+  fetchVerify?: (tenant: string) => Promise<Verdict>;
 }
 
-export default function EventTable({ fetchPage, fetchProof, tenants, fixedTenant = false }: Props) {
+export default function EventTable({ fetchPage, fetchProof, tenants, fixedTenant = false, fetchVerify }: Props) {
   const initialTenant = typeof location !== "undefined" ? new URLSearchParams(location.search).get("tenant") ?? "" : "";
   const [filters, setFilters] = useState<Query>({ tenant: initialTenant, actor: "", action: "", from: "", to: "" });
   const [applied, setApplied] = useState<Query>(initialTenant ? { tenant: initialTenant } : {});
@@ -32,6 +34,13 @@ export default function EventTable({ fetchPage, fetchProof, tenants, fixedTenant
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setLoading(false); }
   };
   useEffect(() => { void load(applied, null, false); }, [applied]);
+  const [coverage, setCoverage] = useState<Verdict | null>(null);
+  const headerTenant = fixedTenant ? "" : String(applied.tenant ?? "");
+  useEffect(() => {
+    setCoverage(null);
+    if (!fetchVerify || (!fixedTenant && !headerTenant)) return;
+    fetchVerify(headerTenant).then(setCoverage).catch(() => setCoverage(null));
+  }, [headerTenant, fixedTenant, pages.length]);
 
   const toggle = async (id: string) => {
     if (open === id) return setOpen(null);
@@ -74,6 +83,13 @@ export default function EventTable({ fetchPage, fetchProof, tenants, fixedTenant
         </div>
       </form>
       <ErrorBox error={error} />
+      {fetchVerify && (fixedTenant || headerTenant) && (
+        <p class="font-mono text-xs text-muted" role="status">
+          {headerTenant && <>tenant <span class="text-fg">{headerTenant}</span> · </>}
+          {coverage === null ? "checking coverage…" : !coverage.valid ? <span class="text-danger">INVALID at position {coverage.position}: {coverage.reason}</span> : <>rooted through {coverage.rooted_through < 0 ? "none" : `#${coverage.rooted_through}`} · anchored through {coverage.anchored_through < 0 ? "none" : `#${coverage.anchored_through}`} <span class="text-faint">(from /verify: rooted = in a Merkle root; anchored = that root has a public anchor receipt)</span></>}
+        </p>
+      )}
+      {fetchVerify && !fixedTenant && !headerTenant && <p class="text-xs text-faint">Pick a tenant to see how far its chain is rooted and publicly anchored. The status pill per row says <code>rooted</code> (in a Merkle root) or <code>chained</code> (receipt only); it does not say whether the root is anchored yet.</p>}
       <div class="card overflow-x-auto">
         <table class="w-full min-w-[760px] text-sm">
           <thead class="border-b border-line text-left text-xs uppercase tracking-wider text-faint">
@@ -93,7 +109,7 @@ export default function EventTable({ fetchPage, fetchProof, tenants, fixedTenant
                     <td class="px-3 py-2 font-mono text-xs">{e.action}</td>
                     <td class="max-w-[10rem] truncate px-3 py-2 text-muted">{e.target ?? "—"}</td>
                     <td class="px-3 py-2"><Hash v={e.event_hash} /></td>
-                    <td class="px-3 py-2"><span class="flex gap-1">{e.erased && <span class="pill pill-danger">erased</span>}<span class={`pill ${e.anchored ? "pill-ok" : "pill-warn"}`}>{e.anchored ? "rooted" : "chained"}</span></span></td>
+                    <td class="px-3 py-2"><span class="flex gap-1">{e.erased && <span class="pill pill-danger">erased</span>}<span class={`pill ${e.anchored ? "pill-ok" : "pill-warn"}`} title={e.anchored ? "In a Merkle root. Whether that root is publicly anchored: see the header line or open the proof." : "Hash-chained and receipted; not in a Merkle root yet."}>{e.anchored ? "rooted" : "chained"}</span></span></td>
                   </tr>
                   {isOpen && (
                     <tr key={e.id + "x"} class="border-b border-line bg-elev">

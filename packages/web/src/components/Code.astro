@@ -3,8 +3,8 @@
 interface Props { tabs: Array<{ label: string; code: string; lang?: string; note?: string }>; id: string }
 const { tabs, id } = Astro.props;
 ---
-<div class="card overflow-hidden code-tabs">
-  <div class="flex items-center gap-1 border-b border-line px-2 pt-2" role="tablist">
+<div class="card min-w-0 overflow-hidden code-tabs">
+  <div class="flex items-center gap-1 border-b border-line px-2 pt-2" role="radiogroup" aria-label="Code sample language">
     {tabs.map((t, i) => (
       <>
         <input type="radio" name={`tabs-${id}`} id={`${id}-${i}`} checked={i === 0} class="peer sr-only" />

@@ -35,12 +35,12 @@ export function ProjectFrame({ title, children }: { title: string; children: (p:
     <div>
       <nav class="mb-1 text-sm text-muted" aria-label="Breadcrumb"><a href="/app" class="hover:text-fg">Projects</a> <span class="text-faint">/</span> <span class="text-fg">{project.name}</span></nav>
       <h1 class="text-2xl font-semibold">{title}</h1>
-      <div class="mt-4 flex gap-1 overflow-x-auto border-b border-line" role="tablist">
+      <nav class="mt-4 flex gap-1 overflow-x-auto border-b border-line" aria-label="Project sections">
         {tabs(id).map(([href, label]) => {
           const active = path === href;
           return <a key={href} href={href} aria-current={active ? "page" : undefined} class={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm ${active ? "border-accent text-fg" : "border-transparent text-muted hover:text-fg"}`}>{label}</a>;
         })}
-      </div>
+      </nav>
       <div class="mt-6">{children(project, reload)}</div>
     </div>
   );

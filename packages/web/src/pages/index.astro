@@ -19,7 +19,7 @@ const faq: Array<[string, string]> = [
   ["How does erasure work with an immutable log?", "The chain commits to <code>sha256(salt ∥ payload)</code>, not the payload. Erasure deletes the payload and the salt; the commitment stays, so the chain, roots and anchors still verify. The verifier reports the event as erased."],
   ["When is an event publicly anchored?", "On the next anchor tick for your plan (daily on Free, 5 minutes on Pro, 1 minute on Business). Rekor accepts the root in seconds and is final on write. OpenTimestamps calendars stamp it immediately and the Bitcoin confirmation lands within hours; the receipt upgrades from <code>pending</code> to <code>final</code>."],
   ["Does the server check my client signatures?", "Only against keys you register. The SDK signs with a private key we never see. Register the public key for a tenant and the server verifies every signed event against it; turn on \"require client signatures\" and it refuses unsigned events for that tenant. The offline verifier checks the same signatures from the export when you pass your public key, so the server's check is a convenience, not something you have to trust."],
-  ["Is there a free tier? Can I self-host?", "Yes and yes. Free is 10k events a month with daily anchoring. Self-host is the same code under AGPL: one container, SQLite, the same verifier."],
+  ["Is there a free tier? Can I self-host?", "Yes and yes. Free is 10k events a month with daily anchoring and every feature the paid plans have; paid plans buy volume, retention, cadence and support. Self-host is the same code under AGPL: one container, SQLite, the same verifier."],
   ["Is AuditKit SOC 2 compliant?", "AuditKit has no SOC 2 report today. What it gives you is log integrity you can prove to your own auditor with the verifier, which is the evidence behind log-integrity controls; it is not a compliance certification."],
 ];
 const jsonLd = {
@@ -49,7 +49,7 @@ const jsonLd = {
       <div><dt class="text-faint">chain</dt><dd class="text-fg">sha256 · RFC 8785</dd></div>
       <div><dt class="text-faint">receipts</dt><dd class="text-fg">Ed25519 signed</dd></div>
       <div><dt class="text-faint">anchors</dt><dd class="text-fg">Rekor + OTS</dd></div>
-      <div><dt class="text-faint">verifier</dt><dd class="text-fg">npx @auditkit/verify</dd></div>
+      <div><dt class="text-faint">verifier</dt><dd class="text-fg">@auditkit/verify · offline</dd></div>
     </dl>
   </section>
 
@@ -84,26 +84,26 @@ const jsonLd = {
 
   <!-- three claims -->
   <section id="claims" class="scroll-mt-20 py-12">
-    <h2 class="text-2xl font-semibold">Three things the alternatives do not do</h2>
+    <h2 class="text-2xl font-semibold">Three things an audit table or an identity vendor's log does not do</h2>
     <div class="mt-6 grid gap-6 lg:grid-cols-3">
       <article class="card p-5">
         <h3 class="font-semibold">Public anchoring</h3>
         <p class="mt-2 text-sm text-muted">Roots go to two independent public logs we cannot edit. Anyone can look up the Rekor entry; the <a href="/anchors" class="text-accent underline underline-offset-2">anchors page</a> lists every root we have published, live from the server. Anchor cadence is a plan feature: daily, 5 minutes, 1 minute. Sigstore describes Rekor as "an immutable, tamper-resistant ledger" with a free public instance at rekor.sigstore.dev.</p>
         <p class="mt-3 font-mono text-xs text-faint">rekor hashedrekord · ots .ots proof stored per root</p>
       </article>
-      <article class="card p-5 lg:col-span-2">
+      <article class="card min-w-0 p-5 lg:col-span-2">
         <h3 class="font-semibold">Offline verifier</h3>
-        <p class="mt-2 text-sm text-muted">Your auditor runs one command against an export file. It re-hashes every event, walks the chain, checks the signatures against the pinned server key, rebuilds every Merkle root and verifies the Rekor and OTS receipts. No call to AuditKit. Exit code 0 means VALID.</p>
+        <p class="mt-2 text-sm text-muted">Your auditor runs one command against an export file (until the package is published, from the repo: <code>node packages/verify/dist/cli.js &lt;file&gt;</code>; <code>npx @auditkit/verify</code> is the eventual command). It re-hashes every event, walks the chain, checks the signatures against the server key you pin (<code>--pin</code>, from <code>/.well-known/auditkit.json</code>), rebuilds every Merkle root and verifies the Rekor and OTS receipts. No call to AuditKit. Exit code 0 means VALID.</p>
         <div class="mt-4"><Terminal /></div>
       </article>
-      <article class="card p-5 lg:col-span-3">
+      <article class="card min-w-0 p-5 lg:col-span-3">
         <div class="grid gap-6 md:grid-cols-2">
-          <div>
+          <div class="min-w-0">
             <h3 class="font-semibold">Crypto-shredding for erasure requests</h3>
             <p class="mt-2 text-sm text-muted">Each event's payload is stored separately under a per-event salt. The chain commits to <code>sha256(salt ∥ JCS(payload))</code>, never the payload itself. A GDPR erasure deletes payload and salt; the event row, the chain, the roots and the anchors stay exactly as valid as before, and the erasure is appended to the same chain as a <code>payload.erased</code> event, so the log records that it happened. Immutable log and right-to-erasure stop being in conflict.</p>
             <p class="mt-3 text-sm text-muted">This is the pattern the EDPB describes in <a href="https://www.edpb.europa.eu/system/files/2025-04/edpb_guidelines_202502_blockchain_en.pdf" class="text-accent underline underline-offset-2" rel="noopener">Guidelines 02/2025</a>: "store only a salted or keyed hash of the personal data … after deletion of the secret key or salt, the hash should not be linkable to the original data". While the salt exists the hash is still personal data; erasure destroys both salt and payload.</p>
           </div>
-          <pre class="rounded-md border border-line bg-elev p-4 text-[0.78rem] leading-relaxed"><code>{ERASE_SNIPPET}</code></pre>
+          <pre class="min-w-0 rounded-md border border-line bg-elev p-4 text-[0.78rem] leading-relaxed"><code>{ERASE_SNIPPET}</code></pre>
         </div>
       </article>
     </div>
@@ -117,9 +117,9 @@ const jsonLd = {
   <!-- quickstart -->
   <section id="quickstart" class="scroll-mt-20 py-12">
     <div class="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
-      <div>
+      <div class="min-w-0">
         <h2 class="text-2xl font-semibold">Five lines to your first receipt</h2>
-        <p class="mt-2 text-muted">Zero-dependency clients for TypeScript (Node 22+) and Python (3.10+, stdlib only). Both retry on 429 and 5xx with idempotency keys, so a retry replays the original receipt instead of double-logging. Pass a private key and every event is client-signed with a key we never see.</p>
+        <p class="mt-2 text-muted">Clients with no third-party dependencies for TypeScript (Node 22+, depends only on <code>@auditkit/core</code>) and Python (3.10+, standard library). Both retry on 429 and 5xx with idempotency keys, so a retry replays the original receipt instead of double-logging. Pass a private key and every event is client-signed with a key we never see (Python signing uses the <code>cryptography</code> extra).</p>
         <a href="/docs" class="btn mt-4">Full docs and API reference</a>
       </div>
       <Code id="qs" tabs={[{ label: "TypeScript", code: TS_QUICKSTART, note: PUBLISH_NOTE }, { label: "Python", code: PY_QUICKSTART, note: PUBLISH_NOTE }, { label: "curl", code: CURL_QUICKSTART }]} />
@@ -129,11 +129,11 @@ const jsonLd = {
   <!-- MCP -->
   <section id="mcp" class="scroll-mt-20 py-12">
     <div class="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
-      <div>
+      <div class="min-w-0">
         <h2 class="text-2xl font-semibold">Connect it to Claude</h2>
         <p class="mt-2 text-muted">The MCP server is the REST API's own process at <code>/mcp</code>, not a wrapper. Same data, same scopes. In Claude.ai: Settings → Connectors → Add custom connector → <code>https://auditkit.dev/mcp</code> → sign in with your email → pick the project. Every tool declares a title and read-only / destructive hints so an agent can tell a search from a write. There is no erase tool over MCP, on purpose.</p>
         <pre class="mt-4 rounded-md border border-line bg-elev p-4 text-[0.78rem] leading-relaxed"><code>{MCP_CLAUDE_CODE}</code></pre>
-        <p class="mt-2 text-xs text-faint">OAuth 2.1 sign-in for Claude.ai and Claude Code; Bearer API keys for everything else. Test keys (<code>ak_test_</code>) hit a seeded project, so you can run every tool before you log anything real.</p>
+        <p class="mt-2 text-xs text-faint">OAuth 2.1 sign-in for Claude.ai and Claude Code; Bearer API keys for everything else. Keys are <code>ak_live_</code> or <code>ak_test_</code>; the prefix is a label for your own routing and both hit your project. Every new account also gets read access to a shared Sample project, so you can run every read tool before you log anything real.</p>
       </div>
       <McpTools />
     </div>
@@ -142,7 +142,7 @@ const jsonLd = {
   <!-- pricing -->
   <section id="pricing" class="scroll-mt-20 py-12">
     <h2 class="text-2xl font-semibold">Pricing</h2>
-    <p class="mt-1 text-muted">One story everywhere: the same table is on the <a href="/pricing" class="text-accent underline underline-offset-2">pricing page</a>, in the dashboard, and in the server's plan table.</p>
+    <p class="mt-1 text-muted">Every feature is on every plan; the tiers differ only in monthly events, payload retention, anchor cadence and support. The same table is on the <a href="/pricing" class="text-accent underline underline-offset-2">pricing page</a>, in the dashboard, and in the server's plan table.</p>
     <div class="mt-6"><PricingTable /></div>
   </section>
 

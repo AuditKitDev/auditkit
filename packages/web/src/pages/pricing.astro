@@ -3,26 +3,27 @@ import Base from "../layouts/Base.astro";
 import PricingTable from "../components/PricingTable.astro";
 import Faq from "../components/Faq.astro";
 const faq: Array<[string, string]> = [
+  ["Which features do I get on Free?", "All of them: signed receipts, public anchoring, client-side signing, crypto-shredding erasure, JSONL export and the offline verifier, viewer tokens, the MCP connector. The server gates three numbers by plan (monthly events, payload retention days, anchor interval) and nothing else; paid plans buy volume, retention, cadence and support."],
   ["What counts as an event?", "One call to <code>POST /v1/events</code>, one item in a bulk call, or one <code>log_event</code> over MCP. Idempotent replays (<code>duplicate: true</code>) do not count twice. Reads, proofs, verifies and exports are free."],
   ["What happens at the limit?", "Writes return <code>429 plan_limit</code> until the month rolls over or you upgrade. Reads, proofs, verify and export keep working. Nothing is dropped silently."],
   ["What does retention mean here?", "Payload retention. After the window, payloads are crypto-shredded (payload and salt deleted). Event headers, hashes, signatures, roots and anchor receipts are kept, so an old export still verifies and still shows who did what, when; only the payload body is gone."],
   ["What is the window before an event is publicly anchored?", "Up to one anchor interval: a day on Free, 5 minutes on Pro, 1 minute on Business. In that window the event is already hash-chained and you hold a signed receipt, so later omission is provable; what is not yet there is the public-log entry."],
-  ["Why no SIEM streaming?", "Deliberate. WorkOS charges $125 per month per stream; we offer a JSONL export API on Business and the same file is what the verifier reads. Pull it into your SIEM on your schedule."],
+  ["Why no SIEM streaming?", "Deliberate. WorkOS charges $125 per month per stream; every plan has the JSONL export API (<code>GET /v1/export</code>, <code>read</code> scope) and the same file is what the verifier reads. Pull it into your SIEM on your schedule."],
   ["Can I pay yearly, by invoice, or in EUR?", "Stripe Checkout, monthly, USD, card. <span class=\"font-mono\">[OWNER: confirm whether yearly/invoice billing is offered]</span>"],
 ];
 ---
-<Base title="Audit log pricing: free tier, Pro $49/mo, Business $199/mo" description="AuditKit pricing. Free: 10k events a month, 30-day retention, daily anchoring. Pro $49: 500k events, 1 year, 5-minute anchoring. Business $199: 5M events, 3 years, 1-minute anchoring. Self-host under AGPL for free." wide>
+<Base title="Audit log pricing: free tier, Pro $49/mo, Business $199/mo" description="AuditKit pricing. Every feature on every plan; tiers differ in volume, retention, anchor cadence and support. Free: 10k events a month, 30-day retention, daily anchoring. Pro $49: 500k events, 1 year, 5-minute anchoring. Business $199: 5M events, 3 years, 1-minute anchoring. Self-host under AGPL for free." wide>
   <section class="py-12">
     <h1 class="text-3xl font-semibold sm:text-4xl">Pricing</h1>
-    <p class="mt-3 max-w-2xl text-lg text-muted">Four plans, one monthly event counter, no seats. Every plan includes signed receipts, public anchoring, the offline verifier and the MCP connector. The verifier runs with our servers off.</p>
-    <div class="mt-8"><PricingTable /></div>
+    <p class="mt-3 max-w-2xl text-lg text-muted">Four plans, one monthly event counter, no seats. Every feature is on every plan; the tiers differ only in monthly events, payload retention, anchor cadence and support. The verifier runs with our servers off.</p>
+    <div class="mt-8"><PricingTable headingLevel={2} /></div>
   </section>
   <section class="py-8">
     <h2 class="text-2xl font-semibold">What you are paying for</h2>
     <div class="mt-4 grid gap-4 md:grid-cols-3">
       <div class="card p-5"><p class="font-medium">Anchor cadence</p><p class="mt-1 text-sm text-muted">How often your tenants' roots are written to Rekor and OpenTimestamps. Shorter cadence means a shorter window between "acknowledged with a signed receipt" and "in a public log".</p></div>
       <div class="card p-5"><p class="font-medium">Payload retention</p><p class="mt-1 text-sm text-muted">How long the payload body stays readable. Headers, hashes, signatures and anchors are kept regardless, so exports from years ago still verify.</p></div>
-      <div class="card p-5"><p class="font-medium">Volume</p><p class="mt-1 text-sm text-muted">Events per calendar month. Roughly 1 KB of storage per event on our side; 5M events is about 5 GB.</p></div>
+      <div class="card p-5"><p class="font-medium">Volume</p><p class="mt-1 text-sm text-muted">Events per calendar month, counted on write. Reads, proofs, verifies and exports are not metered.</p></div>
     </div>
   </section>
   <section class="py-8">

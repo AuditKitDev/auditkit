@@ -21,10 +21,10 @@ Any MCP client that reads a JSON config and cannot do OAuth:
 
 ```json
 { "mcpServers": { "auditkit": { "type": "http", "url": "https://auditkit.dev/mcp",
-  "headers": { "Authorization": "Bearer ak_test_…" } } } }
+  "headers": { "Authorization": "Bearer ak_live_…" } } } }
 ```
 
-Test keys (`ak_test_`) hit a seeded demo project, so every tool can be exercised before you log anything real.
+`ak_test_` and `ak_live_` keys behave identically today; the prefix is a label for your own routing. Every new account gets read access to a shared Sample project with seeded events, so every read tool can be exercised before you log anything real.
 
 ## The tools
 

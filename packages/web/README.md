@@ -24,17 +24,29 @@ Checks: `pnpm --filter @auditkit/web build`, `typecheck` (astro check), `preview
 
 nginx proxies `^/(v1|auth|oauth|api|demo|public|webhooks|mcp|openapi.json|health|.well-known/)` to the server; everything else is `dist/`. No Astro page uses one of those prefixes. Dashboard JSON is at `/api/app/*`, viewer JSON at `/api/viewer/*`; the HTML pages stay at `/app/*` and `/viewer`.
 
-Project pages are built once at `/app/projects/_/…` and read the real id from the URL, so nginx needs two rewrites:
+Project pages are built once under `dist/app/projects/_/` and read the real id from the URL. The static build needs these request paths served from these files (`deploy/nginx-auditkit.conf` does this with one rewrite plus `try_files`):
+
+| Request | Built file |
+|---|---|
+| `/app/projects/<id>` | `dist/app/projects/_/index.html` |
+| `/app/projects/<id>/events` | `dist/app/projects/_/events/index.html` |
+| `/app/projects/<id>/tenants` | `dist/app/projects/_/tenants/index.html` |
+| `/app/projects/<id>/keys` | `dist/app/projects/_/keys/index.html` |
+| `/app/projects/<id>/viewer-tokens` | `dist/app/projects/_/viewer-tokens/index.html` |
+| `/app/projects/<id>/verify` | `dist/app/projects/_/verify/index.html` |
+| anything else not in `dist/` | `dist/404.html` with status 404 |
 
 ```nginx
+location ~ ^/app/projects/[^/]+(/.*)?$ {
+  rewrite ^/app/projects/[^/]+(/.*)?$ /app/projects/_$1 last;
+}
+error_page 404 /404.html;
 location / {
-  rewrite ^/app/projects/[^/]+/?$             /app/projects/_/index.html     break;
-  rewrite ^/app/projects/[^/]+/([a-z-]+)/?$   /app/projects/_/$1/index.html  break;
-  try_files $uri $uri/index.html =404;
+  try_files $uri $uri/index.html $uri.html =404;
 }
 ```
 
-In dev `src/middleware.ts` performs the same rewrite.
+The rewrite turns `/app/projects/abc/events` into `/app/projects/_/events`, and `try_files` then finds `…/events/index.html`. In dev `src/middleware.ts` performs the same rewrite.
 
 ## Layout
 

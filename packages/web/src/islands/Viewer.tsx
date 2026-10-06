@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import { api, HttpError, type Verdict, type ViewerMe } from "../lib/api";
+import { VERIFY_CLI_NOTE } from "../lib/snippets";
 import EventTable from "./EventTable";
 import { ErrorBox, Loading, VerdictView } from "./ui";
 
@@ -33,8 +34,8 @@ export default function Viewer() {
         </div>
       </div>
       {verdict && <div class="card p-4"><VerdictView v={verdict} /></div>}
-      <EventTable fetchPage={(q) => v.events(q)} fetchProof={(id) => v.proof(id)} fixedTenant />
-      <p class="text-xs text-faint">Verify the export yourself with <code>npx @auditkit/verify &lt;file&gt;.jsonl</code>; it needs no access to AuditKit.</p>
+      <EventTable fetchPage={(q) => v.events(q)} fetchProof={(id) => v.proof(id)} fetchVerify={() => v.verify()} fixedTenant />
+      <p class="text-xs text-faint">Verify the export yourself with <code>@auditkit/verify</code>; it needs no access to AuditKit. {VERIFY_CLI_NOTE}</p>
     </div>
   );
 }

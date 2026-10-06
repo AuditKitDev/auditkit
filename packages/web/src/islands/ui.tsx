@@ -1,6 +1,14 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef } from "preact/hooks";
-import { fmtDate, rekorUrl, short, type AnchorRef, type Proof, type ProofStep, type Verdict } from "../lib/api";
+import { fmtDate, rekorRef, short, type AnchorRef, type Proof, type ProofStep, type Verdict } from "../lib/api";
+
+/** Rekor pill: a link only when the log has a public search page for this ref (v1); v2 shard refs are shown as text. */
+export function RekorPill({ refStr, suffix = "" }: { refStr: string; suffix?: string }) {
+  const r = rekorRef(refStr);
+  return r.url
+    ? <a href={r.url} target="_blank" rel="noopener" class="pill pill-ok hover:underline">{r.label}{suffix}</a>
+    : <span class="pill pill-ok" title={refStr}>{r.label}{suffix}</span>;
+}
 
 export const Loading = ({ what = "Loading" }: { what?: string }) => <p class="py-8 text-center text-sm text-muted" role="status">{what}…</p>;
 
@@ -29,7 +37,7 @@ export function AnchorPills({ anchors }: { anchors: AnchorRef[] }) {
   return (
     <span class="flex flex-wrap gap-1">
       {anchors.map((a) => a.kind === "rekor"
-        ? <a key={a.ref} href={rekorUrl(a.ref)} target="_blank" rel="noopener" class="pill pill-ok hover:underline">Rekor #{a.ref.split("/")[0]}</a>
+        ? <RekorPill key={a.ref} refStr={a.ref} />
         : <span key={a.ref} class={`pill ${a.status === "final" ? "pill-ok" : "pill-warn"}`}>OTS {a.status === "final" ? "bitcoin" : "pending"}</span>)}
     </span>
   );
@@ -43,7 +51,7 @@ export function VerdictView({ v }: { v: Verdict }) {
       <dt class="text-faint">events</dt><dd>{v.count}</dd>
       <dt class="text-faint">head</dt><dd class="hash">{v.head}</dd>
       <dt class="text-faint">rooted through</dt><dd>{v.rooted_through < 0 ? "none yet" : `#${v.rooted_through}`} <span class="text-faint">· in a Merkle root</span></dd>
-      <dt class="text-faint">anchored through</dt><dd>{v.anchored_through < 0 ? "none yet" : `#${v.anchored_through}`} <span class="text-faint">· root published to Rekor / OTS</span></dd>
+      <dt class="text-faint">anchored through</dt><dd>{v.anchored_through < 0 ? "none yet" : `#${v.anchored_through}`} <span class="text-faint">· root has a public anchor receipt (Rekor / OTS)</span></dd>
     </dl>
   );
 }
@@ -68,7 +76,7 @@ export function ProofView({ proof }: { proof: Proof }) {
               <span class={`pill ${a.status === "final" ? "pill-ok" : "pill-warn"}`}>{a.kind} · {a.status}</span>
               <span class="hash">{a.ref}</span>
               <span class="text-faint">{a.anchored_at ? fmtDate(a.anchored_at) : ""}</span>
-              {a.kind === "rekor" && <a class="text-accent underline" href={rekorUrl(a.ref)} target="_blank" rel="noopener">open in Rekor search</a>}
+              {a.kind === "rekor" && (rekorRef(a.ref).url ? <a class="text-accent underline" href={rekorRef(a.ref).url!} target="_blank" rel="noopener">open in Rekor search</a> : <span class="text-faint">{rekorRef(a.ref).label}; this log shard has no public search page, the proof bytes above are what the verifier checks</span>)}
             </li>
           ))}
         </ul>

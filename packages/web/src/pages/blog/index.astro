@@ -1,7 +1,8 @@
 ---
 import Base from "../../layouts/Base.astro";
-const posts = Object.entries(import.meta.glob<{ frontmatter: { title: string; description: string; date: string; tags?: string[] } }>("./*.md", { eager: true }))
-  .map(([path, m]) => ({ href: `/blog/${path.replace("./", "").replace(/\.md$/, "")}`, ...m.frontmatter }))
+import { isoDay } from "../../lib/site";
+const posts = Object.entries(import.meta.glob<{ frontmatter: { title: string; description: string; date: string | Date; tags?: string[] } }>("./*.md", { eager: true }))
+  .map(([path, m]) => ({ href: `/blog/${path.replace("./", "").replace(/\.md$/, "")}`, ...m.frontmatter, date: isoDay(m.frontmatter.date) }))
   .sort((a, b) => (a.date < b.date ? 1 : -1));
 ---
 <Base title="Blog: audit log integrity, anchoring, erasure" description="Definitions and design notes on tamper-evident audit logs: hash chains, Merkle roots, Rekor and OpenTimestamps anchoring, crypto-shredding, signed receipts, MCP.">

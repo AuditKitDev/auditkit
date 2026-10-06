@@ -1,6 +1,10 @@
 import { useEffect, useState } from "preact/hooks";
 import { api, HttpError } from "../lib/api";
 
+// Same rule as the server's SAFE_NEXT (packages/server/src/auth.ts): one leading slash, never `//` or `/\`, no scheme.
+const SAFE_NEXT = /^\/(?!\/|\\)[A-Za-z0-9_\-./?=&%:+,~]*$/;
+const safeNext = (n: string | null): string | undefined => (n && SAFE_NEXT.test(n) ? n : undefined);
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -10,10 +14,10 @@ export default function Login() {
 
   useEffect(() => {
     const q = new URLSearchParams(location.search);
-    const n = q.get("next"); if (n && n.startsWith("/")) setNext(n);
+    const n = safeNext(q.get("next")); if (n) setNext(n);
     if (q.get("error") === "expired") setUrlError("That sign-in link has expired or was already used. Request a new one.");
     // Already signed in? Go straight to the app.
-    api.auth.me().then(() => location.replace(n && n.startsWith("/") ? n : "/app")).catch(() => { /* not signed in */ });
+    api.auth.me().then(() => location.replace(n ?? "/app")).catch(() => { /* not signed in */ });
   }, []);
 
   async function submit(e: Event) {

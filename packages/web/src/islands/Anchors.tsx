@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { api, fmtDate, fmtNum, rekorUrl, type PublicAnchor, type PublicStats } from "../lib/api";
-import { ErrorBox, Loading } from "./ui";
+import { api, fmtDate, fmtNum, type PublicAnchor, type PublicStats } from "../lib/api";
+import { ErrorBox, Loading, RekorPill } from "./ui";
 
 export default function Anchors() {
   const [anchors, setAnchors] = useState<PublicAnchor[] | null>(null);
@@ -33,7 +33,7 @@ export default function Anchors() {
                     <td class="whitespace-nowrap px-3 py-2 text-muted">{fmtDate(a.created_at)}</td>
                     <td class="px-3 py-2"><code class="hash">{a.global_root}</code></td>
                     <td class="px-3 py-2 text-muted">{a.projects}</td>
-                    <td class="px-3 py-2">{rekor ? <a class="pill pill-ok hover:underline" href={rekorUrl(rekor.ref)} target="_blank" rel="noopener">#{rekor.ref.split("/")[0]} · final</a> : <span class="pill pill-warn">pending</span>}</td>
+                    <td class="px-3 py-2">{rekor ? <RekorPill refStr={rekor.ref} suffix=" · final" /> : <span class="pill pill-warn">pending</span>}</td>
                     <td class="px-3 py-2">{ots ? <span class={`pill ${ots.status === "final" ? "pill-ok" : "pill-warn"}`}>{ots.status === "final" ? "bitcoin confirmed" : "calendar stamped · bitcoin pending"}</span> : <span class="pill pill-warn">pending</span>}</td>
                   </tr>
                 );

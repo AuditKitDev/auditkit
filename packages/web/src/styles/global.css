@@ -11,7 +11,7 @@
   --line-strong: #324050;
   --fg: #e7ecf2;
   --fg-muted: #93a0b1;
-  --fg-faint: #5f6c7c;
+  --fg-faint: #7f8c9d; /* 5.1:1 on --surface, 4.7:1 on --surface-2 (AA) */
   --accent: #7cf2c4;
   --accent-ink: #06261c;
   --accent-dim: rgba(124, 242, 196, 0.14);
@@ -34,17 +34,17 @@
   --line-strong: #b9c2cd;
   --fg: #0d1218;
   --fg-muted: #4f5c6b;
-  --fg-faint: #7d8896;
-  --accent: #0a7f5d;
+  --fg-faint: #5f6c7b; /* 5.0:1 on --bg, 4.7:1 on --surface-2 (AA) */
+  --accent: #097757;
   --accent-ink: #ffffff;
-  --accent-dim: rgba(10, 127, 93, 0.12);
-  --warn: #9a6a00;
-  --warn-dim: rgba(154, 106, 0, 0.12);
+  --accent-dim: rgba(9, 119, 87, 0.12);
+  --warn: #8a5f00; /* 5.3:1 on --bg (AA) */
+  --warn-dim: rgba(138, 95, 0, 0.12);
   --danger: #b42323;
   --danger-dim: rgba(180, 35, 35, 0.1);
   --info: #1f4fd6;
   --info-dim: rgba(31, 79, 214, 0.1);
-  --ring: #0a7f5d;
+  --ring: #097757;
   --grid: rgba(0, 0, 0, 0.045);
 }
 
@@ -78,7 +78,9 @@
   :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 2px; }
   a { color: inherit; }
   code, kbd, pre, samp { font-family: var(--font-mono); font-feature-settings: "liga" 0; }
-  pre { overflow-x: auto; }
+  pre { overflow-x: auto; max-width: 100%; }
+  /* A <pre> inside a grid or flex item must not widen the track (390 px phones showed the homepage at 785 px). */
+  .grid > *, .flex > * { min-width: 0; }
   h1, h2, h3, h4 { letter-spacing: -0.015em; text-wrap: balance; }
   p { text-wrap: pretty; }
   table { border-collapse: collapse; }
@@ -139,7 +141,8 @@
   & pre { background: var(--bg-elev); border: 1px solid var(--line); border-radius: 0.5rem; padding: 0.9rem 1rem; font-size: 0.82rem; line-height: 1.55; margin: 0.9rem 0; color: var(--fg); }
   & pre code { padding: 0; background: none; font-size: inherit; }
   & table { width: 100%; font-size: 0.88rem; margin: 0.9rem 0; }
-  & th, & td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  & th, & td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+  & td code, & th code { overflow-wrap: anywhere; }
   & th { color: var(--fg); font-weight: 600; }
   & td { color: var(--fg-muted); }
   & hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }

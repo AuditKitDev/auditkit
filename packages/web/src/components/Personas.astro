@@ -2,7 +2,7 @@
 // Personas and their search sentences: docs/research/buyer-need.md §(a).
 const personas = [
   { who: "Founder or CTO in a first enterprise security review", says: "security questionnaire asks if our audit logs are immutable and exportable to SIEM, fastest way to add this", gets: "Five lines of SDK, a JSONL export API, and an answer to the integrity question that is a command, not a paragraph." },
-  { who: "Security or compliance lead at a regulated SaaS", says: "how do I prove to my auditor that nobody with database access can alter our audit log, PCI 10.3.2 / AU-9(3)", gets: "Signed receipts, roots in two public logs, and an offline verifier the auditor runs themselves. Export into Vanta or Drata as evidence." },
+  { who: "Security or compliance lead at a regulated SaaS", says: "how do I prove to my auditor that nobody with database access can alter our audit log, PCI 10.3.2 / AU-9(3)", gets: "Signed receipts, roots in two public logs, and an offline verifier the auditor runs themselves. The export and the verifier's report are plain files you attach as evidence; there is no Vanta or Drata integration." },
   { who: "Platform engineer told to make the Postgres audit table tamper-proof", says: "immutable audit log postgres hash chain how to anchor so a DBA can't rewrite it", gets: "The chain, the Merkle roots and the anchoring already built, AGPL, one container, SQLite. Or the hosted version." },
 ];
 ---

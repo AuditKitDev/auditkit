@@ -73,7 +73,7 @@ function Body({ p, reload }: { p: Project; reload: () => void }) {
         <ol class="mt-3 grid gap-3 text-sm md:grid-cols-3">
           <li class="rounded-md border border-line p-3"><a href={`/app/projects/${encodeURIComponent(p.id)}/keys`} class="font-medium text-accent underline">Create an API key</a><p class="mt-1 text-muted">Start with a test key; it works with the SDKs and the MCP connector.</p></li>
           <li class="rounded-md border border-line p-3"><a href="/docs#quickstart" class="font-medium text-accent underline">Log your first event</a><p class="mt-1 text-muted">Keep the receipt. A later verify proves we never dropped it.</p></li>
-          <li class="rounded-md border border-line p-3"><a href={`/app/projects/${encodeURIComponent(p.id)}/verify`} class="font-medium text-accent underline">Export and verify</a><p class="mt-1 text-muted">Hand the JSONL to your auditor with <code>npx @auditkit/verify</code>.</p></li>
+          <li class="rounded-md border border-line p-3"><a href={`/app/projects/${encodeURIComponent(p.id)}/verify`} class="font-medium text-accent underline">Export and verify</a><p class="mt-1 text-muted">Hand the JSONL to your auditor with <code>@auditkit/verify</code> (until it is published: <code>node packages/verify/dist/cli.js</code> from the repo).</p></li>
         </ol>
       </section>
     </div>
