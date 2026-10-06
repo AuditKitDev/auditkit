@@ -43,8 +43,12 @@ openProject(cfg, DEMO);
 
 setSandboxProject(process.env.AUDITKIT_SANDBOX_PROJECT);
 if (siteUrl.startsWith("https://") && !process.env.RESEND_API_KEY) {
-  console.error("[auditkit] refusing to start: AUDITKIT_SITE_URL is https but RESEND_API_KEY is unset (sign-in links would be written to logs)");
-  process.exit(1);
+  if (process.env.AUDITKIT_ALLOW_MAIL_STUB === "1") {
+    console.warn("[auditkit] WARNING: no RESEND_API_KEY; sign-in links are written to this log (AUDITKIT_ALLOW_MAIL_STUB=1). Not for public use.");
+  } else {
+    console.error("[auditkit] refusing to start: AUDITKIT_SITE_URL is https but RESEND_API_KEY is unset (sign-in links would be written to logs). Set RESEND_API_KEY, or AUDITKIT_ALLOW_MAIL_STUB=1 for a private smoke test.");
+    process.exit(1);
+  }
 }
 const app = buildApp({
   cfg, reg, signer,
