@@ -61,7 +61,9 @@ export async function tick(cfg: Config, reg: DatabaseSync, anchors: Anchor[], lo
   const globalRootId = uid("gr");
   reg.prepare("INSERT INTO global_root (id, root_hash, created_at, project_roots) VALUES (?, ?, ?, ?)")
     .run(globalRootId, globalTree.root, now(), JSON.stringify(rooted.map((r) => ({ project_id: r.projectId, root_hash: r.projectRoot }))));
+  const idx = reg.prepare("INSERT INTO project_root_index (global_root_id, project_id) VALUES (?, ?)");
   rooted.forEach((r, i) => {
+    idx.run(globalRootId, r.projectId);
     const path: ProofStep[] = proofFor(globalTree, i);
     r.db.prepare("UPDATE project_root SET global_root_id = ?, path_to_global = ?, global_root_hash = ? WHERE id = ?")
       .run(globalRootId, JSON.stringify(path), globalTree.root, r.projectRootId);
@@ -108,6 +110,17 @@ export async function maintain(reg: DatabaseSync, anchors: Anchor[], log: (m: st
       }
     }
   }
+}
+
+/** Retention = payload retention. Headers, hashes and anchors are kept forever; payloads older than the plan's window are shredded. */
+export function applyRetention(cfg: Config, reg: DatabaseSync, retentionDaysFor: (plan: string) => number): number {
+  let shredded = 0;
+  for (const p of reg.prepare("SELECT id, plan FROM project").all() as Array<{ id: string; plan: string }>) {
+    const cutoff = new Date(Date.now() - retentionDaysFor(p.plan) * 86_400_000).toISOString();
+    const db = openProject(cfg, p.id);
+    shredded += Number(db.prepare("DELETE FROM payload WHERE event_id IN (SELECT id FROM event WHERE received_at < ?)").run(cutoff).changes);
+  }
+  return shredded;
 }
 
 export function anchorsFor(reg: DatabaseSync, globalRootId: string): AnchorReceipt[] {

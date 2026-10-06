@@ -8,12 +8,17 @@ import { ingest, search, getEvent, erase, verifyRange, exportLines, listTenants,
 import { anchorsFor, proofForEvent } from "./anchorLoop.js";
 import { openapi } from "./openapi.js";
 import { mcpHandler } from "./mcp.js";
+import { planOf } from "./plans.js";
+import { buildWebRoutes, monthlyUsage, type WebDeps } from "./webRoutes.js";
+import { buildViewerRoutes } from "./viewer.js";
 
 export interface Deps {
   cfg: Config;
   reg: DatabaseSync;
   signer: Signer;
   anchorPolicy: { kinds: string[]; interval_seconds: number };
+  /** Site-facing routes (/auth, /app, /demo, /public, /webhooks). Omitted in pure-API tests. */
+  web?: Omit<WebDeps, "cfg" | "reg" | "signer">;
 }
 
 type Env = { Variables: { principal: Principal; db: DatabaseSync } };
@@ -35,8 +40,20 @@ export function needScope(c: Context<Env>, scope: Scope): Response | null {
   return c.json({ error: { code: "forbidden", message: `key lacks scope ${scope}` } }, 403);
 }
 
+/** 429 when the month's events would exceed the project's plan. */
+function overLimit(deps: Deps, c: Context<Env>, adding: number): Response | null {
+  const p = deps.reg.prepare("SELECT plan FROM project WHERE id = ?").get(c.get("principal").projectId) as { plan: string } | undefined;
+  const limit = planOf(p?.plan ?? "free").events_per_month;
+  if (monthlyUsage(c.get("db")) + adding > limit) {
+    return c.json({ error: { code: "plan_limit", message: `monthly event limit of ${limit} reached; upgrade the plan` } }, 429);
+  }
+  return null;
+}
+
 export function buildApp(deps: Deps): Hono<Env> {
   const app = new Hono<Env>();
+  if (deps.web) app.route("/", buildWebRoutes({ ...deps.web, cfg: deps.cfg, reg: deps.reg, signer: deps.signer }));
+  app.route("/", buildViewerRoutes(deps.cfg, deps.reg, deps.signer));
 
   app.get("/.well-known/auditkit.json", (c) =>
     c.json({ server_public_key: deps.signer.publicKeySpkiB64, key_algorithm: "Ed25519", anchors: deps.anchorPolicy.kinds, anchor_interval_seconds: deps.anchorPolicy.interval_seconds, export_version: 1 }),
@@ -74,6 +91,8 @@ export function buildApp(deps: Deps): Hono<Env> {
     const body = eventSchema.parse(await c.req.json());
     const idem = c.req.header("idempotency-key");
     const input: EventInput = idem ? { ...body, idempotency_key: idem } : body;
+    const limited = overLimit(deps, c, 1);
+    if (limited) return limited;
     const [receipt] = ingest(c.get("db"), c.get("principal").projectId, deps.signer, [input]);
     return c.json(receipt, receipt!.duplicate ? 200 : 201);
   });
@@ -82,6 +101,8 @@ export function buildApp(deps: Deps): Hono<Env> {
     const denied = needScope(c, "write");
     if (denied) return denied;
     const body = z.object({ events: z.array(eventSchema).min(1).max(1000) }).parse(await c.req.json());
+    const limited = overLimit(deps, c, body.events.length);
+    if (limited) return limited;
     return c.json({ receipts: ingest(c.get("db"), c.get("principal").projectId, deps.signer, body.events) }, 201);
   });
 

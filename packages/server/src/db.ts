@@ -34,6 +34,9 @@ export function openRegistry(cfg: Config): DatabaseSync {
       id TEXT PRIMARY KEY, root_hash TEXT NOT NULL, created_at TEXT NOT NULL,
       project_roots TEXT NOT NULL  -- JSON [{project_id, root_hash}] in leaf order
     );
+    CREATE TABLE IF NOT EXISTS project_root_index (
+      global_root_id TEXT NOT NULL REFERENCES global_root(id), project_id TEXT NOT NULL, PRIMARY KEY (global_root_id, project_id)
+    );
     CREATE TABLE IF NOT EXISTS anchor (
       global_root_id TEXT NOT NULL REFERENCES global_root(id), kind TEXT NOT NULL,
       ref TEXT NOT NULL, proof TEXT NOT NULL, status TEXT NOT NULL, anchored_at TEXT NOT NULL,
@@ -82,7 +85,7 @@ export function openProject(cfg: Config, projectId: string): DatabaseSync {
     );
     CREATE TABLE IF NOT EXISTS viewer_token (
       id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE, tenant_id TEXT NOT NULL,
-      expires_at TEXT NOT NULL, created_at TEXT NOT NULL
+      expires_at TEXT NOT NULL, created_at TEXT NOT NULL, revoked_at TEXT
     );
   `);
   projectDbs.set(projectId, db);

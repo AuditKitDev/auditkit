@@ -1,0 +1,159 @@
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createHmac } from "node:crypto";
+import { openRegistry, closeAll, type Config } from "./db.js";
+import { loadSigner } from "./signing.js";
+import { buildApp } from "./app.js";
+import { migrateAuth, type Mailer } from "./auth.js";
+import { migrateBilling, applyStripeEvent, type BillingConfig } from "./billing.js";
+import { tick } from "./anchorLoop.js";
+import type { Anchor } from "@auditkit/core";
+
+let cfg: Config;
+let app: ReturnType<typeof buildApp>;
+let reg: ReturnType<typeof openRegistry>;
+let cookie = "";
+let projectId = "";
+const sent: string[] = [];
+const mailer: Mailer = { async send(_to, _s, text) { sent.push(text); } };
+const billing: BillingConfig = { prices: {}, siteUrl: "http://site", webhookSecret: "whsec_test" };
+const fakeAnchor: Anchor = {
+  kind: "rekor",
+  async anchor() { return { kind: "rekor", ref: "fake", proof: "e30=", anchored_at: new Date().toISOString(), status: "final" }; },
+  async upgrade(r) { return r; },
+  async verify() { return { ok: true, attested_at: "" }; },
+};
+
+const req = (path: string, init: RequestInit = {}) =>
+  app.request(path, { ...init, headers: { "content-type": "application/json", cookie, ...(init.headers ?? {}) } });
+
+beforeAll(() => {
+  cfg = { dataDir: mkdtempSync(join(tmpdir(), "auditkit-web-")) };
+  reg = openRegistry(cfg);
+  migrateAuth(reg); migrateBilling(reg);
+  reg.prepare("INSERT INTO project (id, name, plan, created_at) VALUES ('demo', 'demo', 'business', '2026-01-01T00:00:00Z')").run();
+  app = buildApp({ cfg, reg, signer: loadSigner(cfg.dataDir), anchorPolicy: { kinds: ["rekor"], interval_seconds: 1 }, web: { mailer, billing, siteUrl: "http://site", secureCookies: false, demoProjectId: "demo" } });
+});
+afterAll(() => { closeAll(); rmSync(cfg.dataDir, { recursive: true, force: true }); });
+
+describe("auth", () => {
+  it("magic link: request, redeem once, session works, logout", async () => {
+    expect((await req("/auth/magic", { method: "POST", body: JSON.stringify({ email: "Owner@Example.com", next: "/app" }) })).status).toBe(202);
+    expect((await req("/auth/magic", { method: "POST", body: JSON.stringify({ email: "not-an-email" }) })).status).toBe(202); // no enumeration
+    expect(sent).toHaveLength(1);
+    const link = /http:\/\/site(\/auth\/callback\?token=[A-Za-z0-9_-]+)/.exec(sent[0]!)![1]!;
+    const cb = await req(link, { redirect: "manual" });
+    expect(cb.status).toBe(302);
+    expect(cb.headers.get("location")).toBe("/app");
+    cookie = cb.headers.get("set-cookie")!.split(";")[0]!;
+    expect(cookie.startsWith("ak_session=")).toBe(true);
+    expect((await req(link, { redirect: "manual" })).headers.get("location")).toContain("error=expired"); // single use
+    const me = await (await req("/auth/me")).json();
+    expect(me.user.email).toBe("owner@example.com");
+    expect((await app.request("/auth/me")).status).toBe(401);
+  });
+  it("rate limits sign-in requests", async () => {
+    let last = 0;
+    for (let i = 0; i < 6; i++) last = (await req("/auth/magic", { method: "POST", body: JSON.stringify({ email: `x${i}@example.com` }) })).status;
+    expect(last).toBe(429);
+  });
+});
+
+describe("app", () => {
+  it("first login created a project; keys, events, verify, export work through the session", async () => {
+    const { projects } = await (await req("/app/projects")).json();
+    expect(projects).toHaveLength(1);
+    expect(projects[0]).toMatchObject({ name: "example.com", plan: "free", role: "owner", limit_events: 10000 });
+    projectId = projects[0].id;
+
+    const k = await (await req(`/app/projects/${projectId}/keys`, { method: "POST", body: JSON.stringify({ mode: "live", scopes: ["write", "read"] }) })).json();
+    expect(k.key.startsWith("ak_live_")).toBe(true);
+    const r = await app.request("/v1/events", { method: "POST", headers: { authorization: `Bearer ${k.key}`, "content-type": "application/json" }, body: JSON.stringify({ tenant: "acme", actor: "u", action: "a.b", payload: { x: 1 } }) });
+    expect(r.status).toBe(201);
+
+    const list = await (await req(`/app/projects/${projectId}/events?tenant=acme`)).json();
+    expect(list.events).toHaveLength(1);
+    const ev = await (await req(`/app/projects/${projectId}/events/${list.events[0].id}`)).json();
+    expect(ev.payload).toEqual({ x: 1 });
+    expect((await (await req(`/app/projects/${projectId}/verify?tenant=acme`)).json()).valid).toBe(true);
+    expect((await req(`/app/projects/${projectId}/export?tenant=acme`)).headers.get("content-type")).toContain("ndjson");
+    const keys = await (await req(`/app/projects/${projectId}/keys`)).json();
+    expect(keys.keys[0]).toMatchObject({ mode: "live", scopes: ["write", "read"] });
+    expect((await req(`/app/projects/${projectId}/keys/${k.id}`, { method: "DELETE" })).status).toBe(200);
+
+    const overview = await (await req(`/app/projects/${projectId}`)).json();
+    expect(overview).toMatchObject({ plan: "free", usage: { events_this_month: 1, limit_events: 10000 }, tenants: 1, last_anchor: null });
+    await tick(cfg, reg, [fakeAnchor]);
+    const after = await (await req(`/app/projects/${projectId}`)).json();
+    expect(after.last_anchor.anchors[0]).toMatchObject({ kind: "rekor", status: "final" });
+  });
+  it("cannot see another user's project", async () => {
+    const { id } = await (await req("/app/projects", { method: "POST", body: JSON.stringify({ name: "second" }) })).json();
+    expect((await req(`/app/projects/${id}`)).status).toBe(200);
+    const other = buildApp({ cfg, reg, signer: loadSigner(cfg.dataDir), anchorPolicy: { kinds: [], interval_seconds: 1 }, web: { mailer, billing, siteUrl: "http://site", secureCookies: false, demoProjectId: "demo" } });
+    expect((await other.request(`/app/projects/${id}`, { headers: { cookie: "ak_session=bogus" } })).status).toBe(401);
+  });
+  it("billing is a clean 501 until configured; webhook upgrades the plan", async () => {
+    const r = await req(`/app/projects/${projectId}/billing/checkout`, { method: "POST", body: JSON.stringify({ plan: "pro" }) });
+    expect(r.status).toBe(501);
+    expect((await r.json()).error.code).toBe("billing_not_configured");
+
+    const payload = JSON.stringify({ id: "evt_1", type: "customer.subscription.updated", data: { object: { id: "sub_1", customer: "cus_1", status: "active", metadata: { project_id: projectId }, items: { data: [{ price: { id: "price_pro" } }] } } } });
+    const t = Math.floor(Date.now() / 1000);
+    const sig = `t=${t},v1=${createHmac("sha256", "whsec_test").update(`${t}.${payload}`).digest("hex")}`;
+    expect((await app.request("/webhooks/stripe", { method: "POST", headers: { "stripe-signature": "t=1,v1=bad" }, body: payload })).status).toBe(400);
+    // prices map is empty in this config, so the plan can't be resolved from price_pro; apply directly with a configured map
+    applyStripeEvent({ ...billing, prices: { pro: "price_pro" } }, reg, JSON.parse(payload));
+    expect((await (await req(`/app/projects/${projectId}`)).json()).plan).toBe("pro");
+    expect((await app.request("/webhooks/stripe", { method: "POST", headers: { "stripe-signature": sig }, body: payload })).status).toBe(200); // idempotent replay ok
+  });
+  it("enforces the plan's monthly event limit", async () => {
+    reg.prepare("UPDATE project SET plan = 'free' WHERE id = ?").run(projectId);
+    const k = await (await req(`/app/projects/${projectId}/keys`, { method: "POST", body: JSON.stringify({ mode: "test", scopes: ["write"] }) })).json();
+    const events = Array.from({ length: 1000 }, (_, i) => ({ tenant: "bulk", actor: "b", action: "x", target: `${i}` }));
+    for (let i = 0; i < 9; i++) await app.request("/v1/events/bulk", { method: "POST", headers: { authorization: `Bearer ${k.key}`, "content-type": "application/json" }, body: JSON.stringify({ events }) });
+    const last = await app.request("/v1/events/bulk", { method: "POST", headers: { authorization: `Bearer ${k.key}`, "content-type": "application/json" }, body: JSON.stringify({ events }) });
+    expect(last.status).toBe(429);
+    expect((await last.json()).error.code).toBe("plan_limit");
+  });
+});
+
+describe("viewer tokens", () => {
+  it("scoped read-only access that expires and revokes", async () => {
+    const tr = await req(`/app/projects/${projectId}/viewer-tokens`, { method: "POST", body: JSON.stringify({ tenant: "acme", ttl_hours: 1 }) });
+    const t = await tr.json();
+    expect(t.url).toContain("/viewer?token=vt_");
+    const ev = await (await app.request(`/viewer/events?token=${t.token}`)).json();
+    expect(ev.events.length).toBeGreaterThan(0);
+    expect(ev.events.every((e: { tenant: string }) => e.tenant === "acme")).toBe(true);
+    expect((await app.request(`/viewer/events?token=${t.token}&tenant=bulk`)).status).toBe(200); // tenant param ignored, scope wins
+    expect((await (await app.request(`/viewer/events?token=${t.token}&tenant=bulk`)).json()).events.every((e: { tenant: string }) => e.tenant === "acme")).toBe(true);
+    expect((await (await app.request(`/viewer/verify?token=${t.token}`)).json()).valid).toBe(true);
+    expect((await app.request(`/viewer/export`, { headers: { authorization: `Bearer ${t.token}` } })).status).toBe(200);
+    expect((await app.request(`/viewer/events?token=vt_${projectId}_${"x".repeat(32)}`)).status).toBe(401);
+    expect((await req(`/app/projects/${projectId}/viewer-tokens/${t.id}`, { method: "DELETE" })).status).toBe(200);
+    expect((await app.request(`/viewer/events?token=${t.token}`)).status).toBe(401);
+    expect((await app.request(`/v1/events`, { headers: { authorization: `Bearer ${t.token}` } })).status).toBe(401); // viewer tokens are not API keys
+  });
+});
+
+describe("demo + public", () => {
+  it("demo chains per visitor and hides other visitors", async () => {
+    const a = await (await app.request("/demo/log", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "1.1.1.1" }, body: JSON.stringify({ actor: "you", action: "invoice.delete" }) })).json();
+    const b = await (await app.request("/demo/log", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "1.1.1.1" }, body: JSON.stringify({ actor: "you", action: "mfa.disable" }) })).json();
+    expect(b.prev_hash).toBe(a.event_hash);
+    expect((await (await app.request("/demo/verify", { headers: { "x-forwarded-for": "1.1.1.1" } })).json()).valid).toBe(true);
+    expect((await app.request(`/demo/proof/${a.id}`, { headers: { "x-forwarded-for": "2.2.2.2" } })).status).toBe(404);
+    expect((await (await app.request("/demo/events", { headers: { "x-forwarded-for": "2.2.2.2" } })).json()).events).toHaveLength(0);
+  });
+  it("public anchors and stats", async () => {
+    const { anchors } = await (await app.request("/public/anchors")).json();
+    expect(anchors.length).toBeGreaterThan(0);
+    expect(anchors[0].receipts[0]).toMatchObject({ kind: "rekor" });
+    expect(anchors[0]).not.toHaveProperty("receipts.0.proof");
+    const stats = await (await app.request("/public/stats")).json();
+    expect(stats.projects).toBeGreaterThanOrEqual(3);
+  });
+});

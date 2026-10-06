@@ -2,28 +2,45 @@ import { serve } from "@hono/node-server";
 import type { Anchor } from "@auditkit/core";
 import { RekorAnchor } from "@auditkit/anchor-rekor";
 import { OtsAnchor } from "@auditkit/anchor-ots";
-import { openRegistry, type Config } from "./db.js";
+import { openRegistry, openProject, type Config } from "./db.js";
 import { loadSigner, loadAnchorKey } from "./signing.js";
 import { buildApp } from "./app.js";
-import { tick, maintain } from "./anchorLoop.js";
+import { tick, maintain, applyRetention } from "./anchorLoop.js";
 import { createProject, createKey } from "./keys.js";
+import { migrateAuth, makeMailer } from "./auth.js";
+import { migrateBilling, billingFromEnv } from "./billing.js";
+import { planOf } from "./plans.js";
 
 const cfg: Config = { dataDir: process.env.AUDITKIT_DATA ?? "./data", publicHost: process.env.AUDITKIT_PUBLIC_HOST ?? "localhost" };
 const port = Number(process.env.PORT ?? 3001);
 const interval = Number(process.env.AUDITKIT_ANCHOR_INTERVAL ?? 300);
+const siteUrl = process.env.AUDITKIT_SITE_URL ?? `http://localhost:${port}`;
 // Default: both public anchors. AUDITKIT_ANCHORS=none for offline dev, or a comma list.
 const wanted = (process.env.AUDITKIT_ANCHORS ?? "rekor,ots").split(",").map((s) => s.trim()).filter((s) => s && s !== "none");
 
 const reg = openRegistry(cfg);
+migrateAuth(reg);
+migrateBilling(reg);
 const signer = loadSigner(cfg.dataDir);
 const anchors: Anchor[] = [];
 if (wanted.includes("rekor")) anchors.push(new RekorAnchor(loadAnchorKey(cfg.dataDir)));
 if (wanted.includes("ots")) anchors.push(new OtsAnchor());
 
-const app = buildApp({ cfg, reg, signer, anchorPolicy: { kinds: anchors.map((a) => a.kind), interval_seconds: interval } });
+// The public demo on the homepage writes here. Reset nightly by dropping and recreating its file.
+const DEMO = "demo";
+if (!reg.prepare("SELECT 1 FROM project WHERE id = ?").get(DEMO)) {
+  reg.prepare("INSERT INTO project (id, name, plan, created_at) VALUES (?, 'Public demo', 'business', ?)").run(DEMO, new Date().toISOString());
+}
+openProject(cfg, DEMO);
 
-// Dev convenience: first boot with no projects creates one and prints its admin key.
-if ((reg.prepare("SELECT COUNT(*) AS n FROM project").get() as { n: number }).n === 0) {
+const app = buildApp({
+  cfg, reg, signer,
+  anchorPolicy: { kinds: anchors.map((a) => a.kind), interval_seconds: interval },
+  web: { mailer: makeMailer(), billing: billingFromEnv(siteUrl), siteUrl, secureCookies: siteUrl.startsWith("https://"), demoProjectId: DEMO },
+});
+
+// Dev convenience: first boot with no user projects creates one and prints its admin key.
+if ((reg.prepare("SELECT COUNT(*) AS n FROM project WHERE id != ?").get(DEMO) as { n: number }).n === 0) {
   const { id } = createProject(reg, "dev");
   const { key } = createKey(reg, id, "test", ["admin", "read", "write", "erase"]);
   console.log(`[auditkit] created project ${id}\n[auditkit] admin key (shown once): ${key}`);
@@ -40,4 +57,11 @@ setInterval(() => {
     .finally(() => { running = false; });
 }, interval * 1000).unref();
 
-serve({ fetch: app.fetch, port }, () => console.log(`[auditkit] listening on :${port}, anchors: ${anchors.map((a) => a.kind).join(",") || "none"}, every ${interval}s`));
+setInterval(() => {
+  const n = applyRetention(cfg, reg, (plan) => planOf(plan).retention_days);
+  if (n) console.log(`[retention] shredded ${n} payloads`);
+}, 6 * 3600 * 1000).unref();
+
+serve({ fetch: app.fetch, port }, () =>
+  console.log(`[auditkit] listening on :${port}, site ${siteUrl}, anchors: ${anchors.map((a) => a.kind).join(",") || "none"}, every ${interval}s`),
+);

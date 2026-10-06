@@ -4,3 +4,8 @@ export { loadSigner, loadAnchorKey, verifyWithSpki, type Signer } from "./signin
 export { createProject, createKey, revokeKey, authenticate, type Principal, type Scope } from "./keys.js";
 export { tick, maintain, anchorsFor, proofForEvent } from "./anchorLoop.js";
 export { openapi } from "./openapi.js";
+export { buildWebRoutes, monthlyUsage, type WebDeps } from "./webRoutes.js";
+export { migrateAuth, makeMailer, requestMagicLink, redeemMagicLink, type Mailer, type User } from "./auth.js";
+export { migrateBilling, billingFromEnv, verifyStripeSignature, applyStripeEvent, type BillingConfig } from "./billing.js";
+export { PLANS, planOf, type Plan } from "./plans.js";
+export { applyRetention } from "./anchorLoop.js";
