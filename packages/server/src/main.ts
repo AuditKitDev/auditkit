@@ -16,7 +16,8 @@ import { planOf } from "./plans.js";
 
 const cfg: Config = { dataDir: process.env.AUDITKIT_DATA ?? "./data", publicHost: process.env.AUDITKIT_PUBLIC_HOST ?? "localhost" };
 const port = Number(process.env.PORT ?? 3001);
-const interval = Number(process.env.AUDITKIT_ANCHOR_INTERVAL ?? 300);
+// Loop cadence; each project is rooted on its plan's own interval (plans.ts), never faster than this.
+const interval = Number(process.env.AUDITKIT_ANCHOR_INTERVAL ?? 60);
 const siteUrl = process.env.AUDITKIT_SITE_URL ?? `http://localhost:${port}`;
 // Default: both public anchors. AUDITKIT_ANCHORS=none for offline dev, or a comma list.
 const wanted = (process.env.AUDITKIT_ANCHORS ?? "rekor,ots").split(",").map((s) => s.trim()).filter((s) => s && s !== "none");
@@ -28,7 +29,9 @@ migrateBilling(reg);
 migrateOAuth(reg);
 const signer = loadSigner(cfg.dataDir);
 const anchors: Anchor[] = [];
-if (wanted.includes("rekor")) anchors.push(new RekorAnchor(loadAnchorKey(cfg.dataDir)));
+const anchorKey = loadAnchorKey(cfg.dataDir);
+const anchorPublicKey = anchorKey.publicKey.export({ format: "der", type: "spki" }).toString("base64");
+if (wanted.includes("rekor")) anchors.push(new RekorAnchor(anchorKey));
 if (wanted.includes("ots")) anchors.push(new OtsAnchor());
 
 // The public demo on the homepage writes here. Reset nightly by dropping and recreating its file.
@@ -46,6 +49,7 @@ if (siteUrl.startsWith("https://") && !process.env.RESEND_API_KEY) {
 const app = buildApp({
   cfg, reg, signer,
   anchorPolicy: { kinds: anchors.map((a) => a.kind), interval_seconds: interval },
+  anchorPublicKey,
   web: { mailer: makeMailer(), billing: billingFromEnv(siteUrl), siteUrl, secureCookies: siteUrl.startsWith("https://"), demoProjectId: DEMO, proxyTrust: (process.env.AUDITKIT_PROXY_TRUST as "x-real-ip" | "x-forwarded-for" | "none" | undefined) ?? "none" },
 });
 
@@ -63,7 +67,7 @@ let running = false;
 setInterval(() => {
   if (running) return;
   running = true;
-  void tick(cfg, reg, anchors, log)
+  void tick(cfg, reg, anchors, log, (plan) => Math.max(interval, planOf(plan).anchor_interval_seconds))
     .then(() => maintain(reg, anchors, log))
     .catch((e: Error) => log(`tick failed: ${e.message}`))
     .finally(() => { running = false; });

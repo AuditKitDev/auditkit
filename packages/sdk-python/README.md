@@ -12,7 +12,7 @@ for line in audit.export("acme"): print(line["type"])  # verify offline with @au
 ```
 
 Methods: `log`, `log_bulk`, `search`, `get`, `proof`, `verify`, `export` (iterator of NDJSON dicts), `tenants`, `erase` (returns `{"erased": True, "audit": receipt}`), `register_tenant_key(tenant, public_key)` (DER SPKI bytes or base64 str), `list_tenant_keys`, `revoke_tenant_key(tenant, key_id)`, `set_tenant_policy(tenant, require_client_sig)` (admin scope).
-Failures raise `AuditKitError(status, code, message)`.
+Failures raise `AuditKitError(status, code, message)`; a network error on the last attempt raises it with status 0, code `network`. `verify_receipt(receipt, server_public_key, actor, action, target=None, payload=...)` and `verify_client_sig(public_key, sig_b64, tenant, actor, action, target, occurred_at)` check signatures offline (need `cryptography`); with `payload` given, `payload_commit = sha256(salt + JCS(payload))` is recomputed too.
 
 Retries: 3 attempts, exponential backoff (0.2s doubled) on 429, 5xx and network errors. `log` and `log_bulk` always send an idempotency key (uuid4 per event unless given), so retries never double-log. `erase` is never retried.
 

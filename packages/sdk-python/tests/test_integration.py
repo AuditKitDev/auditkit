@@ -7,7 +7,7 @@ import pytest
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from auditkit import AuditKit, AuditKitError, client_signable
+from auditkit import AuditKit, AuditKitError, client_signable, verify_client_sig, verify_receipt
 
 
 @pytest.fixture
@@ -110,3 +110,28 @@ def test_retry_on_5xx():
     assert ak.log("t", "a", "b")["id"] == "e"
     assert len(calls) == 3 and len(set(calls)) == 1 and len(calls[0]) == 36
     s.shutdown()
+
+
+def test_receipt_verify_network_and_surrogate(server, kit):
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+    import json as _j, urllib.request as _u
+
+    r = kit.log("acme", "u_v", "p.check", payload={"a": 1})
+    meta = _j.load(_u.urlopen(server["url"] + "/.well-known/auditkit.json"))
+    pub = next(v for k, v in meta.items() if isinstance(v, str) and "public" in k.lower())
+    assert verify_receipt(r, pub, "u_v", "p.check", payload={"a": 1})
+    assert not verify_receipt(r, pub, "u_v", "p.check", payload={"a": 2})
+    assert not verify_receipt(r, pub, "evil", "p.check")
+    assert verify_receipt(r, pub, "u_v", "p.check")
+
+    sk = Ed25519PrivateKey.generate()
+    sig = base64.b64encode(sk.sign(bytes.fromhex(client_signable("t", "a", "b", None, "2026-01-01T00:00:00.000Z")))).decode()
+    assert verify_client_sig(sk.public_key(), sig, "t", "a", "b", None, "2026-01-01T00:00:00.000Z")
+    assert not verify_client_sig(sk.public_key(), sig, "t", "x", "b", None, "2026-01-01T00:00:00.000Z")
+
+    with pytest.raises(ValueError, match="surrogate"):
+        client_signable("t", "\ud800", "b", None, "x")
+
+    with pytest.raises(AuditKitError) as ei:
+        AuditKit("k", base_url="http://127.0.0.1:1", max_attempts=2, retry_delay=0.001).get("x")
+    assert ei.value.status == 0 and ei.value.code == "network"

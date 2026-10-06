@@ -4,11 +4,16 @@
 import type { Anchor, AnchorKind, AnchorReceipt, Hex } from "@auditkit/core";
 import { RekorAnchor } from "@auditkit/anchor-rekor";
 import { OtsAnchor } from "@auditkit/anchor-ots";
+import { createPublicKey } from "node:crypto";
 
 export type AnchorRegistry = Partial<Record<AnchorKind, Anchor>>;
 
-export function defaultAnchors(online: boolean): AnchorRegistry {
-  const rekor = new RekorAnchor();
+/**
+ * `anchorPublicKey` (base64 P-256 SPKI from the manifest or a pin) binds Rekor receipts to the server
+ * that claims them: Rekor is a public log, so without it anyone could write an entry for a forged root.
+ */
+export function defaultAnchors(online: boolean, anchorPublicKey?: string): AnchorRegistry {
+  const rekor = new RekorAnchor(anchorPublicKey ? { publicKey: createPublicKey({ key: Buffer.from(anchorPublicKey, "base64"), format: "der", type: "spki" }) } : {});
   return {
     rekor: {
       kind: "rekor",

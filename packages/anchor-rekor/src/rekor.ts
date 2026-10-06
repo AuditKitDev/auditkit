@@ -1,5 +1,5 @@
 import type { KeyObject } from "node:crypto";
-import type { Anchor, AnchorReceipt, Hex } from "@auditkit/core";
+import type { Anchor, AnchorReceipt, AnchorVerdict, Hex } from "@auditkit/core";
 import { checkpointKeyId, parseCheckpoint, verifyCheckpoint, type LogKey } from "./checkpoint.js";
 import { assertP256, entryDigest, rootBytes, signArtifact, v1RequestBody, v2RequestBody } from "./entry.js";
 import { HttpError, postJsonWithRetry, type RetryOptions } from "./http.js";
@@ -168,7 +168,13 @@ export class RekorAnchor implements Anchor {
     return receipt;
   }
 
-  verify(root: Hex, receipt: AnchorReceipt, opts: { online?: boolean } = {}): Promise<Verdict> {
+  async verify(root: Hex, receipt: AnchorReceipt, opts: { online?: boolean } = {}): Promise<AnchorVerdict> {
+    const v = await this.verifyDetailed(root, receipt, opts);
+    // Rekor proves existence and order in a public log. It carries no trustworthy time (v2 has none; v1's
+    // integratedTime is not covered by anything we verify offline), so no attested_at is reported.
+    return v.ok ? { ok: true, level: "final" } : { ok: false, reason: v.reason };
+  }
+  verifyDetailed(root: Hex, receipt: AnchorReceipt, opts: { online?: boolean } = {}): Promise<Verdict> {
     const o: Parameters<typeof verifyRekorReceipt>[2] = { logKeys: this.logKeys, fetch: this.fetchFn };
     if (this.publicKey) o.expectPublicKey = this.publicKey;
     if (opts.online) o.online = true;

@@ -23,7 +23,7 @@ const fakeAnchor: Anchor = {
   kind: "rekor",
   async anchor() { return { kind: "rekor", ref: "fake", proof: "e30=", anchored_at: new Date().toISOString(), status: "final" }; },
   async upgrade(r) { return r; },
-  async verify() { return { ok: true, attested_at: "" }; },
+  async verify() { return { ok: true, level: "final" }; },
 };
 
 const req = (path: string, init: RequestInit = {}) =>
@@ -154,6 +154,25 @@ describe("customer signing keys", () => {
     const keys = await (await req(`/api/app/projects/${projectId}/tenants/signed/keys`)).json();
     expect(keys.keys).toHaveLength(1);
     expect((await req(`/api/app/projects/${projectId}/tenants/signed/keys/${keys.keys[0].id}`, { method: "DELETE" })).status).toBe(200);
+  });
+});
+
+describe("per-plan anchor cadence", () => {
+  it("roots a project only when its plan interval has elapsed", async () => {
+    const k = await (await req(`/api/app/projects/${projectId}/keys`, { method: "POST", body: JSON.stringify({ mode: "test", scopes: ["write"] }) })).json();
+    const log = (body: object) => app.request("/v1/events", { method: "POST", headers: { authorization: `Bearer ${k.key}`, "content-type": "application/json" }, body: JSON.stringify(body) });
+    reg.prepare("UPDATE project SET plan = 'business' WHERE id = ?").run(projectId);
+    await log({ tenant: "cadence", actor: "u", action: "a" });
+    await tick(cfg, reg, [fakeAnchor], () => {}, (plan) => (plan === "free" ? 86_400 : 0)); // business: rooted now
+    reg.prepare("UPDATE project SET plan = 'free' WHERE id = ?").run(projectId);
+    await log({ tenant: "cadence", actor: "u", action: "b" });
+    const before = (await (await req(`/api/app/projects/${projectId}/verify?tenant=cadence`)).json()).rooted_through;
+    expect(await tick(cfg, reg, [fakeAnchor], () => {}, (plan) => (plan === "free" ? 86_400 : 0))).toBeNull(); // free: not due for a day
+    expect((await (await req(`/api/app/projects/${projectId}/verify?tenant=cadence`)).json()).rooted_through).toBe(before);
+    reg.prepare("UPDATE project SET plan = 'business' WHERE id = ?").run(projectId);
+    expect(await tick(cfg, reg, [fakeAnchor], () => {}, (plan) => (plan === "free" ? 86_400 : 0))).not.toBeNull(); // business: due now
+    expect((await (await req(`/api/app/projects/${projectId}/verify?tenant=cadence`)).json()).rooted_through).toBe(before + 1);
+    reg.prepare("UPDATE project SET plan = 'free' WHERE id = ?").run(projectId);
   });
 });
 

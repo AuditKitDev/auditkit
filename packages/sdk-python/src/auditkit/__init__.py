@@ -8,12 +8,15 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
-from base64 import b64encode
-from typing import Any, Callable, Iterator, Optional
+from base64 import b64decode, b64encode
+from typing import Any, Callable, Iterator, Optional, Union
 
 from .jcs import canonicalize
 
-__all__ = ["AuditKit", "AuditKitError", "client_signable", "canonicalize"]
+__all__ = ["AuditKit", "AuditKitError", "client_signable", "canonicalize", "verify_receipt", "verify_client_sig"]
+
+Receipt = dict[str, Any]
+_UNSET: Any = object()
 
 
 class AuditKitError(Exception):
@@ -23,9 +26,57 @@ class AuditKitError(Exception):
 
 
 def client_signable(tenant: str, actor: str, action: str, target: Optional[str], occurred_at: str) -> str:
-    """Hex sha256 of JCS({tenant, actor, action, target|null, occurred_at}). Sign the raw 32 bytes."""
+    """Hex sha256 of JCS({tenant, actor, action, target|null, occurred_at}). Sign the raw 32 bytes.
+
+    Raises ValueError if any field contains a lone UTF-16 surrogate.
+    """
+    for k, v in (("tenant", tenant), ("actor", actor), ("action", action), ("target", target), ("occurred_at", occurred_at)):
+        if isinstance(v, str):
+            try:
+                v.encode("utf-8")
+            except UnicodeEncodeError:
+                raise ValueError(f"client_signable: {k} contains a lone UTF-16 surrogate (not valid Unicode text)") from None
     doc = {"tenant": tenant, "actor": actor, "action": action, "target": target, "occurred_at": occurred_at}
     return hashlib.sha256(canonicalize(doc).encode("utf-8")).hexdigest()
+
+
+def _load_public_key(key: Any) -> Any:
+    from cryptography.hazmat.primitives.serialization import load_der_public_key
+
+    if isinstance(key, str):
+        key = b64decode(key)
+    if isinstance(key, (bytes, bytearray)):
+        return load_der_public_key(bytes(key))
+    return key
+
+
+def _ed25519_ok(public_key: Any, sig_b64: str, message: bytes) -> bool:
+    from cryptography.exceptions import InvalidSignature
+
+    try:
+        _load_public_key(public_key).verify(b64decode(sig_b64), message)
+        return True
+    except (InvalidSignature, ValueError):
+        return False
+
+
+def verify_receipt(receipt: Receipt, server_public_key: Union[str, bytes, Any], actor: str, action: str, target: Optional[str] = None, payload: Any = _UNSET) -> bool:
+    """Offline receipt check (needs `cryptography`). Recomputes event_hash from the receipt plus the actor/action/target
+    you logged, then checks server_sig. When `payload` is given (even None), also recomputes
+    payload_commit = sha256(salt + JCS(payload)). server_public_key: base64 SPKI str, DER bytes or an Ed25519PublicKey."""
+    r = receipt
+    if payload is not _UNSET:
+        if hashlib.sha256((r["salt"] + canonicalize(payload)).encode("utf-8")).hexdigest() != r["payload_commit"]:
+            return False
+    header = {"id": r["id"], "project_id": r["project_id"], "tenant_id": r["tenant_id"], "position": r["position"], "occurred_at": r["occurred_at"],
+              "actor": actor, "action": action, "target": target, "payload_commit": r["payload_commit"], "prev_hash": r["prev_hash"]}
+    h = hashlib.sha256(canonicalize(header).encode("utf-8")).hexdigest()
+    return h == r["event_hash"] and _ed25519_ok(server_public_key, r["server_sig"], bytes.fromhex(h))
+
+
+def verify_client_sig(public_key: Union[str, bytes, Any], sig_b64: str, tenant: str, actor: str, action: str, target: Optional[str], occurred_at: str) -> bool:
+    """Check a client_sig (base64) against an Ed25519 public key (needs `cryptography`)."""
+    return _ed25519_ok(public_key, sig_b64, bytes.fromhex(client_signable(tenant, actor, action, target, occurred_at)))
 
 
 def _qs(**q: Any) -> str:
@@ -44,11 +95,11 @@ class AuditKit:
         api_key: str,
         base_url: str = "https://api.auditkit.dev",
         client_key: Any = None,
-        keep_receipts: Optional[Callable[[dict], None]] = None,
+        keep_receipts: Optional[Callable[[Receipt], None]] = None,
         timeout: float = 10,
         max_attempts: int = 3,
         retry_delay: float = 0.2,
-    ):
+    ) -> None:
         self._key = api_key
         self._base = base_url.rstrip("/")
         self._client_key = client_key
@@ -57,7 +108,7 @@ class AuditKit:
         self._max = max_attempts
         self._delay = retry_delay
 
-    def _send(self, path: str, method: str = "GET", body: Any = None, headers: Optional[dict] = None, retry: bool = True):
+    def _send(self, path: str, method: str = "GET", body: Any = None, headers: Optional[dict[str, str]] = None, retry: bool = True) -> Any:
         h = {"authorization": f"Bearer {self._key}"}
         data = None
         if body is not None:
@@ -79,9 +130,9 @@ class AuditKit:
                         j = None
                     err = (j or {}).get("error") or {} if isinstance(j, dict) else {}
                     raise AuditKitError(e.code, err.get("code") or f"http_{e.code}", err.get("message") or str(e.reason)) from None
-            except (urllib.error.URLError, OSError):
+            except (urllib.error.URLError, OSError) as e:
                 if attempt >= mx:
-                    raise
+                    raise AuditKitError(0, "network", f"network error: {e}") from e
             time.sleep(self._delay * 2 ** (attempt - 1))
         raise AssertionError("unreachable")
 
@@ -89,10 +140,10 @@ class AuditKit:
         with self._send(path, **kw) as r:
             return json.loads(r.read())
 
-    def _wire(self, tenant, actor, action, target=None, occurred_at=None, payload=None, idempotency_key=None) -> dict:
+    def _wire(self, tenant: str, actor: str, action: str, target: Optional[str] = None, occurred_at: Optional[str] = None, payload: Any = None, idempotency_key: Optional[str] = None) -> dict[str, Any]:
         if occurred_at is None and self._client_key is not None:
             occurred_at = _now()
-        w: dict = {"tenant": tenant, "actor": actor, "action": action, "idempotency_key": idempotency_key or str(uuid.uuid4())}
+        w: dict[str, Any] = {"tenant": tenant, "actor": actor, "action": action, "idempotency_key": idempotency_key or str(uuid.uuid4())}
         if target is not None:
             w["target"] = target
         if occurred_at is not None:
@@ -104,57 +155,57 @@ class AuditKit:
             w["client_sig"] = b64encode(self._client_key.sign(digest)).decode()
         return w
 
-    def _kept(self, r: dict) -> dict:
+    def _kept(self, r: Receipt) -> Receipt:
         if self._keep:
             self._keep(r)
         return r
 
-    def log(self, tenant, actor, action, target=None, occurred_at=None, payload=None, idempotency_key=None) -> dict:
+    def log(self, tenant: str, actor: str, action: str, target: Optional[str] = None, occurred_at: Optional[str] = None, payload: Any = None, idempotency_key: Optional[str] = None) -> Receipt:
         w = self._wire(tenant, actor, action, target, occurred_at, payload, idempotency_key)
         return self._kept(self._json("/v1/events", method="POST", body=w, headers={"idempotency-key": w["idempotency_key"]}))
 
-    def log_bulk(self, events: list) -> list:
+    def log_bulk(self, events: list[dict[str, Any]]) -> list[Receipt]:
         """events: dicts with the same keys as log()'s arguments."""
         ws = [self._wire(**e) for e in events]
         return [self._kept(r) for r in self._json("/v1/events/bulk", method="POST", body={"events": ws})["receipts"]]
 
-    def search(self, tenant=None, actor=None, action=None, from_=None, to=None, limit=None, cursor=None) -> dict:
+    def search(self, tenant: Optional[str] = None, actor: Optional[str] = None, action: Optional[str] = None, from_: Optional[str] = None, to: Optional[str] = None, limit: Optional[int] = None, cursor: Optional[str] = None) -> dict[str, Any]:
         return self._json("/v1/events" + _qs(tenant=tenant, actor=actor, action=action, **{"from": from_}, to=to, limit=limit, cursor=cursor))
 
-    def get(self, id: str) -> dict:
+    def get(self, id: str) -> dict[str, Any]:
         return self._json(f"/v1/events/{urllib.parse.quote(id, safe='')}")
 
-    def proof(self, id: str) -> dict:
+    def proof(self, id: str) -> dict[str, Any]:
         return self._json(f"/v1/events/{urllib.parse.quote(id, safe='')}/proof")
 
-    def verify(self, tenant: str, from_: Optional[int] = None, to: Optional[int] = None) -> dict:
+    def verify(self, tenant: str, from_: Optional[int] = None, to: Optional[int] = None) -> dict[str, Any]:
         return self._json("/v1/verify" + _qs(tenant=tenant, **{"from": from_}, to=to))
 
-    def export(self, tenant: str, from_: Optional[int] = None, to: Optional[int] = None) -> Iterator[dict]:
+    def export(self, tenant: str, from_: Optional[int] = None, to: Optional[int] = None) -> Iterator[dict[str, Any]]:
         with self._send("/v1/export" + _qs(tenant=tenant, **{"from": from_}, to=to)) as r:
             for line in r:
                 line = line.strip()
                 if line:
                     yield json.loads(line)
 
-    def tenants(self) -> list:
+    def tenants(self) -> list[dict[str, Any]]:
         return self._json("/v1/tenants")["tenants"]
 
-    def register_tenant_key(self, tenant: str, public_key) -> dict:
+    def register_tenant_key(self, tenant: str, public_key: Union[str, bytes, bytearray]) -> dict[str, Any]:
         """public_key: DER SPKI bytes, or a base64 str of them. Needed before sending client_sig."""
         pk = b64encode(public_key).decode() if isinstance(public_key, (bytes, bytearray)) else public_key
         return self._json(f"/v1/tenants/{urllib.parse.quote(tenant, safe='')}/keys", method="POST", body={"public_key": pk}, retry=False)
 
-    def list_tenant_keys(self, tenant: str) -> list:
+    def list_tenant_keys(self, tenant: str) -> list[dict[str, Any]]:
         return self._json(f"/v1/tenants/{urllib.parse.quote(tenant, safe='')}/keys")["keys"]
 
-    def revoke_tenant_key(self, tenant: str, key_id: str) -> dict:
+    def revoke_tenant_key(self, tenant: str, key_id: str) -> dict[str, Any]:
         return self._json(f"/v1/tenants/{urllib.parse.quote(tenant, safe='')}/keys/{urllib.parse.quote(key_id, safe='')}", method="DELETE", retry=False)
 
-    def set_tenant_policy(self, tenant: str, require_client_sig: bool) -> dict:
+    def set_tenant_policy(self, tenant: str, require_client_sig: bool) -> dict[str, Any]:
         """Admin scope. When true, unsigned events for the tenant are refused."""
         return self._json(f"/v1/tenants/{urllib.parse.quote(tenant, safe='')}/policy", method="POST", body={"require_client_sig": require_client_sig}, retry=False)
 
-    def erase(self, id: str) -> dict:
+    def erase(self, id: str) -> dict[str, Any]:
         """Returns {"erased": True, "audit": receipt}. Not retried."""
         return self._json(f"/v1/erase/{urllib.parse.quote(id, safe='')}", method="POST", retry=False)

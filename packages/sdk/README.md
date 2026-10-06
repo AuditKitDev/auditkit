@@ -1,6 +1,6 @@
 # @auditkit/sdk
 
-Zero-dependency TypeScript client for the AuditKit API (Node 22+, global `fetch`).
+TypeScript client for the AuditKit API (Node 22+, global `fetch`). Depends only on `@auditkit/core`.
 
 ```ts
 import { AuditKit } from "@auditkit/sdk";
@@ -17,7 +17,7 @@ Failures throw `AuditKitError { status, code, message }`.
 
 ## Retries
 
-Up to 3 attempts with exponential backoff on 429, 5xx and network errors. Reads retry always. `log` and `logBulk` always send an idempotency key (a `crypto.randomUUID()` per event if you did not pass `idempotencyKey`), so a retry after a lost response replays the original receipt (`duplicate: true`) and never double-logs. `erase` is never retried.
+Each attempt times out after `timeoutMs` (default 10000). A network error on the last attempt throws `AuditKitError` (status 0, code `network`). Up to 3 attempts with exponential backoff on 429, 5xx and network errors. Reads retry always. `log` and `logBulk` always send an idempotency key (a `crypto.randomUUID()` per event if you did not pass `idempotencyKey`), so a retry after a lost response replays the original receipt (`duplicate: true`) and never double-logs. `erase` is never retried.
 
 ## Client signatures
 
@@ -38,4 +38,4 @@ The signed message is defined by `clientSignable` in `@auditkit/core`. The SDK's
 
 ## Receipts
 
-Receipts carry `tenant_id`, `project_id`, `occurred_at` and `payload_commit`. `verifyReceipt(receipt, serverPublicKey, { actor, action, target? })` recomputes `event_hash` offline and checks `server_sig` against the server's public key (`KeyObject` or base64 SPKI, published at `/.well-known/auditkit.json`).
+Receipts carry `tenant_id`, `project_id`, `occurred_at` and `payload_commit` and `salt`. `verifyReceipt(receipt, serverPublicKey, { actor, action, target?, payload? })` recomputes `event_hash` offline (and, when `payload` is given, `payload_commit = sha256(salt + JCS(payload))`) and checks `server_sig` against the server's public key (`KeyObject` or base64 SPKI, published at `/.well-known/auditkit.json`).

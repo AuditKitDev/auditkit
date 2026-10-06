@@ -116,4 +116,24 @@ describe("sdk", () => {
     await a.revokeTenantKey("signed", keyId);
     expect((await a.listTenantKeys("signed"))[0]!.revoked_at).toBeTypeOf("string");
   });
+
+  it("times out hung requests, wraps network errors, verifies payload commit, rejects lone surrogates", async () => {
+    const hang = ((_u: unknown, init?: RequestInit) => new Promise((_res, rej) => {
+      init?.signal?.addEventListener("abort", () => rej(init.signal!.reason));
+    })) as typeof fetch;
+    const t0 = Date.now();
+    const err = await new AuditKit({ apiKey: "k", baseUrl: "http://x", fetch: hang, timeoutMs: 30, maxAttempts: 2, retryDelayMs: 1 }).get("e1").catch((e) => e);
+    expect(err).toBeInstanceOf(AuditKitError);
+    expect(err).toMatchObject({ status: 0, code: "network" });
+    expect(Date.now() - t0).toBeLessThan(2000);
+
+    const r = await kit().log({ tenant: "acme", actor: "u", action: "p.check", payload: { a: 1 } });
+    expect(r.salt).toMatch(/^[0-9a-f]+$/);
+    expect(verifyReceipt(r, serverPub, { actor: "u", action: "p.check", payload: { a: 1 } })).toBe(true);
+    expect(verifyReceipt(r, serverPub, { actor: "u", action: "p.check", payload: { a: 2 } })).toBe(false);
+    expect(verifyReceipt(r, serverPub, { actor: "u", action: "p.check" })).toBe(true);
+
+    expect(() => clientSignable({ tenant: "t", actor: "\ud800", action: "a", occurredAt: "2026-01-01T00:00:00.000Z" })).toThrow(/lone UTF-16 surrogate/);
+    expect(() => clientSignable({ tenant: "t", actor: "\ud83d\ude00", action: "a", occurredAt: "2026-01-01T00:00:00.000Z" })).not.toThrow();
+  });
 });

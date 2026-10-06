@@ -83,7 +83,7 @@ export function buildMcp(deps: Deps, principal: Principal, db: DatabaseSync): Mc
     async ({ tenant, from, to }) => {
       if (!can("read")) return text({ error: "key lacks read scope" });
       const out: string[] = [];
-      for (const line of exportLines(db, principal.projectId, tenant, deps.signer, (id) => anchorsFor(deps.reg, id), deps.cfg.publicHost ?? "localhost", from, to)) {
+      for (const line of exportLines(db, principal.projectId, tenant, deps.signer, (id) => anchorsFor(deps.reg, id), deps.cfg.publicHost ?? "localhost", from, to, deps.anchorPublicKey)) {
         out.push(JSON.stringify(line));
         if (out.length >= 2000) { out.push('{"type":"truncated"}'); break; }
       }

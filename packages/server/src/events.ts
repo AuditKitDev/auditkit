@@ -38,6 +38,8 @@ export interface Receipt {
   position: number;
   occurred_at?: string;
   payload_commit?: string;
+  /** Salt of the payload commitment; with the payload the client holds, it recomputes payload_commit. */
+  salt?: string;
   event_hash: string;
   prev_hash: string;
   server_sig: string;
@@ -120,7 +122,7 @@ export function ingest(db: DatabaseSync, projectId: string, signer: Signer, inpu
       db.prepare("UPDATE tenant SET head_hash = ?, head_position = ? WHERE id = ?").run(ev.event_hash, ev.position, tenant.id);
       tenant.head_hash = ev.event_hash;
       tenant.head_position = ev.position;
-      receipts.push({ id, tenant: input.tenant, tenant_id: tenant.id, project_id: projectId, position: ev.position, occurred_at: ev.occurred_at, payload_commit: ev.payload_commit, event_hash: ev.event_hash, prev_hash: ev.prev_hash, server_sig: serverSig });
+      receipts.push({ id, tenant: input.tenant, tenant_id: tenant.id, project_id: projectId, position: ev.position, occurred_at: ev.occurred_at, payload_commit: ev.payload_commit, salt, event_hash: ev.event_hash, prev_hash: ev.prev_hash, server_sig: serverSig });
     }
     db.exec(nested ? "RELEASE ingest" : "COMMIT");
   } catch (e) {
@@ -288,6 +290,7 @@ export function* exportLines(
   server: string,
   requestedFrom = 0,
   requestedTo?: number,
+  anchorPublicKey?: string,
 ): Generator<ExportLine> {
   const tenant = db.prepare("SELECT * FROM tenant WHERE external_id = ?").get(tenantExt) as TenantRow | undefined;
   if (!tenant) throw new ValidationError("unknown tenant");
@@ -302,7 +305,7 @@ export function* exportLines(
   yield {
     type: "manifest", version: 1, server, project_id: projectId, tenant_id: tenant.id, tenant: tenantExt,
     from_position: from, to_position: end, requested_from: requestedFrom, requested_to: reqEnd,
-    prev_hash: prev, server_public_key: signer.publicKeySpkiB64, exported_at: now(),
+    prev_hash: prev, server_public_key: signer.publicKeySpkiB64, ...(anchorPublicKey ? { anchor_public_key: anchorPublicKey } : {}), exported_at: now(),
   };
   for (const r of chainRows(db, tenant.id, from, end)) {
     const line: ExportLine = {

@@ -9,7 +9,7 @@ import { openProject, now, UnknownProjectError, type Config } from "./db.js";
 import type { Signer } from "./signing.js";
 import { search, getEvent, verifyRange, exportLines, getOrCreateTenant } from "./events.js";
 import { anchorsFor, proofForEvent, verifyRoots } from "./anchorLoop.js";
-import { contentDisposition } from "./app.js";
+import { ndjsonResponse } from "./app.js";
 
 export interface ViewerToken { id: string; tenant: string; expires_at: string; created_at: string; revoked_at: string | null }
 
@@ -50,7 +50,7 @@ function resolve(cfg: Config, token: string | undefined): Resolved | null {
 type Env = { Variables: { v: Resolved } };
 
 /** Public, read-only routes under /viewer, authenticated by ?token= or Bearer vt_... */
-export function buildViewerRoutes(cfg: Config, reg: DatabaseSync, signer: Signer): Hono<Env> {
+export function buildViewerRoutes(cfg: Config, reg: DatabaseSync, signer: Signer, anchorPublicKey?: string): Hono<Env> {
   const app = new Hono<Env>();
   const err = (c: Context, status: 401 | 404, code: string, message: string) => c.json({ error: { code, message } }, status);
   app.use("/api/viewer/*", async (c, next) => {
@@ -89,10 +89,7 @@ export function buildViewerRoutes(cfg: Config, reg: DatabaseSync, signer: Signer
   app.get("/api/viewer/export", (c) => {
     const { db, projectId, tenant } = c.get("v");
     const q = z.object({ from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
-    const lines = exportLines(db, projectId, tenant, signer, (id) => anchorsFor(reg, id), cfg.publicHost ?? "localhost", q.from, q.to);
-    const enc = new TextEncoder();
-    const body = new ReadableStream({ pull(ctrl) { const n = lines.next(); if (n.done) ctrl.close(); else ctrl.enqueue(enc.encode(JSON.stringify(n.value) + "\n")); } });
-    return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": contentDisposition(tenant) } });
+    return ndjsonResponse(exportLines(db, projectId, tenant, signer, (id) => anchorsFor(reg, id), cfg.publicHost ?? "localhost", q.from, q.to, anchorPublicKey), tenant);
   });
   app.get("/api/viewer/me", (c) => c.json({ tenant: c.get("v").tenant, project_id: c.get("v").projectId }));
   return app;

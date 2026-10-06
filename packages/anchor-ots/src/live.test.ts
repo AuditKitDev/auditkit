@@ -18,7 +18,7 @@ describe.skipIf(!process.env["OTS_LIVE"])("live OpenTimestamps", () => {
     console.log("attestations:", JSON.stringify(uris));
     const v = await a.verify(root, receipt);
     console.log("verify:", JSON.stringify(v));
-    expect(v).toMatchObject({ ok: true, level: "calendar" });
+    expect(v).toMatchObject({ ok: true, stage: "calendar" });
     const up = await a.upgrade(receipt);
     console.log("upgrade right after stamping ->", up.status);
     expect(up.status).toBe("pending");
@@ -29,6 +29,6 @@ describe.skipIf(!process.env["OTS_LIVE"])("live OpenTimestamps", () => {
     const root = createHash("sha256").update("Hello World!\n").digest("hex");
     const v = await new OtsAnchor({ online: true }).verify(root, { kind: "ots", ref: "", proof, anchored_at: "", status: "final" });
     console.log("online verify:", JSON.stringify(v));
-    expect(v).toEqual({ ok: true, level: "bitcoin", block_height: 358391, attested_at: "2015-05-28T15:41:18.000Z" });
+    expect(v).toEqual({ ok: true, stage: "bitcoin", block_height: 358391, attested_at: "2015-05-28T15:41:18.000Z" });
   });
 });

@@ -26,6 +26,8 @@ type RootLine = Extract<ExportLine, { type: "root" }>;
 export interface VerifyOptions {
   /** base64 SPKI Ed25519 key the manifest's server_public_key must equal. */
   pinnedServerKey?: string;
+  /** base64 SPKI P-256 key Rekor entries must be signed by; defaults to the manifest's anchor_public_key. */
+  pinnedAnchorKey?: string;
   /** Replace or add anchor verifiers; defaults to Rekor and OTS from the workspace packages. */
   anchors?: AnchorRegistry;
   /** Let anchor verifiers contact the public logs for a live cross-check. Default false. */
@@ -52,7 +54,8 @@ export interface AnchorResult {
   ref: string;
   global_root: Hex;
   root_range: [number, number];
-  status: "verified" | "failed" | "no_verifier";
+  /** verified: a signed/public-log proof held; pending: a promise only (OTS calendar); unverified: signer unbound. */
+  status: "verified" | "pending" | "unverified" | "failed" | "no_verifier";
   attested_at?: string;
   reason?: string;
   receipt_status: AnchorReceipt["status"];
@@ -73,6 +76,8 @@ export type Verdict = "VALID" | "VALID_UNANCHORED" | "INVALID";
 
 export interface Report {
   verdict: Verdict;
+  /** Whether the server key was pinned by the caller rather than taken from the file. */
+  pinned: boolean;
   /** For INVALID: which check failed first, and at which position (null when the failure is file-level). */
   failed?: { check: CheckName; position: number | null; reason: string };
   manifest?: Manifest;
@@ -93,7 +98,7 @@ export async function verifyExport(lines: ExportLine[] | AsyncIterable<string>, 
   const events = parsed.lines.filter((l): l is EventLine => l.type === "event");
   const roots = parsed.lines.filter((l): l is RootLine => l.type === "root");
   const erased = events.filter((e) => e.payload === undefined).length;
-  const base = { events: events.length, erased, checks, anchors: anchorResults };
+  const base = { events: events.length, erased, checks, anchors: anchorResults, pinned: opts.pinnedServerKey !== undefined };
   if (parsed.error) {
     checks.push({ name: "manifest", status: "fail", summary: parsed.error });
     return { verdict: "INVALID", failed: { check: "manifest", position: null, reason: parsed.error }, ...base };
@@ -113,10 +118,15 @@ export async function verifyExport(lines: ExportLine[] | AsyncIterable<string>, 
     checks.push({ name: "manifest", status: "fail", summary: reason });
     return { verdict: "INVALID", failed: { check: "manifest", position: null, reason }, ...base, manifest };
   }
+  const shape = shapeError(parsed.lines);
+  if (shape) {
+    checks.push({ name: "manifest", status: "fail", summary: shape });
+    return { verdict: "INVALID", failed: { check: "manifest", position: null, reason: shape }, ...base, manifest };
+  }
   checks.push({
     name: "manifest",
     status: "ok",
-    summary: `version 1, tenant ${manifest.tenant_id}, positions ${manifest.from_position}..${manifest.to_position}, exported ${manifest.exported_at}`,
+    summary: `version 1, tenant ${manifest.tenant_id}, positions ${manifest.from_position}..${manifest.to_position}, exported ${manifest.exported_at}${manifest.anchor_public_key ? "" : " (no anchor key in manifest: Rekor receipts cannot be bound to the server)"}`,
   });
 
   // 2. chain
@@ -127,8 +137,8 @@ export async function verifyExport(lines: ExportLine[] | AsyncIterable<string>, 
   // 3. server signatures (+ pin)
   checks.push(checkSignatures(manifest, events, opts.pinnedServerKey));
 
-  // 4. payload commitments
-  checks.push(checkPayloads(events));
+  // 4. payload commitments, and every missing payload must have its erasure record in the chain
+  checks.push(checkPayloads(events, manifest));
 
   // 5. client signatures
   checks.push(checkClientSigs(events, opts.clientKeys));
@@ -138,11 +148,12 @@ export async function verifyExport(lines: ExportLine[] | AsyncIterable<string>, 
   checks.push(rootCheck.check);
 
   // 7. anchors
-  const registry: AnchorRegistry = { ...defaultAnchors(opts.online ?? false), ...(opts.anchors ?? {}) };
+  const anchorKey = opts.pinnedAnchorKey ?? manifest.anchor_public_key;
+  const registry: AnchorRegistry = { ...defaultAnchors(opts.online ?? false, anchorKey), ...(opts.anchors ?? {}) };
   const anchoredRoots = new Set<number>();
   for (const [i, root] of roots.entries()) {
     for (const receipt of root.anchors) {
-      const r = await verifyAnchor(registry, root, receipt);
+      const r = await verifyAnchor(registry, root, receipt, anchorKey !== undefined);
       anchorResults.push(r);
       if (r.status === "verified" && rootCheck.rebuilt.has(i)) anchoredRoots.add(i);
     }
@@ -164,8 +175,10 @@ export async function verifyExport(lines: ExportLine[] | AsyncIterable<string>, 
       coverage,
     };
   }
-  const allRootsAnchored = roots.length > 0 && roots.every((_, i) => anchoredRoots.has(i));
-  return { verdict: allRootsAnchored ? "VALID" : "VALID_UNANCHORED", ...base, manifest, coverage };
+  // VALID means every exported position sits under a root with a verified public anchor. Anything less is
+  // VALID_UNANCHORED: the chain and signatures hold, but part of it is vouched for only by AuditKit's key.
+  const fullyAnchored = coverage.anchored.length > 0 && coverage.rooted_unanchored.length === 0 && coverage.chain_only.length === 0;
+  return { verdict: fullyAnchored ? "VALID" : "VALID_UNANCHORED", ...base, manifest, coverage };
 }
 
 async function parseLines(src: AsyncIterable<string>): Promise<{ lines: ExportLine[]; error: string | null }> {
@@ -246,10 +259,23 @@ function checkSignatures(manifest: Manifest, events: EventLine[], pinned: string
   };
 }
 
-function checkPayloads(events: EventLine[]): Check {
+/** A payload may be absent only if the chain itself records the erasure: a later `payload.erased` naming the
+ *  event, or a later `payload.retention_shred` whose `through_position` covers it. Otherwise someone stripped it. */
+function erasureRecorded(e: EventLine, events: EventLine[]): boolean {
+  return events.some((r) => r.position > e.position && (
+    (r.action === "payload.erased" && r.target === e.id) ||
+    (r.action === "payload.retention_shred" && typeof (r.payload?.data as { through_position?: unknown } | undefined)?.through_position === "number" && (r.payload!.data as { through_position: number }).through_position >= e.position)
+  ));
+}
+
+function checkPayloads(events: EventLine[], manifest: Manifest): Check {
   let erased = 0;
   for (const e of events) {
     if (e.payload === undefined) {
+      if (!erasureRecorded(e, events)) {
+        const hint = e.position >= manifest.to_position ? "the erasure record may lie beyond the exported range; export through the latest position" : "no payload.erased or retention record names it";
+        return { name: "payloads", status: "fail", position: e.position, summary: `payload missing without an erasure record in the chain (${hint})` };
+      }
       erased += 1;
       continue;
     }
@@ -324,13 +350,22 @@ function checkRoots(manifest: Manifest, events: EventLine[], roots: RootLine[]):
   return { check, rebuilt };
 }
 
-async function verifyAnchor(registry: AnchorRegistry, root: RootLine, receipt: AnchorReceipt): Promise<AnchorResult> {
+async function verifyAnchor(registry: AnchorRegistry, root: RootLine, receipt: AnchorReceipt, signerBound: boolean): Promise<AnchorResult> {
   const common = { kind: receipt.kind, ref: receipt.ref, global_root: root.global_root, root_range: [root.from_position, root.to_position] as [number, number], receipt_status: receipt.status };
   const anchor: Anchor | undefined = registry[receipt.kind];
   if (!anchor) return { ...common, status: "no_verifier", reason: `no verifier for kind ${String(receipt.kind)}` };
   try {
     const v = await anchor.verify(root.global_root, receipt);
-    return v.ok ? { ...common, status: "verified", attested_at: v.attested_at } : { ...common, status: "failed", reason: v.reason };
+    if (!v.ok) return { ...common, status: "failed", reason: v.reason };
+    // OTS: a calendar attestation is an unsigned promise anyone can forge; only the Bitcoin level anchors.
+    if (v.level === "pending") {
+      return { ...common, status: "pending", reason: `${v.reason} (upgrade the receipt, or run --online once the block exists)` };
+    }
+    // Rekor: the entry proves existence/order in a public log; it must be signed by this server's anchor key.
+    if (receipt.kind === "rekor" && !signerBound) {
+      return { ...common, status: "unverified", reason: "Rekor entry is in the log but no anchor key binds it to this server (manifest lacks anchor_public_key; pass --anchor-key)" };
+    }
+    return { ...common, status: "verified", ...(v.attested_at ? { attested_at: v.attested_at } : {}) };
   } catch (e) {
     return { ...common, status: "failed", reason: e instanceof Error ? e.message : String(e) };
   }
@@ -341,31 +376,29 @@ function anchorsCheck(roots: RootLine[], results: AnchorResult[]): Check {
   if (results.length === 0) return { name: "anchors", status: "unverified", summary: "roots carry no anchor receipts" };
   const verified = results.filter((r) => r.status === "verified").length;
   const details = results.map(
-    (r) => `${r.kind} ${r.ref} for ${r.root_range[0]}..${r.root_range[1]}: ${r.status}${r.attested_at ? ` at ${r.attested_at}` : ""}${r.reason ? ` (${r.reason})` : ""}`,
+    (r) => `${r.kind} ${r.ref} for ${r.root_range[0]}..${r.root_range[1]}: ${r.status}${r.attested_at ? ` (Bitcoin block time ${r.attested_at})` : r.kind === "rekor" && r.status === "verified" ? " (existence and order; Rekor gives no trusted time)" : ""}${r.reason ? ` (${r.reason})` : ""}`,
   );
-  const status: CheckStatus = verified === results.length ? "ok" : verified > 0 ? "unverified" : "fail";
+  const failed = results.filter((r) => r.status === "failed").length;
+  const status: CheckStatus = verified === results.length ? "ok" : failed === results.length ? "fail" : "unverified";
   return { name: "anchors", status, summary: `${verified} of ${results.length} anchor receipts verify`, details };
 }
 
 function computeCoverage(manifest: Manifest, roots: RootLine[], rebuilt: Set<number>, anchored: Set<number>): Coverage {
   const anchoredR: Array<[number, number]> = [];
   const rootedR: Array<[number, number]> = [];
-  const covered = new Set<number>();
   for (const [i, r] of roots.entries()) {
     if (!rebuilt.has(i)) continue;
     (anchored.has(i) ? anchoredR : rootedR).push([r.from_position, r.to_position]);
-    for (let p = r.from_position; p <= r.to_position; p++) covered.add(p);
   }
+  // Gaps between rebuilt root intervals, computed on intervals so a huge to_position costs nothing.
+  const intervals = [...anchoredR, ...rootedR].sort((x, y) => x[0] - y[0]);
   const chainOnly: Array<[number, number]> = [];
-  let start: number | null = null;
-  for (let p = manifest.from_position; p <= manifest.to_position + 1; p++) {
-    const gap = p <= manifest.to_position && !covered.has(p);
-    if (gap && start === null) start = p;
-    if (!gap && start !== null) {
-      chainOnly.push([start, p - 1]);
-      start = null;
-    }
+  let cursor = manifest.from_position;
+  for (const [a, b] of intervals) {
+    if (a > cursor) chainOnly.push([cursor, a - 1]);
+    cursor = Math.max(cursor, b + 1);
   }
+  if (cursor <= manifest.to_position) chainOnly.push([cursor, manifest.to_position]);
   return { from_position: manifest.from_position, to_position: manifest.to_position, anchored: anchoredR, rooted_unanchored: rootedR, chain_only: chainOnly };
 }
 
@@ -381,4 +414,29 @@ function coverageCheck(c: Coverage): Check {
 
 function short(h: Hex): string {
   return h.slice(0, 12);
+}
+
+/** Structural validation of every line, so a malformed file is reported, not thrown. */
+function shapeError(lines: ExportLine[]): string | null {
+  const isHex = (v: unknown) => typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
+  const isInt = (v: unknown) => Number.isInteger(v) && (v as number) >= 0;
+  const m = lines[0] as Partial<Manifest>;
+  if (!isInt(m.from_position) || !isInt(m.to_position) || (m.from_position as number) > (m.to_position as number)) return "manifest: bad from_position/to_position";
+  if (!isHex(m.prev_hash) || typeof m.server_public_key !== "string" || typeof m.tenant_id !== "string") return "manifest: missing prev_hash, server_public_key or tenant_id";
+  for (const [i, l] of lines.entries()) {
+    if (i === 0) continue;
+    if (l.type === "event") {
+      const e = l as Partial<EventLine>;
+      if (typeof e.id !== "string" || !isInt(e.position) || typeof e.actor !== "string" || typeof e.action !== "string" || typeof e.occurred_at !== "string") return `line ${i + 1}: event missing id/position/actor/action/occurred_at`;
+      if (!isHex(e.payload_commit) || !isHex(e.prev_hash) || !isHex(e.event_hash) || typeof e.server_sig !== "string") return `line ${i + 1}: event missing hashes or server_sig`;
+      if (e.payload !== undefined && (typeof e.payload !== "object" || e.payload === null || typeof (e.payload as { salt?: unknown }).salt !== "string")) return `line ${i + 1}: payload must be { salt, data }`;
+    } else if (l.type === "root") {
+      const r = l as Partial<RootLine>;
+      if (!isHex(r.tenant_root) || !isHex(r.project_root) || !isHex(r.global_root) || !isInt(r.from_position) || !isInt(r.to_position) || (r.from_position as number) > (r.to_position as number)) return `line ${i + 1}: root missing hashes or bad range`;
+      if (!Array.isArray(r.path_to_project) || !Array.isArray(r.path_to_global) || !Array.isArray(r.anchors)) return `line ${i + 1}: root missing paths or anchors`;
+    } else {
+      return `line ${i + 1}: unknown line type ${String((l as { type?: unknown }).type)}`;
+    }
+  }
+  return null;
 }

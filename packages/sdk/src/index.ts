@@ -1,7 +1,7 @@
-// @auditkit/sdk: depends only on @auditkit/core; global fetch and node:crypto.
+// @auditkit/sdk: depends on @auditkit/core, global fetch and node:crypto.
 import { createPublicKey, randomUUID, sign, verify, type KeyObject } from "node:crypto";
 
-import { clientSignable as coreClientSignable, eventHash, type ExportLine, type Hex } from "@auditkit/core";
+import { clientSignable as coreClientSignable, commitPayload, eventHash, type ExportLine, type Hex } from "@auditkit/core";
 
 export type { ExportLine, Hex };
 
@@ -15,7 +15,7 @@ export interface EventInput {
   idempotencyKey?: string;
 }
 export interface Receipt {
-  id: string; tenant: string; tenant_id: string; project_id: string; position: number; occurred_at: string; payload_commit: Hex;
+  id: string; tenant: string; tenant_id: string; project_id: string; position: number; occurred_at: string; payload_commit: Hex; salt: Hex;
   event_hash: Hex; prev_hash: Hex; server_sig: string; duplicate?: boolean;
 }
 export interface TenantKey { id: string; public_key: string; created_at: string; revoked_at: string | null }
@@ -24,8 +24,11 @@ const toSpki = (k: KeyObject | string): string => (typeof k === "string" ? k : k
 /**
  * Offline receipt check: recompute event_hash from the receipt plus the action/actor/target you logged,
  * then check server_sig (Ed25519 over the raw hash bytes) against the server's public key (KeyObject or base64 SPKI).
+ * When `payload` is given, also recompute payload_commit = sha256(salt + JCS(payload)) so the receipt proves the
+ * server committed to YOUR payload. Omit `payload` to skip that check.
  */
-export function verifyReceipt(r: Receipt, serverPublicKey: KeyObject | string, e: { actor: string; action: string; target?: string | null }): boolean {
+export function verifyReceipt(r: Receipt, serverPublicKey: KeyObject | string, e: { actor: string; action: string; target?: string | null; payload?: unknown }): boolean {
+  if (e.payload !== undefined && commitPayload(r.salt, e.payload) !== r.payload_commit) return false;
   const key = typeof serverPublicKey === "string" ? createPublicKey({ key: Buffer.from(serverPublicKey, "base64"), format: "der", type: "spki" }) : serverPublicKey;
   const h = eventHash({ id: r.id, project_id: r.project_id, tenant_id: r.tenant_id, position: r.position, occurred_at: r.occurred_at, actor: e.actor, action: e.action, target: e.target ?? null, payload_commit: r.payload_commit, prev_hash: r.prev_hash });
   return h === r.event_hash && verify(null, Buffer.from(h, "hex"), key, Buffer.from(r.server_sig, "base64"));
@@ -45,11 +48,16 @@ export class AuditKitError extends Error {
   }
 }
 
+const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
+
 /**
  * The bytes a client signs: @auditkit/core `clientSignable`, as hex. Same input with camelCase `occurredAt`.
  * The signature is Ed25519 over the 32 raw digest bytes, base64.
  */
 export function clientSignable(e: { tenant: string; actor: string; action: string; target?: string | null; occurredAt: string }): Hex {
+  for (const [k, v] of Object.entries({ tenant: e.tenant, actor: e.actor, action: e.action, target: e.target, occurredAt: e.occurredAt })) {
+    if (typeof v === "string" && LONE_SURROGATE.test(v)) throw new TypeError(`clientSignable: ${k} contains a lone UTF-16 surrogate (not valid Unicode text)`);
+  }
   return coreClientSignable({ tenant: e.tenant, actor: e.actor, action: e.action, target: e.target, occurred_at: e.occurredAt });
 }
 
@@ -68,9 +76,11 @@ export interface AuditKitOptions {
   maxAttempts?: number;
   /** Base backoff in ms, doubled per retry (default 200). */
   retryDelayMs?: number;
+  /** Per-attempt timeout in ms (default 10000). For `export`, it bounds time to response headers, not the stream. */
+  timeoutMs?: number;
 }
 
-type Req = { method?: string; body?: unknown; headers?: Record<string, string>; retry: boolean };
+type Req = { method?: string; body?: unknown; headers?: Record<string, string>; retry: boolean; stream?: boolean };
 
 export class AuditKit {
   readonly #o: AuditKitOptions;
@@ -87,14 +97,20 @@ export class AuditKit {
     const max = init.retry ? (this.#o.maxAttempts ?? 3) : 1;
     for (let attempt = 1; ; attempt++) {
       let res: Response | undefined;
+      const ms = this.#o.timeoutMs ?? 10_000;
+      const ctl = init.stream ? new AbortController() : undefined;
+      const timer = ctl ? setTimeout(() => ctl.abort(new DOMException("The operation timed out.", "TimeoutError")), ms) : undefined;
       try {
         res = await this.#fetch(this.#base + path, {
           method: init.method ?? "GET",
+          signal: ctl ? ctl.signal : AbortSignal.timeout(ms),
           headers: { authorization: `Bearer ${this.#o.apiKey}`, ...(init.body !== undefined ? { "content-type": "application/json" } : {}), ...init.headers },
           ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
         });
       } catch (e) {
-        if (attempt >= max) throw e;
+        if (attempt >= max) throw new AuditKitError(0, "network", `network error: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        if (timer) clearTimeout(timer);
       }
       if (res && (res.ok || (res.status !== 429 && res.status < 500) || attempt >= max)) {
         if (res.ok) return res;
@@ -175,7 +191,7 @@ export class AuditKit {
 
   /** Streams the NDJSON export, one parsed line at a time. */
   async *export(r: Range): AsyncIterable<ExportLine> {
-    const res = await this.#send("/v1/export" + qs(r), { retry: true });
+    const res = await this.#send("/v1/export" + qs(r), { retry: true, stream: true });
     if (!res.body) return;
     const dec = new TextDecoder();
     let buf = "";

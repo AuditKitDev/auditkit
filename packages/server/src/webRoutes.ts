@@ -13,7 +13,7 @@ import { createProject, createKey, revokeKey, type Scope } from "./keys.js";
 import { ingest, search, getEvent, verifyRange, exportLines, listTenants, ValidationError, IdempotencyConflict } from "./events.js";
 import { anchorsFor, proofForEvent, verifyRoots } from "./anchorLoop.js";
 import { planOf } from "./plans.js";
-import { contentDisposition } from "./app.js";
+import { ndjsonResponse } from "./app.js";
 import { createViewerToken, listViewerTokens, revokeViewerToken } from "./viewer.js";
 import { addTenantKey, listTenantKeys, revokeTenantKey, setRequireClientSig } from "./tenantKeys.js";
 import { checkoutUrl, portalUrl, verifyStripeSignature, applyStripeEvent, BillingNotConfigured, type BillingConfig } from "./billing.js";
@@ -24,6 +24,7 @@ export interface WebDeps {
   signer: Signer;
   mailer: Mailer;
   billing: BillingConfig;
+  anchorPublicKey?: string | undefined;
   siteUrl: string;
   secureCookies: boolean;
   demoProjectId: string;
@@ -181,10 +182,7 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
   });
   app.get("/api/app/projects/:id/export", (c) => {
     const q = z.object({ tenant: z.string(), from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
-    const lines = exportLines(c.get("db"), c.get("projectId"), q.tenant, d.signer, (id) => anchorsFor(d.reg, id), d.cfg.publicHost ?? "localhost", q.from, q.to);
-    const enc = new TextEncoder();
-    const body = new ReadableStream({ pull(ctrl) { const n = lines.next(); if (n.done) ctrl.close(); else ctrl.enqueue(enc.encode(JSON.stringify(n.value) + "\n")); } });
-    return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": contentDisposition(q.tenant) } });
+    return ndjsonResponse(exportLines(c.get("db"), c.get("projectId"), q.tenant, d.signer, (id) => anchorsFor(d.reg, id), d.cfg.publicHost ?? "localhost", q.from, q.to, d.anchorPublicKey), q.tenant);
   });
   app.post("/api/app/projects/:id/billing/checkout", async (c) => {
     if (c.get("role") !== "owner") return err(c, 403, "forbidden", "only the project owner can change billing");

@@ -17,13 +17,23 @@ export interface AnchorReceipt {
   status: "pending" | "final";
 }
 
+export type AnchorVerdict =
+  | { ok: true; level: "final"; attested_at?: string }
+  | { ok: true; level: "pending"; reason: string }
+  | { ok: false; reason: string };
+
 export interface Anchor {
   kind: AnchorKind;
   anchor(root: Hex): Promise<AnchorReceipt>;
   /** For pending receipts, try to upgrade. Return the same receipt if still pending. */
   upgrade(receipt: AnchorReceipt): Promise<AnchorReceipt>;
-  /** Offline: given only the root and the receipt, is this root really in the public log? */
-  verify(root: Hex, receipt: AnchorReceipt): Promise<{ ok: true; attested_at: string } | { ok: false; reason: string }>;
+  /**
+   * Offline: given only the root and the receipt, is this root really in the public log?
+   * `level: "final"` = a signed / consensus-backed proof held (Rekor inclusion + signed checkpoint, OTS Bitcoin block).
+   * `level: "pending"` = only a promise held (OTS calendar attestation); it is unsigned and must not count as anchored.
+   * `attested_at` is only present when the public log vouches for the time (OTS Bitcoin block time). Rekor gives none.
+   */
+  verify(root: Hex, receipt: AnchorReceipt): Promise<AnchorVerdict>;
 }
 
 /**
@@ -49,6 +59,8 @@ export type ExportLine =
       /** event_hash of the event just before from_position, or GENESIS. */
       prev_hash: Hex;
       server_public_key: string; // base64 Ed25519 SPKI; must match /.well-known/auditkit.json and the pinned key
+      /** base64 P-256 SPKI the server signs Rekor entries with; a verifier accepts only Rekor entries by this key. */
+      anchor_public_key?: string;
       exported_at: string;
     }
   | {

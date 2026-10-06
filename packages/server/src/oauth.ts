@@ -107,6 +107,7 @@ export function buildOAuthRoutes(reg: DatabaseSync, siteUrl: string): Hono {
     const q = parsed.data;
     const client = reg.prepare("SELECT name, redirect_uris FROM oauth_client WHERE client_id = ?").get(q.client_id) as { name: string; redirect_uris: string } | undefined;
     if (!client || !(JSON.parse(client.redirect_uris) as string[]).includes(q.redirect_uri)) return c.text("unknown client or redirect_uri", 400);
+    if (q.resource !== undefined && q.resource !== `${siteUrl}/mcp`) return c.text(`unknown resource; this server issues tokens for ${siteUrl}/mcp only`, 400); // RFC 8707
     const user = userFromSession(reg, readSessionCookie(c));
     if (!user) return c.redirect(`/login?next=${encodeURIComponent(c.req.path + "?" + new URL(c.req.url).searchParams.toString())}`, 302);
     const scopes = (q.scope?.split(/[ ,]+/).filter(Boolean) ?? ["read"]).filter((s): s is Scope => (SCOPES as string[]).includes(s));
@@ -147,7 +148,11 @@ export function buildOAuthRoutes(reg: DatabaseSync, siteUrl: string): Hono {
 
   app.post("/oauth/token", async (c) => {
     const ct = c.req.header("content-type") ?? "";
-    const form = ct.includes("json") ? ((await c.req.json()) as Record<string, string>) : (Object.fromEntries((await c.req.formData()).entries()) as Record<string, string>);
+    let form: Record<string, string>;
+    try {
+      form = ct.includes("json") ? ((await c.req.json()) as Record<string, string>) : ct.includes("application/x-www-form-urlencoded") ? (Object.fromEntries((await c.req.formData()).entries()) as Record<string, string>) : {};
+    } catch { return oauthErr(c, 400, "invalid_request", "body must be application/x-www-form-urlencoded or JSON"); }
+    if (Object.keys(form).length === 0) return oauthErr(c, 400, "invalid_request", "body must be application/x-www-form-urlencoded or JSON");
     const client = reg.prepare("SELECT client_secret_hash FROM oauth_client WHERE client_id = ?").get(form.client_id ?? "") as { client_secret_hash: string | null } | undefined;
     if (!client) return oauthErr(c, 401, "invalid_client", "unknown client_id");
     if (client.client_secret_hash && sha256Hex(form.client_secret ?? "") !== client.client_secret_hash) return oauthErr(c, 401, "invalid_client", "bad client_secret");

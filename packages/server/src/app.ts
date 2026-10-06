@@ -22,6 +22,8 @@ export interface Deps {
   reg: DatabaseSync;
   signer: Signer;
   anchorPolicy: { kinds: string[]; interval_seconds: number };
+  /** base64 P-256 SPKI used to sign Rekor entries; published so verifiers bind Rekor receipts to this server. */
+  anchorPublicKey?: string;
   /** Site-facing routes (/auth, /app, /demo, /public, /webhooks). Omitted in pure-API tests. */
   web?: Omit<WebDeps, "cfg" | "reg" | "signer">;
 }
@@ -43,6 +45,21 @@ const eventSchema = z.object({
 export function contentDisposition(tenant: string): string {
   const ascii = tenant.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 80) || "export";
   return `attachment; filename="auditkit-${ascii}.jsonl"; filename*=UTF-8''auditkit-${encodeURIComponent(tenant.slice(0, 80))}.jsonl`;
+}
+
+/** Streams export lines; the first line is produced eagerly so validation errors surface before any headers. */
+export function ndjsonResponse(lines: Generator<unknown>, filename: string): Response {
+  const first = lines.next(); // throws ValidationError for an unknown tenant
+  const enc = new TextEncoder();
+  let sentFirst = false;
+  const body = new ReadableStream({
+    pull(ctrl) {
+      if (!sentFirst) { sentFirst = true; if (!first.done) { ctrl.enqueue(enc.encode(JSON.stringify(first.value) + "\n")); return; } }
+      const n = lines.next();
+      if (n.done) ctrl.close(); else ctrl.enqueue(enc.encode(JSON.stringify(n.value) + "\n"));
+    },
+  });
+  return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": contentDisposition(filename) } });
 }
 
 export function needScope(c: Context<Env>, scope: Scope): Response | null {
@@ -68,7 +85,7 @@ export function buildApp(deps: Deps): Hono<Env> {
   app.use("*", secureHeaders({ crossOriginEmbedderPolicy: false, crossOriginResourcePolicy: false }));
   app.use("*", bodyLimit({ maxSize: 1_000_000, onError: (c) => c.json({ error: { code: "too_large", message: "request body must be under 1 MB" } }, 413) }));
   if (deps.web) {
-    app.route("/", buildWebRoutes({ ...deps.web, cfg: deps.cfg, reg: deps.reg, signer: deps.signer }));
+    app.route("/", buildWebRoutes({ ...deps.web, cfg: deps.cfg, reg: deps.reg, signer: deps.signer, anchorPublicKey: deps.anchorPublicKey }));
     app.route("/", buildOAuthRoutes(deps.reg, deps.web.siteUrl));
   }
   const bearer = (c: Context<Env>): Principal | null => {
@@ -76,10 +93,10 @@ export function buildApp(deps: Deps): Hono<Env> {
     const token = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined;
     return authenticate(deps.reg, token) ?? principalFromAccessToken(deps.reg, token);
   };
-  app.route("/", buildViewerRoutes(deps.cfg, deps.reg, deps.signer));
+  app.route("/", buildViewerRoutes(deps.cfg, deps.reg, deps.signer, deps.anchorPublicKey));
 
   app.get("/.well-known/auditkit.json", (c) =>
-    c.json({ server_public_key: deps.signer.publicKeySpkiB64, key_algorithm: "Ed25519", anchors: deps.anchorPolicy.kinds, anchor_interval_seconds: deps.anchorPolicy.interval_seconds, export_version: 1 }),
+    c.json({ server_public_key: deps.signer.publicKeySpkiB64, key_algorithm: "Ed25519", anchor_public_key: deps.anchorPublicKey ?? null, anchor_key_algorithm: "ECDSA P-256", anchors: deps.anchorPolicy.kinds, anchor_interval_seconds: deps.anchorPolicy.interval_seconds, export_version: 1 }),
   );
   app.get("/openapi.json", (c) => c.json(openapi));
   app.get("/health", (c) => c.json({ ok: true }));
@@ -174,15 +191,7 @@ export function buildApp(deps: Deps): Hono<Env> {
     const denied = needScope(c, "read");
     if (denied) return denied;
     const q = z.object({ tenant: z.string(), from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
-    const lines = exportLines(c.get("db"), c.get("principal").projectId, q.tenant, deps.signer, (id) => anchorsFor(deps.reg, id), deps.cfg.publicHost ?? "localhost", q.from, q.to);
-    const body = new ReadableStream({
-      pull(ctrl) {
-        const n = lines.next();
-        if (n.done) ctrl.close();
-        else ctrl.enqueue(new TextEncoder().encode(JSON.stringify(n.value) + "\n"));
-      },
-    });
-    return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": contentDisposition(q.tenant) } });
+    return ndjsonResponse(exportLines(c.get("db"), c.get("principal").projectId, q.tenant, deps.signer, (id) => anchorsFor(deps.reg, id), deps.cfg.publicHost ?? "localhost", q.from, q.to, deps.anchorPublicKey), q.tenant);
   });
 
   app.get("/v1/tenants", (c) => {

@@ -4,7 +4,7 @@
 // customers there are. Proofs are a path through three trees.
 import { randomBytes } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import { readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { buildTree, proofFor, verifyProof, GENESIS, type Anchor, type AnchorReceipt, type Hex, type ProofStep } from "@auditkit/core";
 import { openProject, now, type Config } from "./db.js";
@@ -49,11 +49,22 @@ function rootProject(db: DatabaseSync): { projectRootId: string; projectRoot: He
 
 export interface TickResult { globalRootId: string; globalRoot: Hex; projects: number; anchors: AnchorReceipt[] }
 
-export async function tick(cfg: Config, reg: DatabaseSync, anchors: Anchor[], log: (m: string) => void = () => {}): Promise<TickResult | null> {
-  const projectIds = readdirSync(join(cfg.dataDir, "projects")).filter((f) => f.endsWith(".db")).map((f) => f.slice(0, -3));
+/**
+ * One tick. A project is rooted only when its plan's anchor interval has elapsed since its last root
+ * (`intervalFor`), so the per-plan cadence on the pricing page is enforced here. The loop itself runs
+ * at the shortest interval. Projects not yet due keep accumulating events until their turn.
+ */
+export async function tick(cfg: Config, reg: DatabaseSync, anchors: Anchor[], log: (m: string) => void = () => {}, intervalFor: (plan: string) => number = () => 0): Promise<TickResult | null> {
+  // Registry is the source of truth; a stray file in projects/ must not break the tick.
+  const projectIds = (reg.prepare("SELECT id FROM project").all() as Array<{ id: string }>).map((p) => p.id)
+    .filter((id) => existsSync(join(cfg.dataDir, "projects", `${id}.db`)));
   const rooted: Array<{ projectId: string; db: DatabaseSync; projectRootId: string; projectRoot: Hex }> = [];
+  const nowMs = Date.now();
   for (const projectId of projectIds) {
     const db = openProject(cfg, projectId);
+    const plan = (reg.prepare("SELECT plan FROM project WHERE id = ?").get(projectId) as { plan: string } | undefined)?.plan ?? "free";
+    const last = (db.prepare("SELECT MAX(created_at) AS t FROM project_root WHERE global_root_id != ''").get() as { t: string | null }).t;
+    if (last && nowMs - Date.parse(last) < intervalFor(plan) * 1000) continue; // not due yet
     const r = rootProject(db);
     if (r) rooted.push({ projectId, db, projectRootId: r.projectRootId, projectRoot: r.projectRoot });
   }
@@ -129,11 +140,11 @@ export function applyRetention(cfg: Config, reg: DatabaseSync, retentionDaysFor:
     const cutoff = new Date(Date.now() - retentionDaysFor(p.plan) * 86_400_000).toISOString();
     const db = openProject(cfg, p.id);
     const perTenant = db.prepare(
-      "SELECT t.external_id AS tenant, COUNT(*) AS n FROM payload p JOIN event e ON e.id = p.event_id JOIN tenant t ON t.id = e.tenant_id WHERE e.received_at < ? GROUP BY t.external_id",
-    ).all(cutoff) as Array<{ tenant: string; n: number }>;
+      "SELECT t.external_id AS tenant, COUNT(*) AS n, MAX(e.position) AS through_position FROM payload p JOIN event e ON e.id = p.event_id JOIN tenant t ON t.id = e.tenant_id WHERE e.received_at < ? GROUP BY t.external_id",
+    ).all(cutoff) as Array<{ tenant: string; n: number; through_position: number }>;
     if (perTenant.length === 0) continue;
     shredded += Number(db.prepare("DELETE FROM payload WHERE event_id IN (SELECT id FROM event WHERE received_at < ?)").run(cutoff).changes);
-    if (signer) ingest(db, p.id, signer, perTenant.map((t) => ({ tenant: t.tenant, actor: "system:retention", action: "payload.retention_shred", target: null, payload: { count: t.n, older_than: cutoff } })));
+    if (signer) ingest(db, p.id, signer, perTenant.map((t) => ({ tenant: t.tenant, actor: "system:retention", action: "payload.retention_shred", target: null, payload: { count: t.n, older_than: cutoff, through_position: t.through_position } })));
   }
   return shredded;
 }
@@ -188,6 +199,7 @@ export function proofForEvent(db: DatabaseSync, reg: DatabaseSync, eventId: stri
   const leaves = db.prepare("SELECT event_hash FROM event WHERE root_id = ? ORDER BY position").all(tr.id) as Array<{ event_hash: string }>;
   const tree = buildTree(leaves.map((l) => l.event_hash));
   const pr = db.prepare("SELECT * FROM project_root WHERE id = ?").get(tr.project_root_id) as { path_to_global: string; global_root_hash: string; global_root_id: string; root_hash: string };
+  if (pr.global_root_id === "") return { event_id: ev.id, event_hash: ev.event_hash, anchored: false as const, reason: "rooted; waiting for the next anchor tick" };
   return {
     event_id: ev.id,
     event_hash: ev.event_hash,

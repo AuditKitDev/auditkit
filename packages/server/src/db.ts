@@ -44,6 +44,7 @@ export function openRegistry(cfg: Config): DatabaseSync {
       PRIMARY KEY (global_root_id, kind)
     );
   `);
+  addColumnIfMissing(db, "global_root", "prev_root_hash", "TEXT NOT NULL DEFAULT ''");
   return db;
 }
 
@@ -100,6 +101,8 @@ export function openProject(cfg: Config, projectId: string): DatabaseSync {
       expires_at TEXT NOT NULL, created_at TEXT NOT NULL, revoked_at TEXT
     );
   `);
+  addColumnIfMissing(db, "event", "idem_hash", "TEXT");
+  addColumnIfMissing(db, "viewer_token", "revoked_at", "TEXT");
   migrateProjectExtras(db);
   projectDbs.set(projectId, db);
   return db;
@@ -111,4 +114,10 @@ export function closeAll(): void {
 }
 
 export const now = (): string => new Date().toISOString();
+
+/** Forward-only column migrations for files created by earlier builds. */
+export function addColumnIfMissing(db: DatabaseSync, table: string, column: string, ddl: string): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+}
 export class UnknownProjectError extends Error { constructor(id: string) { super(`unknown project ${id}`); } }

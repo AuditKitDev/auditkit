@@ -11,4 +11,4 @@ export {
   type ChainVerdict,
 } from "./chain.js";
 export { buildTree, proofFor, verifyProof, leafHash, type MerkleTree, type ProofStep } from "./merkle.js";
-export type { Anchor, AnchorKind, AnchorReceipt, ExportLine } from "./anchor.js";
+export type { Anchor, AnchorKind, AnchorReceipt, AnchorVerdict, ExportLine } from "./anchor.js";

@@ -56,10 +56,12 @@ export interface OtsAnchorOptions {
 }
 
 export type OtsVerifyResult =
-  | { ok: true; level: "bitcoin"; attested_at: string; block_height: number }
+  | { ok: true; level: "final"; stage: "bitcoin"; attested_at: string; block_height: number }
   | {
       ok: true;
-      level: "calendar";
+      level: "pending";
+      reason: string;
+      stage: "calendar";
       attested_at: string;
       calendars: string[];
       /** Bitcoin attestations present in the proof that were not checked (no block header source). */
@@ -207,7 +209,8 @@ export class OtsAnchor implements Anchor {
         if (!bytesEqual(msg, expected)) return { ok: false, reason: `merkle root mismatch at bitcoin block ${height}` };
         return {
           ok: true,
-          level: "bitcoin",
+          level: "final",
+          stage: "bitcoin",
           block_height: height,
           attested_at: header.time !== undefined ? new Date(header.time * 1000).toISOString() : receipt.anchored_at,
         };
@@ -224,7 +227,9 @@ export class OtsAnchor implements Anchor {
     }
     return {
       ok: true,
-      level: "calendar",
+      level: "pending",
+      reason: "calendar attestation only; Bitcoin confirmation not yet in the receipt",
+      stage: "calendar",
       attested_at: receipt.anchored_at,
       calendars,
       unchecked_bitcoin_heights: bitcoin.map((b) => b.height),

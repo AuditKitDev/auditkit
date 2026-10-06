@@ -21,6 +21,8 @@ export interface ChainedEvent extends EventHeader {
 
 /** payload_commit = sha256(salt || JCS(payload)). Deleting salt+payload makes the commit unrecoverable. */
 export function commitPayload(salt: Hex, payload: unknown): Hex {
+  // A fixed-width salt means salt||payload cannot be re-split: "ab"+"c…" and "abc"+"…" are different commitments.
+  if (!/^[0-9a-f]{32}$/.test(salt)) throw new TypeError("commitPayload: salt must be 32 lowercase hex chars");
   return sha256Hex(salt + canonicalize(payload ?? null));
 }
 

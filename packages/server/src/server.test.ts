@@ -20,7 +20,7 @@ const fakeAnchor: Anchor = {
   kind: "rekor",
   async anchor(root) { anchored.push(root); return { kind: "rekor", ref: `fake:${anchored.length}`, proof: "e30=", anchored_at: new Date().toISOString(), status: "final" }; },
   async upgrade(r) { return r; },
-  async verify(root, r: AnchorReceipt) { return anchored.includes(root) && r.kind === "rekor" ? { ok: true, attested_at: r.anchored_at } : { ok: false, reason: "unknown" }; },
+  async verify(root, r: AnchorReceipt) { return anchored.includes(root) && r.kind === "rekor" ? { ok: true, level: "final", attested_at: r.anchored_at } : { ok: false, reason: "unknown" }; },
 };
 
 const api = (path: string, init: RequestInit = {}, k = key) =>

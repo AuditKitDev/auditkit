@@ -15,7 +15,7 @@ const fakeAnchor: Anchor = {
   kind: "rekor",
   async anchor(root) { anchored.push(root); return { kind: "rekor", ref: `fake:${anchored.length}`, proof: "e30=", anchored_at: new Date().toISOString(), status: "final" }; },
   async upgrade(r) { return r; },
-  async verify(root, r: AnchorReceipt) { return anchored.includes(root) && r.kind === "rekor" ? { ok: true, attested_at: r.anchored_at } : { ok: false, reason: "unknown" }; },
+  async verify(root, r: AnchorReceipt) { return anchored.includes(root) && r.kind === "rekor" ? { ok: true, level: "final", attested_at: r.anchored_at } : { ok: false, reason: "unknown" }; },
 };
 const anchors = { rekor: fakeAnchor };
 
@@ -37,7 +37,8 @@ beforeAll(async () => {
   serverKey = signer.publicKeySpkiB64;
   const projectId = createProject(reg, "verify-test").id;
   const key = createKey(reg, projectId, "test", ["admin"]).key;
-  const app = buildApp({ cfg, reg, signer, anchorPolicy: { kinds: ["rekor"], interval_seconds: 1 } });
+  const anchorPublicKey = generateKeyPairSync("ec", { namedCurve: "P-256" }).publicKey.export({ format: "der", type: "spki" }).toString("base64");
+  const app = buildApp({ cfg, reg, signer, anchorPolicy: { kinds: ["rekor"], interval_seconds: 1 }, anchorPublicKey });
   const api = (path: string, init: RequestInit = {}) =>
     app.request(path, { ...init, headers: { authorization: `Bearer ${key}`, "content-type": "application/json" } });
 
@@ -129,9 +130,9 @@ describe("verifyExport", () => {
     expect(r.verdict).toBe("INVALID");
     expect(r.failed).toMatchObject({ check: "roots", position: 0 });
   });
-  it("(e) an erased payload is reported erased and stays VALID", async () => {
+  it("(e) an erased payload is reported erased; the erasure record is newer than the last anchor, so VALID_UNANCHORED", async () => {
     const r = await run(erasedExport);
-    expect(r.verdict).toBe("VALID");
+    expect(r.verdict).toBe("VALID_UNANCHORED");
     expect(r.erased).toBe(1);
     expect(r.checks.find((c) => c.name === "payloads")?.summary).toContain("1 erased");
   });
@@ -204,5 +205,59 @@ describe("cli", () => {
     expect(ok.stdout).toContain("unpinned");
     expect(cli([file, "--pin", "nope"]).status).toBe(1);
     expect(cli([]).status).toBe(64);
+  });
+});
+
+describe("review findings: tampered exports must not be VALID", () => {
+  const pending = { kind: "ots" as const, ref: "https://a.pool", proof: "e30=", anchored_at: new Date().toISOString(), status: "pending" as const };
+  const otsPendingOnly = { ots: { kind: "ots" as const, async anchor() { throw new Error("n/a"); }, async upgrade(r: AnchorReceipt) { return r; }, async verify() { return { ok: true as const, level: "pending" as const, reason: "calendar attestation only" }; } } };
+
+  it("a forged OTS pending receipt does not anchor anything: VALID_UNANCHORED, not VALID", async () => {
+    const lines = parse(clean);
+    for (const l of lines) if (l.type === "root") l.anchors = [pending];
+    const r = await verifyExport(lines, { anchors: otsPendingOnly });
+    expect(r.verdict).toBe("VALID_UNANCHORED");
+    expect(r.anchors[0]).toMatchObject({ status: "pending" });
+  });
+  it("events after the last root are not VALID", async () => {
+    const r = await run(beforeTick);
+    expect(r.verdict).toBe("VALID_UNANCHORED");
+    expect(r.coverage!.chain_only.length).toBeGreaterThan(0);
+  });
+  it("a payload stripped from the file is INVALID (no erasure record)", async () => {
+    const lines = parse(clean);
+    const ev = lines.find((l): l is EventLine => l.type === "event" && l.position === 3)!;
+    delete ev.payload;
+    const r = await verifyExport(lines, { anchors });
+    expect(r).toMatchObject({ verdict: "INVALID", failed: { check: "payloads", position: 3 } });
+  });
+  it("a real erasure with its chain record stays VALID and is counted", async () => {
+    const r = await run(erasedExport);
+    expect(r.verdict).toBe("VALID_UNANCHORED"); // the erasure event itself is newer than the last root
+    expect(r.erased).toBe(1);
+    expect(status(r, "payloads")).toBe("ok");
+  });
+  it("Rekor receipts are unverified when no anchor key binds the signer", async () => {
+    const lines = parse(clean);
+    const m = lines[0] as Extract<ExportLine, { type: "manifest" }>;
+    delete m.anchor_public_key;
+    const r = await verifyExport(lines, { anchors: { rekor: { ...fakeAnchor, async verify() { return { ok: true as const, level: "final" as const }; } } } });
+    expect(r.anchors[0]).toMatchObject({ status: "unverified" });
+    expect(r.verdict).toBe("VALID_UNANCHORED");
+  });
+  it("malformed lines are reported, not thrown", async () => {
+    const lines = parse(clean);
+    (lines[1] as unknown as { payload: unknown }).payload = null;
+    const r = await verifyExport(lines, { anchors });
+    expect(r.verdict).toBe("INVALID");
+    expect(r.failed!.check).toBe("manifest");
+  });
+  it("a huge to_position does not hang coverage", async () => {
+    const lines = parse(clean);
+    (lines[0] as Extract<ExportLine, { type: "manifest" }>).to_position = 1_000_000_000;
+    const t = Date.now();
+    const r = await verifyExport(lines, { anchors });
+    expect(Date.now() - t).toBeLessThan(2000);
+    expect(r.verdict).not.toBe("VALID");
   });
 });

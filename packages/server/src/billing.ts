@@ -31,6 +31,8 @@ export function migrateBilling(reg: DatabaseSync): void {
     );
     CREATE TABLE IF NOT EXISTS stripe_event (id TEXT PRIMARY KEY, received_at TEXT NOT NULL);
   `);
+  const cols = reg.prepare("PRAGMA table_info(billing)").all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === "last_event_created")) reg.exec("ALTER TABLE billing ADD COLUMN last_event_created INTEGER NOT NULL DEFAULT 0");
 }
 
 async function stripe(cfg: BillingConfig, path: string, form: Record<string, string>): Promise<Record<string, unknown>> {
@@ -83,13 +85,18 @@ export function verifyStripeSignature(secret: string, header: string | undefined
 }
 
 /** Applies a verified Stripe event. Idempotent by event id. */
-export function applyStripeEvent(cfg: BillingConfig, reg: DatabaseSync, ev: { id: string; type: string; data: { object: Record<string, unknown> } }): void {
+export function applyStripeEvent(cfg: BillingConfig, reg: DatabaseSync, ev: { id: string; type: string; created?: number; data: { object: Record<string, unknown> } }): void {
   if (reg.prepare("SELECT 1 FROM stripe_event WHERE id = ?").get(ev.id)) return;
   reg.prepare("INSERT INTO stripe_event (id, received_at) VALUES (?, ?)").run(ev.id, new Date().toISOString());
   const o = ev.data.object;
   const meta = (o.metadata as Record<string, string> | undefined) ?? {};
   const projectId = meta.project_id ?? (o.client_reference_id as string | undefined);
   if (!projectId) return;
+  // Stripe delivers out of order; an older event must not undo a newer state.
+  const created = ev.created ?? 0;
+  const last = (reg.prepare("SELECT last_event_created FROM billing WHERE project_id = ?").get(projectId) as { last_event_created: number } | undefined)?.last_event_created ?? 0;
+  if (created && created < last) return;
+  reg.prepare("INSERT INTO billing (project_id, updated_at, last_event_created) VALUES (?, ?, ?) ON CONFLICT(project_id) DO UPDATE SET last_event_created = MAX(last_event_created, excluded.last_event_created)").run(projectId, new Date().toISOString(), created);
   const upsert = (customer?: unknown, subscription?: unknown) =>
     reg.prepare("INSERT INTO billing (project_id, customer_id, subscription_id, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(project_id) DO UPDATE SET customer_id = COALESCE(excluded.customer_id, customer_id), subscription_id = COALESCE(excluded.subscription_id, subscription_id), updated_at = excluded.updated_at")
       .run(projectId, (customer as string) ?? null, (subscription as string) ?? null, new Date().toISOString());

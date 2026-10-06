@@ -9,7 +9,7 @@ import { verifyExport, type Report, type VerifyOptions } from "./index.js";
  * without copying the key. Fill in from https://api.auditkit.dev/.well-known/auditkit.json
  * once the production signing key exists; rotate by adding a new hostname entry, never by editing one.
  */
-export const PINNED_KEYS: Record<string, string> = {};
+export const PINNED_KEYS: Record<string, { server: string; anchor: string }> = {};
 
 const EXIT: Record<Report["verdict"], number> = { VALID: 0, VALID_UNANCHORED: 2, INVALID: 1 };
 
@@ -29,7 +29,8 @@ function parseArgs(argv: string[]): { file: string; opts: VerifyOptions; json: b
     else if (a === "--pin") {
       const v = argv[++i];
       if (!v) usage();
-      opts.pinnedServerKey = PINNED_KEYS[v] ?? v;
+      const pin = PINNED_KEYS[v];
+      if (pin) { opts.pinnedServerKey = pin.server; opts.pinnedAnchorKey = pin.anchor; } else opts.pinnedServerKey = v;
     } else if (a.startsWith("-")) usage();
     else if (file === undefined) file = a;
     else usage();
@@ -77,7 +78,8 @@ async function main(): Promise<number> {
     const server = await peekServer(file);
     const key = server !== undefined && Object.hasOwn(PINNED_KEYS, server) ? PINNED_KEYS[server] : undefined;
     if (key !== undefined) {
-      opts.pinnedServerKey = key;
+      opts.pinnedServerKey = key.server;
+      opts.pinnedAnchorKey = key.anchor;
       notes.push(`pinned server key for ${server} automatically`);
     } else {
       notes.push(`warning: server key is unpinned${server ? ` (${server} is not in the built-in list)` : ""}; pass --pin to pin it`);
