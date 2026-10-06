@@ -218,7 +218,7 @@ describe("OtsAnchor anchor -> upgrade -> verify against a fake calendar", () => 
     upgraded = true;
     const f2 = await b.upgrade(p2);
     expect(f2.status).toBe("final");
-    expect(await b.verify(root, f2)).toEqual({ ok: true, stage: "bitcoin", block_height: 7, attested_at: "2023-11-14T22:13:20.000Z" });
+    expect(await b.verify(root, f2)).toEqual({ ok: true, level: "final", stage: "bitcoin", block_height: 7, attested_at: "2023-11-14T22:13:20.000Z" });
     expect(await b.verify(root, { ...f2, status: "pending" })).toMatchObject({ ok: true, stage: "bitcoin" });
     const c = new OtsAnchor({ calendars: [CAL], fetch: fetch32 });
     expect(await c.verify(root, f2)).toMatchObject({ ok: true, stage: "calendar", unchecked_bitcoin_heights: [7] });
