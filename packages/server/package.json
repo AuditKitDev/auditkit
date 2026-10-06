@@ -1,0 +1,29 @@
+{
+  "name": "@auditkit/server",
+  "version": "2.0.0-alpha.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@auditkit/core": "workspace:*",
+    "@hono/node-server": "^1.14.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "hono": "^4.8.0",
+    "zod": "^3.25.0",
+    "@auditkit/anchor-rekor": "workspace:*",
+    "@auditkit/anchor-ots": "workspace:*"
+  },
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "bin": {
+    "auditkit-server": "./dist/main.js"
+  }
+}
