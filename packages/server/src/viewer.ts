@@ -51,7 +51,7 @@ type Env = { Variables: { v: Resolved } };
 export function buildViewerRoutes(cfg: Config, reg: DatabaseSync, signer: Signer): Hono<Env> {
   const app = new Hono<Env>();
   const err = (c: Context, status: 401 | 404, code: string, message: string) => c.json({ error: { code, message } }, status);
-  app.use("/viewer/*", async (c, next) => {
+  app.use("/api/viewer/*", async (c, next) => {
     const auth = c.req.header("authorization");
     const token = c.req.query("token") ?? (auth?.startsWith("Bearer ") ? auth.slice(7) : undefined);
     const v = resolve(cfg, token);
@@ -60,7 +60,7 @@ export function buildViewerRoutes(cfg: Config, reg: DatabaseSync, signer: Signer
     await next();
   });
   const hasAnchor = (id: string) => anchorsFor(reg, id).length > 0;
-  app.get("/viewer/events", (c) => {
+  app.get("/api/viewer/events", (c) => {
     const { db, tenant } = c.get("v");
     const q = c.req.query();
     const query: Parameters<typeof search>[1] = { tenant };
@@ -68,22 +68,22 @@ export function buildViewerRoutes(cfg: Config, reg: DatabaseSync, signer: Signer
     if (q.limit) query.limit = Number(q.limit);
     return c.json(search(db, query));
   });
-  app.get("/viewer/events/:id", (c) => {
+  app.get("/api/viewer/events/:id", (c) => {
     const { db, tenant } = c.get("v");
     const ev = getEvent(db, c.req.param("id"));
     return ev && ev.tenant === tenant ? c.json(ev) : err(c, 404, "not_found", "no such event");
   });
-  app.get("/viewer/events/:id/proof", (c) => {
+  app.get("/api/viewer/events/:id/proof", (c) => {
     const { db, tenant } = c.get("v");
     const ev = getEvent(db, c.req.param("id"));
     return ev && ev.tenant === tenant ? c.json(proofForEvent(db, reg, ev.id)) : err(c, 404, "not_found", "no such event");
   });
-  app.get("/viewer/verify", (c) => {
+  app.get("/api/viewer/verify", (c) => {
     const { db, projectId, tenant } = c.get("v");
     const q = z.object({ from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
     return c.json(verifyRange(db, projectId, tenant, q.from, q.to, hasAnchor));
   });
-  app.get("/viewer/export", (c) => {
+  app.get("/api/viewer/export", (c) => {
     const { db, projectId, tenant } = c.get("v");
     const q = z.object({ from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
     const lines = exportLines(db, projectId, tenant, signer, (id) => anchorsFor(reg, id), cfg.publicHost ?? "localhost", q.from, q.to);
@@ -91,6 +91,6 @@ export function buildViewerRoutes(cfg: Config, reg: DatabaseSync, signer: Signer
     const body = new ReadableStream({ pull(ctrl) { const n = lines.next(); if (n.done) ctrl.close(); else ctrl.enqueue(enc.encode(JSON.stringify(n.value) + "\n")); } });
     return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": `attachment; filename="auditkit-${tenant}.jsonl"` } });
   });
-  app.get("/viewer/me", (c) => c.json({ tenant: c.get("v").tenant, project_id: c.get("v").projectId }));
+  app.get("/api/viewer/me", (c) => c.json({ tenant: c.get("v").tenant, project_id: c.get("v").projectId }));
   return app;
 }

@@ -123,6 +123,16 @@ export function applyRetention(cfg: Config, reg: DatabaseSync, retentionDaysFor:
   return shredded;
 }
 
+/** Wipe the public demo project's data. Its anchored roots stay in the registry; the demo chain simply restarts. */
+export function resetProjectData(cfg: Config, projectId: string): void {
+  const db = openProject(cfg, projectId);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const t of ["payload", "tenant_key", "viewer_token", "event", "tenant_root", "project_root", "tenant"]) db.exec(`DELETE FROM ${t}`);
+    db.exec("COMMIT");
+  } catch (e) { db.exec("ROLLBACK"); throw e; }
+}
+
 export function anchorsFor(reg: DatabaseSync, globalRootId: string): AnchorReceipt[] {
   return reg.prepare("SELECT kind, ref, proof, status, anchored_at FROM anchor WHERE global_root_id = ?").all(globalRootId) as unknown as AnchorReceipt[];
 }

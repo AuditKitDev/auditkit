@@ -14,6 +14,7 @@ import {
 } from "@auditkit/core";
 import { now } from "./db.js";
 import type { Signer } from "./signing.js";
+import { checkClientSigs } from "./tenantKeys.js";
 
 export interface EventInput {
   tenant: string;
@@ -57,6 +58,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 /** Appends events in order inside one transaction. Each one extends its tenant's chain. */
 export function ingest(db: DatabaseSync, projectId: string, signer: Signer, inputs: EventInput[]): Receipt[] {
   const receipts: Receipt[] = [];
+  checkClientSigs(db, inputs);
   db.exec("BEGIN IMMEDIATE");
   try {
     for (const input of inputs) {

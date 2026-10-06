@@ -14,6 +14,7 @@ import { ingest, search, getEvent, verifyRange, exportLines, listTenants, Valida
 import { anchorsFor, proofForEvent } from "./anchorLoop.js";
 import { planOf } from "./plans.js";
 import { createViewerToken, listViewerTokens, revokeViewerToken } from "./viewer.js";
+import { addTenantKey, listTenantKeys, revokeTenantKey, setRequireClientSig } from "./tenantKeys.js";
 import { checkoutUrl, portalUrl, verifyStripeSignature, applyStripeEvent, BillingNotConfigured, type BillingConfig } from "./billing.js";
 
 export interface WebDeps {
@@ -67,20 +68,20 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
   });
 
   // ---- app (session)
-  app.use("/app/*", async (c, next) => {
+  app.use("/api/app/*", async (c, next) => {
     const u = userFromSession(d.reg, readSessionCookie(c));
     if (!u) return err(c, 401, "unauthorized", "not signed in");
     c.set("user", u);
     await next();
   });
-  app.use("/app/projects/:id/*", async (c, next) => {
+  app.use("/api/app/projects/:id/*", async (c, next) => {
     const id = c.req.param("id");
     const role = membership(d.reg, c.get("user").id, id);
     if (!role) return err(c, 404, "not_found", "no such project");
     c.set("projectId", id); c.set("role", role); c.set("db", openProject(d.cfg, id));
     await next();
   });
-  app.get("/app/projects/:id", (c) => {
+  app.get("/api/app/projects/:id", (c) => {
     const id = c.req.param("id");
     const role = membership(d.reg, c.get("user").id, id);
     if (!role) return err(c, 404, "not_found", "no such project");
@@ -97,67 +98,80 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
       last_anchor: last ? { global_root: last.root_hash, created_at: last.created_at, anchors: anchorsFor(d.reg, last.id) } : null,
     });
   });
-  app.get("/app/projects", (c) => {
+  app.get("/api/app/projects", (c) => {
     const projects = userProjects(d.reg, c.get("user").id).map((p) => {
       const limits = planOf(p.plan);
       return { ...p, events_this_month: monthlyUsage(openProject(d.cfg, p.id)), limit_events: limits.events_per_month };
     });
     return c.json({ projects });
   });
-  app.post("/app/projects", async (c) => {
+  app.post("/api/app/projects", async (c) => {
     const body = z.object({ name: z.string().min(1).max(100) }).parse(await c.req.json());
     const { id } = createProject(d.reg, body.name);
     d.reg.prepare("INSERT INTO membership (user_id, project_id, role, created_at) VALUES (?, ?, 'owner', ?)").run(c.get("user").id, id, now());
     return c.json({ id, name: body.name, plan: "free" }, 201);
   });
-  app.get("/app/projects/:id/keys", (c) => {
+  app.get("/api/app/projects/:id/keys", (c) => {
     const keys = d.reg.prepare("SELECT id, prefix, mode, scopes, created_at, revoked_at FROM api_key WHERE project_id = ? ORDER BY created_at DESC").all(c.get("projectId")) as Array<{ scopes: string }>;
     return c.json({ keys: keys.map((k) => ({ ...k, scopes: k.scopes.split(",") })) });
   });
-  app.post("/app/projects/:id/keys", async (c) => {
+  app.post("/api/app/projects/:id/keys", async (c) => {
     const body = z.object({ mode: z.enum(["live", "test"]), scopes: z.array(z.enum(["read", "write", "erase", "admin"])).min(1) }).parse(await c.req.json());
     return c.json(createKey(d.reg, c.get("projectId"), body.mode, body.scopes as Scope[]), 201);
   });
-  app.delete("/app/projects/:id/keys/:keyId", (c) =>
+  app.delete("/api/app/projects/:id/keys/:keyId", (c) =>
     revokeKey(d.reg, c.get("projectId"), c.req.param("keyId")) ? c.json({ revoked: true }) : err(c, 404, "not_found", "no such key"),
   );
-  app.get("/app/projects/:id/viewer-tokens", (c) => c.json({ tokens: listViewerTokens(c.get("db")) }));
-  app.post("/app/projects/:id/viewer-tokens", async (c) => {
+  app.get("/api/app/projects/:id/viewer-tokens", (c) => c.json({ tokens: listViewerTokens(c.get("db")) }));
+  app.post("/api/app/projects/:id/viewer-tokens", async (c) => {
     const body = z.object({ tenant: z.string().min(1).max(200), ttl_hours: z.number().int().min(1).max(24 * 90).optional() }).parse(await c.req.json());
     const t = createViewerToken(c.get("db"), c.get("projectId"), body.tenant, body.ttl_hours ?? 24 * 7);
     return c.json({ ...t, url: `${d.siteUrl}/viewer?token=${t.token}` }, 201);
   });
-  app.delete("/app/projects/:id/viewer-tokens/:tokenId", (c) =>
+  app.delete("/api/app/projects/:id/viewer-tokens/:tokenId", (c) =>
     revokeViewerToken(c.get("db"), c.req.param("tokenId")) ? c.json({ revoked: true }) : err(c, 404, "not_found", "no such token"),
   );
-  app.get("/app/projects/:id/tenants", (c) => c.json({ tenants: listTenants(c.get("db")) }));
-  app.get("/app/projects/:id/events", (c) => {
+  app.get("/api/app/projects/:id/tenants/:tenant/keys", (c) => c.json({ keys: listTenantKeys(c.get("db"), c.req.param("tenant")) }));
+  app.post("/api/app/projects/:id/tenants/:tenant/keys", async (c) => {
+    const body = z.object({ public_key: z.string().min(40).max(200) }).parse(await c.req.json());
+    return c.json(addTenantKey(c.get("db"), c.req.param("tenant"), body.public_key), 201);
+  });
+  app.delete("/api/app/projects/:id/tenants/:tenant/keys/:keyId", (c) =>
+    revokeTenantKey(c.get("db"), c.req.param("keyId")) ? c.json({ revoked: true }) : err(c, 404, "not_found", "no such key"),
+  );
+  app.post("/api/app/projects/:id/tenants/:tenant/policy", async (c) => {
+    const body = z.object({ require_client_sig: z.boolean() }).parse(await c.req.json());
+    setRequireClientSig(c.get("db"), c.req.param("tenant"), body.require_client_sig);
+    return c.json({ ok: true });
+  });
+  app.get("/api/app/projects/:id/tenants", (c) => c.json({ tenants: listTenants(c.get("db")) }));
+  app.get("/api/app/projects/:id/events", (c) => {
     const q = c.req.query();
     const query: Parameters<typeof search>[1] = {};
     for (const k of ["tenant", "actor", "action", "from", "to", "cursor"] as const) if (q[k]) query[k] = q[k];
     if (q.limit) query.limit = Number(q.limit);
     return c.json(search(c.get("db"), query));
   });
-  app.get("/app/projects/:id/events/:eventId", (c) => {
+  app.get("/api/app/projects/:id/events/:eventId", (c) => {
     const ev = getEvent(c.get("db"), c.req.param("eventId"));
     return ev ? c.json(ev) : err(c, 404, "not_found", "no such event");
   });
-  app.get("/app/projects/:id/events/:eventId/proof", (c) => {
+  app.get("/api/app/projects/:id/events/:eventId/proof", (c) => {
     const p = proofForEvent(c.get("db"), d.reg, c.req.param("eventId"));
     return p ? c.json(p) : err(c, 404, "not_found", "no such event");
   });
-  app.get("/app/projects/:id/verify", (c) => {
+  app.get("/api/app/projects/:id/verify", (c) => {
     const q = z.object({ tenant: z.string(), from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
     return c.json(verifyRange(c.get("db"), c.get("projectId"), q.tenant, q.from, q.to, (id) => anchorsFor(d.reg, id).length > 0));
   });
-  app.get("/app/projects/:id/export", (c) => {
+  app.get("/api/app/projects/:id/export", (c) => {
     const q = z.object({ tenant: z.string(), from: z.coerce.number().int().min(0).optional(), to: z.coerce.number().int().min(0).optional() }).parse(c.req.query());
     const lines = exportLines(c.get("db"), c.get("projectId"), q.tenant, d.signer, (id) => anchorsFor(d.reg, id), d.cfg.publicHost ?? "localhost", q.from, q.to);
     const enc = new TextEncoder();
     const body = new ReadableStream({ pull(ctrl) { const n = lines.next(); if (n.done) ctrl.close(); else ctrl.enqueue(enc.encode(JSON.stringify(n.value) + "\n")); } });
     return new Response(body, { headers: { "content-type": "application/x-ndjson", "content-disposition": `attachment; filename="auditkit-${q.tenant}.jsonl"` } });
   });
-  app.post("/app/projects/:id/billing/checkout", async (c) => {
+  app.post("/api/app/projects/:id/billing/checkout", async (c) => {
     if (c.get("role") !== "owner") return err(c, 403, "forbidden", "only the project owner can change billing");
     const body = z.object({ plan: z.enum(["pro", "business"]) }).parse(await c.req.json());
     try {
@@ -167,7 +181,7 @@ export function buildWebRoutes(d: WebDeps): Hono<Env> {
       throw e;
     }
   });
-  app.post("/app/projects/:id/billing/portal", async (c) => {
+  app.post("/api/app/projects/:id/billing/portal", async (c) => {
     if (c.get("role") !== "owner") return err(c, 403, "forbidden", "only the project owner can change billing");
     try {
       return c.json({ url: await portalUrl(d.billing, d.reg, c.get("projectId")) });

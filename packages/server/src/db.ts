@@ -47,6 +47,10 @@ export function openRegistry(cfg: Config): DatabaseSync {
 }
 
 const projectDbs = new Map<string, DatabaseSync>();
+/** Later tables/columns, applied after the base schema. Registered by modules to keep db.ts free of their SQL. */
+const extras: Array<(db: DatabaseSync) => void> = [];
+export function registerProjectMigration(fn: (db: DatabaseSync) => void): void { extras.push(fn); }
+function migrateProjectExtras(db: DatabaseSync): void { for (const fn of extras) fn(db); }
 
 export function openProject(cfg: Config, projectId: string): DatabaseSync {
   const cached = projectDbs.get(projectId);
@@ -88,6 +92,7 @@ export function openProject(cfg: Config, projectId: string): DatabaseSync {
       expires_at TEXT NOT NULL, created_at TEXT NOT NULL, revoked_at TEXT
     );
   `);
+  migrateProjectExtras(db);
   projectDbs.set(projectId, db);
   return db;
 }

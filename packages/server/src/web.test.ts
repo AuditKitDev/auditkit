@@ -63,40 +63,40 @@ describe("auth", () => {
 
 describe("app", () => {
   it("first login created a project; keys, events, verify, export work through the session", async () => {
-    const { projects } = await (await req("/app/projects")).json();
+    const { projects } = await (await req("/api/app/projects")).json();
     expect(projects).toHaveLength(1);
     expect(projects[0]).toMatchObject({ name: "example.com", plan: "free", role: "owner", limit_events: 10000 });
     projectId = projects[0].id;
 
-    const k = await (await req(`/app/projects/${projectId}/keys`, { method: "POST", body: JSON.stringify({ mode: "live", scopes: ["write", "read"] }) })).json();
+    const k = await (await req(`/api/app/projects/${projectId}/keys`, { method: "POST", body: JSON.stringify({ mode: "live", scopes: ["write", "read"] }) })).json();
     expect(k.key.startsWith("ak_live_")).toBe(true);
     const r = await app.request("/v1/events", { method: "POST", headers: { authorization: `Bearer ${k.key}`, "content-type": "application/json" }, body: JSON.stringify({ tenant: "acme", actor: "u", action: "a.b", payload: { x: 1 } }) });
     expect(r.status).toBe(201);
 
-    const list = await (await req(`/app/projects/${projectId}/events?tenant=acme`)).json();
+    const list = await (await req(`/api/app/projects/${projectId}/events?tenant=acme`)).json();
     expect(list.events).toHaveLength(1);
-    const ev = await (await req(`/app/projects/${projectId}/events/${list.events[0].id}`)).json();
+    const ev = await (await req(`/api/app/projects/${projectId}/events/${list.events[0].id}`)).json();
     expect(ev.payload).toEqual({ x: 1 });
-    expect((await (await req(`/app/projects/${projectId}/verify?tenant=acme`)).json()).valid).toBe(true);
-    expect((await req(`/app/projects/${projectId}/export?tenant=acme`)).headers.get("content-type")).toContain("ndjson");
-    const keys = await (await req(`/app/projects/${projectId}/keys`)).json();
+    expect((await (await req(`/api/app/projects/${projectId}/verify?tenant=acme`)).json()).valid).toBe(true);
+    expect((await req(`/api/app/projects/${projectId}/export?tenant=acme`)).headers.get("content-type")).toContain("ndjson");
+    const keys = await (await req(`/api/app/projects/${projectId}/keys`)).json();
     expect(keys.keys[0]).toMatchObject({ mode: "live", scopes: ["write", "read"] });
-    expect((await req(`/app/projects/${projectId}/keys/${k.id}`, { method: "DELETE" })).status).toBe(200);
+    expect((await req(`/api/app/projects/${projectId}/keys/${k.id}`, { method: "DELETE" })).status).toBe(200);
 
-    const overview = await (await req(`/app/projects/${projectId}`)).json();
+    const overview = await (await req(`/api/app/projects/${projectId}`)).json();
     expect(overview).toMatchObject({ plan: "free", usage: { events_this_month: 1, limit_events: 10000 }, tenants: 1, last_anchor: null });
     await tick(cfg, reg, [fakeAnchor]);
-    const after = await (await req(`/app/projects/${projectId}`)).json();
+    const after = await (await req(`/api/app/projects/${projectId}`)).json();
     expect(after.last_anchor.anchors[0]).toMatchObject({ kind: "rekor", status: "final" });
   });
   it("cannot see another user's project", async () => {
-    const { id } = await (await req("/app/projects", { method: "POST", body: JSON.stringify({ name: "second" }) })).json();
-    expect((await req(`/app/projects/${id}`)).status).toBe(200);
+    const { id } = await (await req("/api/app/projects", { method: "POST", body: JSON.stringify({ name: "second" }) })).json();
+    expect((await req(`/api/app/projects/${id}`)).status).toBe(200);
     const other = buildApp({ cfg, reg, signer: loadSigner(cfg.dataDir), anchorPolicy: { kinds: [], interval_seconds: 1 }, web: { mailer, billing, siteUrl: "http://site", secureCookies: false, demoProjectId: "demo" } });
-    expect((await other.request(`/app/projects/${id}`, { headers: { cookie: "ak_session=bogus" } })).status).toBe(401);
+    expect((await other.request(`/api/app/projects/${id}`, { headers: { cookie: "ak_session=bogus" } })).status).toBe(401);
   });
   it("billing is a clean 501 until configured; webhook upgrades the plan", async () => {
-    const r = await req(`/app/projects/${projectId}/billing/checkout`, { method: "POST", body: JSON.stringify({ plan: "pro" }) });
+    const r = await req(`/api/app/projects/${projectId}/billing/checkout`, { method: "POST", body: JSON.stringify({ plan: "pro" }) });
     expect(r.status).toBe(501);
     expect((await r.json()).error.code).toBe("billing_not_configured");
 
@@ -106,12 +106,12 @@ describe("app", () => {
     expect((await app.request("/webhooks/stripe", { method: "POST", headers: { "stripe-signature": "t=1,v1=bad" }, body: payload })).status).toBe(400);
     // prices map is empty in this config, so the plan can't be resolved from price_pro; apply directly with a configured map
     applyStripeEvent({ ...billing, prices: { pro: "price_pro" } }, reg, JSON.parse(payload));
-    expect((await (await req(`/app/projects/${projectId}`)).json()).plan).toBe("pro");
+    expect((await (await req(`/api/app/projects/${projectId}`)).json()).plan).toBe("pro");
     expect((await app.request("/webhooks/stripe", { method: "POST", headers: { "stripe-signature": sig }, body: payload })).status).toBe(200); // idempotent replay ok
   });
   it("enforces the plan's monthly event limit", async () => {
     reg.prepare("UPDATE project SET plan = 'free' WHERE id = ?").run(projectId);
-    const k = await (await req(`/app/projects/${projectId}/keys`, { method: "POST", body: JSON.stringify({ mode: "test", scopes: ["write"] }) })).json();
+    const k = await (await req(`/api/app/projects/${projectId}/keys`, { method: "POST", body: JSON.stringify({ mode: "test", scopes: ["write"] }) })).json();
     const events = Array.from({ length: 1000 }, (_, i) => ({ tenant: "bulk", actor: "b", action: "x", target: `${i}` }));
     for (let i = 0; i < 9; i++) await app.request("/v1/events/bulk", { method: "POST", headers: { authorization: `Bearer ${k.key}`, "content-type": "application/json" }, body: JSON.stringify({ events }) });
     const last = await app.request("/v1/events/bulk", { method: "POST", headers: { authorization: `Bearer ${k.key}`, "content-type": "application/json" }, body: JSON.stringify({ events }) });
@@ -120,21 +120,55 @@ describe("app", () => {
   });
 });
 
+describe("customer signing keys", () => {
+  it("verifies client_sig on ingest once a key is registered; enforces when required", async () => {
+    const { generateKeyPairSync, sign } = await import("node:crypto");
+    const { clientSignable } = await import("@auditkit/core");
+    const kp = generateKeyPairSync("ed25519");
+    const spki = kp.publicKey.export({ format: "der", type: "spki" }).toString("base64");
+    const k = await (await req(`/api/app/projects/${projectId}/keys`, { method: "POST", body: JSON.stringify({ mode: "test", scopes: ["admin"] }) })).json();
+    const v1 = (path: string, init: RequestInit = {}) => app.request(path, { ...init, headers: { authorization: `Bearer ${k.key}`, "content-type": "application/json" } });
+    const occurred_at = new Date().toISOString();
+    const signed = (actor: string, action: string, key = kp.privateKey) => {
+      const msg = Buffer.from(clientSignable({ tenant: "signed", actor, action, target: null, occurred_at }), "hex");
+      return JSON.stringify({ tenant: "signed", actor, action, occurred_at, client_sig: sign(null, msg, key).toString("base64") });
+    };
+    // no key registered yet: a client_sig is refused rather than silently stored
+    expect((await v1("/v1/events", { method: "POST", body: signed("u", "a") })).status).toBe(400);
+    expect((await v1("/v1/tenants/signed/keys", { method: "POST", body: JSON.stringify({ public_key: spki }) })).status).toBe(201);
+    expect((await v1("/v1/events", { method: "POST", body: signed("u", "a") })).status).toBe(201);
+    // wrong key fails
+    const other = generateKeyPairSync("ed25519");
+    expect((await v1("/v1/events", { method: "POST", body: signed("u", "a", other.privateKey) })).status).toBe(400);
+    // unsigned still allowed until required
+    expect((await v1("/v1/events", { method: "POST", body: JSON.stringify({ tenant: "signed", actor: "u", action: "unsigned" }) })).status).toBe(201);
+    expect((await v1("/v1/tenants/signed/policy", { method: "POST", body: JSON.stringify({ require_client_sig: true }) })).status).toBe(200);
+    expect((await v1("/v1/events", { method: "POST", body: JSON.stringify({ tenant: "signed", actor: "u", action: "unsigned" }) })).status).toBe(400);
+    expect((await v1("/v1/events", { method: "POST", body: signed("u", "b") })).status).toBe(201);
+    // the export carries the client_sig so the offline verifier can check it with the public key
+    const txt = await (await v1("/v1/export?tenant=signed")).text();
+    expect(txt.split("\n").filter((l) => l.includes('"client_sig"')).length).toBe(2);
+    const keys = await (await req(`/api/app/projects/${projectId}/tenants/signed/keys`)).json();
+    expect(keys.keys).toHaveLength(1);
+    expect((await req(`/api/app/projects/${projectId}/tenants/signed/keys/${keys.keys[0].id}`, { method: "DELETE" })).status).toBe(200);
+  });
+});
+
 describe("viewer tokens", () => {
   it("scoped read-only access that expires and revokes", async () => {
-    const tr = await req(`/app/projects/${projectId}/viewer-tokens`, { method: "POST", body: JSON.stringify({ tenant: "acme", ttl_hours: 1 }) });
+    const tr = await req(`/api/app/projects/${projectId}/viewer-tokens`, { method: "POST", body: JSON.stringify({ tenant: "acme", ttl_hours: 1 }) });
     const t = await tr.json();
     expect(t.url).toContain("/viewer?token=vt_");
-    const ev = await (await app.request(`/viewer/events?token=${t.token}`)).json();
+    const ev = await (await app.request(`/api/viewer/events?token=${t.token}`)).json();
     expect(ev.events.length).toBeGreaterThan(0);
     expect(ev.events.every((e: { tenant: string }) => e.tenant === "acme")).toBe(true);
-    expect((await app.request(`/viewer/events?token=${t.token}&tenant=bulk`)).status).toBe(200); // tenant param ignored, scope wins
-    expect((await (await app.request(`/viewer/events?token=${t.token}&tenant=bulk`)).json()).events.every((e: { tenant: string }) => e.tenant === "acme")).toBe(true);
-    expect((await (await app.request(`/viewer/verify?token=${t.token}`)).json()).valid).toBe(true);
-    expect((await app.request(`/viewer/export`, { headers: { authorization: `Bearer ${t.token}` } })).status).toBe(200);
-    expect((await app.request(`/viewer/events?token=vt_${projectId}_${"x".repeat(32)}`)).status).toBe(401);
-    expect((await req(`/app/projects/${projectId}/viewer-tokens/${t.id}`, { method: "DELETE" })).status).toBe(200);
-    expect((await app.request(`/viewer/events?token=${t.token}`)).status).toBe(401);
+    expect((await app.request(`/api/viewer/events?token=${t.token}&tenant=bulk`)).status).toBe(200); // tenant param ignored, scope wins
+    expect((await (await app.request(`/api/viewer/events?token=${t.token}&tenant=bulk`)).json()).events.every((e: { tenant: string }) => e.tenant === "acme")).toBe(true);
+    expect((await (await app.request(`/api/viewer/verify?token=${t.token}`)).json()).valid).toBe(true);
+    expect((await app.request(`/api/viewer/export`, { headers: { authorization: `Bearer ${t.token}` } })).status).toBe(200);
+    expect((await app.request(`/api/viewer/events?token=vt_${projectId}_${"x".repeat(32)}`)).status).toBe(401);
+    expect((await req(`/api/app/projects/${projectId}/viewer-tokens/${t.id}`, { method: "DELETE" })).status).toBe(200);
+    expect((await app.request(`/api/viewer/events?token=${t.token}`)).status).toBe(401);
     expect((await app.request(`/v1/events`, { headers: { authorization: `Bearer ${t.token}` } })).status).toBe(401); // viewer tokens are not API keys
   });
 });

@@ -9,3 +9,6 @@ export { migrateAuth, makeMailer, requestMagicLink, redeemMagicLink, type Mailer
 export { migrateBilling, billingFromEnv, verifyStripeSignature, applyStripeEvent, type BillingConfig } from "./billing.js";
 export { PLANS, planOf, type Plan } from "./plans.js";
 export { applyRetention } from "./anchorLoop.js";
+export { addTenantKey, listTenantKeys, revokeTenantKey, setRequireClientSig } from "./tenantKeys.js";
+export { resetProjectData } from "./anchorLoop.js";
+export { migrateOAuth, buildOAuthRoutes, principalFromAccessToken } from "./oauth.js";

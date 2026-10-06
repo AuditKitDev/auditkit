@@ -11,6 +11,9 @@ import { mcpHandler } from "./mcp.js";
 import { planOf } from "./plans.js";
 import { buildWebRoutes, monthlyUsage, type WebDeps } from "./webRoutes.js";
 import { buildViewerRoutes } from "./viewer.js";
+import { rateLimiter } from "./auth.js";
+import { addTenantKey, listTenantKeys, revokeTenantKey, setRequireClientSig } from "./tenantKeys.js";
+import { buildOAuthRoutes, principalFromAccessToken, wwwAuthenticate } from "./oauth.js";
 
 export interface Deps {
   cfg: Config;
@@ -52,7 +55,15 @@ function overLimit(deps: Deps, c: Context<Env>, adding: number): Response | null
 
 export function buildApp(deps: Deps): Hono<Env> {
   const app = new Hono<Env>();
-  if (deps.web) app.route("/", buildWebRoutes({ ...deps.web, cfg: deps.cfg, reg: deps.reg, signer: deps.signer }));
+  if (deps.web) {
+    app.route("/", buildWebRoutes({ ...deps.web, cfg: deps.cfg, reg: deps.reg, signer: deps.signer }));
+    app.route("/", buildOAuthRoutes(deps.reg, deps.web.siteUrl));
+  }
+  const bearer = (c: Context<Env>): Principal | null => {
+    const auth = c.req.header("authorization");
+    const token = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined;
+    return authenticate(deps.reg, token) ?? principalFromAccessToken(deps.reg, token);
+  };
   app.route("/", buildViewerRoutes(deps.cfg, deps.reg, deps.signer));
 
   app.get("/.well-known/auditkit.json", (c) =>
@@ -61,18 +72,21 @@ export function buildApp(deps: Deps): Hono<Env> {
   app.get("/openapi.json", (c) => c.json(openapi));
   app.get("/health", (c) => c.json({ ok: true }));
 
+  const keyLimit = rateLimiter(1200, 60_000); // per key per minute, any /v1 call
   app.use("/v1/*", async (c, next) => {
-    const auth = c.req.header("authorization");
-    const p = authenticate(deps.reg, auth?.startsWith("Bearer ") ? auth.slice(7) : undefined);
+    const p = bearer(c);
     if (!p) return c.json({ error: { code: "unauthorized", message: "missing or invalid API key" } }, 401);
+    if (!keyLimit(p.keyId)) return c.json({ error: { code: "rate_limited", message: "1200 requests per minute per key" } }, 429);
     c.set("principal", p);
     c.set("db", openProject(deps.cfg, p.projectId));
     await next();
   });
   app.use("/mcp", async (c, next) => {
-    const auth = c.req.header("authorization");
-    const p = authenticate(deps.reg, auth?.startsWith("Bearer ") ? auth.slice(7) : undefined);
-    if (!p) return c.json({ jsonrpc: "2.0", error: { code: -32001, message: "Missing or invalid API key. Send Authorization: Bearer ak_..." }, id: null }, 401);
+    const p = bearer(c);
+    if (!p) {
+      const headers: Record<string, string> = deps.web ? { "www-authenticate": wwwAuthenticate(deps.web.siteUrl) } : {};
+      return c.json({ jsonrpc: "2.0", error: { code: -32001, message: "Unauthorized. Connect via OAuth, or send Authorization: Bearer ak_..." }, id: null }, 401, headers);
+    }
     c.set("principal", p);
     c.set("db", openProject(deps.cfg, p.projectId));
     await next();
@@ -168,6 +182,30 @@ export function buildApp(deps: Deps): Hono<Env> {
     const body = z.object({ external_id: z.string().min(1).max(200) }).parse(await c.req.json());
     const t = getOrCreateTenant(c.get("db"), body.external_id);
     return c.json({ id: t.id, external_id: t.external_id }, 201);
+  });
+
+  app.get("/v1/tenants/:tenant/keys", (c) => {
+    const denied = needScope(c, "read");
+    if (denied) return denied;
+    return c.json({ keys: listTenantKeys(c.get("db"), c.req.param("tenant")) });
+  });
+  app.post("/v1/tenants/:tenant/keys", async (c) => {
+    const denied = needScope(c, "write");
+    if (denied) return denied;
+    const body = z.object({ public_key: z.string().min(40).max(200) }).parse(await c.req.json());
+    return c.json(addTenantKey(c.get("db"), c.req.param("tenant"), body.public_key), 201);
+  });
+  app.delete("/v1/tenants/:tenant/keys/:keyId", (c) => {
+    const denied = needScope(c, "write");
+    if (denied) return denied;
+    return revokeTenantKey(c.get("db"), c.req.param("keyId")) ? c.json({ revoked: true }) : c.json({ error: { code: "not_found", message: "no such key" } }, 404);
+  });
+  app.post("/v1/tenants/:tenant/policy", async (c) => {
+    const denied = needScope(c, "admin");
+    if (denied) return denied;
+    const body = z.object({ require_client_sig: z.boolean() }).parse(await c.req.json());
+    setRequireClientSig(c.get("db"), c.req.param("tenant"), body.require_client_sig);
+    return c.json({ ok: true });
   });
 
   app.post("/v1/erase/:id", (c) => {

@@ -5,10 +5,11 @@ import { OtsAnchor } from "@auditkit/anchor-ots";
 import { openRegistry, openProject, type Config } from "./db.js";
 import { loadSigner, loadAnchorKey } from "./signing.js";
 import { buildApp } from "./app.js";
-import { tick, maintain, applyRetention } from "./anchorLoop.js";
+import { tick, maintain, applyRetention, resetProjectData } from "./anchorLoop.js";
 import { createProject, createKey } from "./keys.js";
 import { migrateAuth, makeMailer } from "./auth.js";
 import { migrateBilling, billingFromEnv } from "./billing.js";
+import { migrateOAuth } from "./oauth.js";
 import { planOf } from "./plans.js";
 
 const cfg: Config = { dataDir: process.env.AUDITKIT_DATA ?? "./data", publicHost: process.env.AUDITKIT_PUBLIC_HOST ?? "localhost" };
@@ -21,6 +22,7 @@ const wanted = (process.env.AUDITKIT_ANCHORS ?? "rekor,ots").split(",").map((s) 
 const reg = openRegistry(cfg);
 migrateAuth(reg);
 migrateBilling(reg);
+migrateOAuth(reg);
 const signer = loadSigner(cfg.dataDir);
 const anchors: Anchor[] = [];
 if (wanted.includes("rekor")) anchors.push(new RekorAnchor(loadAnchorKey(cfg.dataDir)));
@@ -56,6 +58,14 @@ setInterval(() => {
     .catch((e: Error) => log(`tick failed: ${e.message}`))
     .finally(() => { running = false; });
 }, interval * 1000).unref();
+
+// Nightly at 03:00 UTC the public demo starts from an empty chain.
+let lastDemoReset = "";
+setInterval(() => {
+  const d = new Date();
+  const day = d.toISOString().slice(0, 10);
+  if (d.getUTCHours() === 3 && lastDemoReset !== day) { lastDemoReset = day; resetProjectData(cfg, DEMO); console.log("[demo] reset"); }
+}, 10 * 60 * 1000).unref();
 
 setInterval(() => {
   const n = applyRetention(cfg, reg, (plan) => planOf(plan).retention_days);
