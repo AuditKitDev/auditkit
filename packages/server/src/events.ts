@@ -202,7 +202,7 @@ export function search(db: DatabaseSync, q: Query): { events: EventRecord[]; nex
   }
   const limit = Math.min(Math.max(q.limit ?? 50, 1), 500);
   const rows = db
-    .prepare(`${EVENT_SELECT} ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY e.occurred_at DESC, e.id DESC LIMIT ?`)
+    .prepare(`${EVENT_SELECT} ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY e.occurred_at DESC, e.rowid DESC LIMIT ?`)
     .all(...args, limit + 1) as Row[];
   const page = rows.slice(0, limit).map(toRecord);
   return { events: page, next_cursor: rows.length > limit ? page[page.length - 1]!.id : null };
